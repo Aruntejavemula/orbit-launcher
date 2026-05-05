@@ -7,3 +7,9 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 *.log
+__pycache__
+*.pyc
+.env
+backend/alembic/versions/*.py
+!backend/alembic/versions/.gitkeep
+backend/backups/

@@ -1,0 +1,65 @@
+import { Search } from "lucide-react";
+import HeroIllustration from "./HeroIllustration";
+import { useAuth } from "../context/AuthContext";
+import { greeting } from "../utils/time";
+
+interface Props {
+  query: string;
+  onQuery: (q: string) => void;
+  totalApps: number;
+  activeTrials: number;
+}
+
+export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Props) {
+  const { user } = useAuth();
+  const firstName = (user?.name ?? "there").split(" ")[0];
+
+  return (
+    <section
+      className="bg-hero relative overflow-hidden rounded-3xl px-8 py-9"
+      style={{ minHeight: 240 }}
+    >
+      <HeroIllustration />
+      <div className="relative max-w-[560px]">
+        <h1 className="font-display text-5xl font-semibold leading-tight tracking-tight">
+          {greeting()}, {firstName}
+        </h1>
+        <p className="mt-3 text-base" style={{ color: "var(--text-muted)" }}>
+          Your ecosystem is optimized.
+        </p>
+
+        <div className="mt-5 flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQuery(e.target.value)}
+              placeholder="Search your tools…"
+              className="w-full rounded-full border border-line bg-paper py-3 pl-10 pr-4 text-sm outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Stat label="Total apps" value={totalApps} />
+          <Stat label="Active trials" value={activeTrials} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl px-4 py-3 shadow-card" style={{ background: "var(--surface)" }}>
+      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </div>
+      <div className="mt-0.5 font-display text-2xl font-semibold">{value}</div>
+    </div>
+  );
+}
