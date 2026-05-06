@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import event, text
 from dotenv import load_dotenv
 import logging
 import os
@@ -9,73 +10,43 @@ load_dotenv()
 
 logger = logging.getLogger("orbit.db")
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://orbit:orbit@localhost:5432/orbitdb")
+_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://orbit:orbit@localhost:5432/orbitdb")
 SLOW_QUERY_MS = int(os.getenv("SLOW_QUERY_MS", "200"))
 
-engine = create_engine(
-    DATABASE_URL,
+# Convert postgres:// / postgresql:// → postgresql+asyncpg://
+_ASYNC_URL = _DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1).replace("postgres://", "postgresql+asyncpg://", 1)
+
+engine = create_async_engine(
+    _ASYNC_URL,
     pool_size=10,
     max_overflow=20,
     pool_timeout=30,
     pool_recycle=1800,
     pool_pre_ping=True,
+    echo=False,
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
 Base = declarative_base()
 
 
-# --- slow query logging ---
-
-@event.listens_for(engine, "before_cursor_execute")
-def _before_execute(conn, cursor, statement, parameters, context, executemany):
-    conn.info["query_start"] = time.monotonic()
-
-
-@event.listens_for(engine, "after_cursor_execute")
-def _after_execute(conn, cursor, statement, parameters, context, executemany):
-    elapsed_ms = (time.monotonic() - conn.info.get("query_start", time.monotonic())) * 1000
-    if elapsed_ms >= SLOW_QUERY_MS:
-        # Log statement without parameters — parameters may contain user data
-        logger.warning("SLOW QUERY %.1fms: %.200s", elapsed_ms, statement.replace("\n", " ").strip())
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
 
 
-# --- pool metrics logging ---
-
-@event.listens_for(engine, "checkout")
-def _pool_checkout(dbapi_conn, conn_record, conn_proxy):
-    pool = engine.pool
-    logger.debug(
-        "pool.checkout  size=%d checked_out=%d overflow=%d",
-        pool.size(),
-        pool.checkedout(),
-        pool.overflow(),
-    )
-
-
-@event.listens_for(engine, "checkin")
-def _pool_checkin(dbapi_conn, conn_record):
-    pool = engine.pool
-    logger.debug(
-        "pool.checkin   size=%d checked_out=%d overflow=%d",
-        pool.size(),
-        pool.checkedout(),
-        pool.overflow(),
-    )
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
-
-def pool_status() -> dict:
-    """Snapshot of connection pool state — used by /api/health."""
+async def pool_status() -> dict:
     pool = engine.pool
     return {
         "pool_size": pool.size(),

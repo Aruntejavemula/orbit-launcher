@@ -25,6 +25,13 @@ export function greeting(d: Date = new Date()): string {
   return "Good night";
 }
 
+export function fmtMinutes(m: number): string {
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r === 0 ? `${h}h` : `${h}h ${r}m`;
+}
+
 export function sameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&

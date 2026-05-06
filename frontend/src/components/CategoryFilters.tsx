@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { categories } from "../data/categories";
 import type { CategoryId } from "../types";
 
@@ -13,14 +14,16 @@ export default function CategoryFilters({ active, onChange }: Props) {
         const Icon = c.icon;
         const isActive = active === c.id;
         return (
-          <button
+          <motion.button
             key={c.id}
             onClick={() => onChange(c.id)}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className={`filter-pill ${isActive ? "active" : ""}`}
           >
             <Icon size={14} />
             <span>{c.label}</span>
-          </button>
+          </motion.button>
         );
       })}
     </div>

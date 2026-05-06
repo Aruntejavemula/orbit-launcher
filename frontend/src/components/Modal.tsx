@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -10,37 +10,80 @@ interface Props {
   width?: number;
 }
 
+function isDark() {
+  return document.documentElement.classList.contains("dark");
+}
+
+const FOCUSABLE = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+  'select:not([disabled])', 'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 export default function Modal({ open, onClose, title, children, width = 480 }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+
+    // Focus first focusable element on open
+    const frame = requestAnimationFrame(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+      first?.focus();
+    });
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab") return;
+
+      const els = Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []
+      ).filter((el) => !el.closest('[aria-hidden="true"]'));
+      if (!els.length) return;
+
+      const first = els[0];
+      const last = els[els.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
   }, [open, onClose]);
+
+  const dark = isDark();
+  const backdropHidden = dark ? "rgba(0,0,0,0)" : "rgba(31,36,33,0)";
+  const backdropVisible = dark ? "rgba(0,0,0,0.7)" : "rgba(31,36,33,0.45)";
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
           className="fixed inset-0 z-50 flex items-start justify-center px-4 py-6"
-          style={{ background: "rgba(31,36,33,0)" }}
-          animate={{ background: "rgba(31,36,33,0.45)" }}
-          exit={{ background: "rgba(31,36,33,0)" }}
+          style={{ background: backdropHidden }}
+          animate={{ background: backdropVisible }}
+          exit={{ background: backdropHidden }}
           transition={{ duration: 0.2 }}
           onClick={onClose}
         >
           <div className="pointer-events-none absolute inset-0 backdrop-blur-sm" />
           <motion.div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            className="relative my-auto w-full overflow-y-auto rounded-2xl bg-paper p-6 shadow-pop pointer-events-auto"
-            style={{ width, maxHeight: "calc(100vh - 48px)" }}
+            className="modal-panel relative my-auto w-full overflow-y-auto rounded-2xl p-6 shadow-pop pointer-events-auto"
+            style={{ width, maxHeight: "calc(100vh - 48px)", background: "var(--modal-bg)" }}
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}

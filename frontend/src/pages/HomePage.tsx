@@ -40,7 +40,7 @@ export default function HomePage({ onOpenApp }: Props) {
         activeTrials={activeTrials}
       />
       <CategoryFilters active={category} onChange={setCategory} />
-      {loading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} />}
+      {loading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
     </div>
   );
 }

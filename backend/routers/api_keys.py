@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from models import ApiKey
 from auth.jwt import get_current_user_id
 from auth.password import hash_password
+from limiter import limiter
 import uuid
 import secrets
 
@@ -14,7 +16,7 @@ router = APIRouter()
 
 
 class ApiKeyCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class ApiKeyResponse(BaseModel):
@@ -33,12 +35,16 @@ class ApiKeyCreatedResponse(ApiKeyResponse):
 
 
 @router.get("", response_model=List[ApiKeyResponse])
-def list_keys(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    return db.query(ApiKey).filter(ApiKey.user_id == user_id).order_by(ApiKey.created_at.desc()).limit(50).all()
+async def list_keys(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(ApiKey).where(ApiKey.user_id == user_id).order_by(ApiKey.created_at.desc()).limit(50)
+    )
+    return result.scalars().all()
 
 
 @router.post("", response_model=ApiKeyCreatedResponse, status_code=status.HTTP_201_CREATED)
-def create_key(body: ApiKeyCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def create_key(request: Request, body: ApiKeyCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     raw = secrets.token_urlsafe(32)
     prefix = raw[:8]
     key = ApiKey(
@@ -48,8 +54,8 @@ def create_key(body: ApiKeyCreate, user_id: str = Depends(get_current_user_id), 
         secret_hash=hash_password(raw),
     )
     db.add(key)
-    db.commit()
-    db.refresh(key)
+    await db.commit()
+    await db.refresh(key)
     return ApiKeyCreatedResponse(
         id=key.id,
         name=key.name,
@@ -61,9 +67,11 @@ def create_key(body: ApiKeyCreate, user_id: str = Depends(get_current_user_id), 
 
 
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_key(key_id: uuid.UUID, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    key = db.query(ApiKey).filter(ApiKey.id == key_id, ApiKey.user_id == user_id).first()
+@limiter.limit("10/minute")
+async def delete_key(request: Request, key_id: uuid.UUID, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user_id))
+    key = result.scalar_one_or_none()
     if not key:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
-    db.delete(key)
-    db.commit()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That API key could not be found.")
+    await db.delete(key)
+    await db.commit()

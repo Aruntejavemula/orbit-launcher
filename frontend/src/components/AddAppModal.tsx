@@ -18,6 +18,7 @@ import BrandIcon from "./BrandIcon";
 import { useApps } from "../context/AppsContext";
 import { appCatalog, type CatalogApp } from "../data/appCatalog";
 import { iconLibrary } from "../data/iconLibrary";
+import { hexToRgb } from "../utils/color";
 import type { CategoryId, BillingFrequency } from "../types";
 
 interface Props {
@@ -104,7 +105,8 @@ export default function AddAppModal({ open, onClose }: Props) {
     plan: PlanType,
     startDate: string,
     months: number,
-    frequency: BillingFrequency | undefined
+    frequency: BillingFrequency | undefined,
+    monthlyCost: number | null,
   ) => {
     const expiresAt =
       plan === "free"
@@ -121,6 +123,7 @@ export default function AddAppModal({ open, onClose }: Props) {
       weeklyMinutes: 0,
       iconKey: app.iconKey,
       frequency: plan === "free" ? undefined : frequency,
+      monthlyCost: plan === "paid" ? monthlyCost : null,
     });
     close();
   };
@@ -131,8 +134,8 @@ export default function AddAppModal({ open, onClose }: Props) {
         <SubscriptionPicker
           app={pending}
           onBack={() => setPending(null)}
-          onConfirm={(plan, start, months, frequency) =>
-            finalizeQuick(pending, plan, start, months, frequency)
+          onConfirm={(plan, start, months, frequency, monthlyCost) =>
+            finalizeQuick(pending, plan, start, months, frequency, monthlyCost)
           }
         />
       ) : (
@@ -186,11 +189,8 @@ function TabBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-        active
-          ? "bg-paper text-sage-ink shadow-sm"
-          : "text-ink-muted hover:text-ink"
-      }`}
+      className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition`}
+      style={active ? { background: "var(--surface)", color: "#2E4332", boxShadow: "0 1px 3px rgba(31,36,33,.12)" } : { color: "var(--text-muted)" }}
     >
       <Icon size={14} />
       {label}
@@ -300,6 +300,9 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [frequency, setFrequency] = useState<BillingFrequency>("monthly");
   const [trialDays, setTrialDays] = useState<string>("14");
+  const [monthlyCost, setMonthlyCost] = useState<string>("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   const expiryDate = useMemo(() => {
     if (plan === "free") return null;
@@ -316,8 +319,24 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !url.trim()) return;
-    const cleanUrl = url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`;
+    let valid = true;
+    if (!name.trim()) {
+      setNameError("App name is required.");
+      valid = false;
+    } else {
+      setNameError(null);
+    }
+    const trimUrl = url.trim();
+    if (!trimUrl) {
+      setUrlError("URL is required.");
+      valid = false;
+    } else if (!trimUrl.startsWith("https://")) {
+      setUrlError("URL must start with https://");
+      valid = false;
+    } else {
+      setUrlError(null);
+    }
+    if (!valid) return;
     const expiresAt =
       plan === "free"
         ? null
@@ -326,20 +345,21 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
       name: name.trim(),
       slug: `manual-${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       color: color.replace("#", ""),
-      url: cleanUrl,
+      url: trimUrl,
       category,
       plan: plan === "free" ? "free" : plan === "trial" ? "trial" : "paid",
       expiresAt: expiresAt ?? undefined,
       weeklyMinutes: 0,
       iconKey,
       frequency: plan === "free" ? undefined : frequency,
+      monthlyCost: plan === "paid" && monthlyCost !== "" ? parseFloat(monthlyCost) : null,
     });
     onAdd();
   };
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper p-2.5">
+      <div className="flex items-center gap-2.5 rounded-xl border p-2.5" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
         <span
           className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
           style={{ background: `rgba(${hexToRgb(color)}, 0.18)` }}
@@ -359,22 +379,22 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
       <div className="grid grid-cols-2 gap-2">
         <Field label="App name">
           <input
-            className="field py-2"
+            className={`field py-2 ${nameError ? "border-red-400 focus:ring-red-300" : ""}`}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); if (nameError) setNameError(null); }}
             placeholder="Notion"
-            required
           />
+          {nameError && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
         </Field>
         <Field label="Website URL">
           <input
-            className="field py-2"
+            className={`field py-2 ${urlError ? "border-red-400 focus:ring-red-300" : ""}`}
             type="text"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="notion.so"
-            required
+            onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(null); }}
+            placeholder="https://notion.so"
           />
+          {urlError && <p className="mt-1 text-xs text-red-600">{urlError}</p>}
         </Field>
       </div>
 
@@ -402,14 +422,12 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
                 type="button"
                 onClick={() => setIconKey(key)}
                 className={`grid h-8 w-8 place-items-center rounded-md transition ${
-                  selected
-                    ? "ring-2 ring-sage"
-                    : "hover:bg-cream border border-line"
+                  selected ? "ring-2 ring-sage" : ""
                 }`}
                 style={
                   selected
                     ? { background: `rgba(${hexToRgb(color)}, 0.18)`, color: `#${color}` }
-                    : { color: "var(--text-muted)" }
+                    : { color: "var(--text-muted)", border: "1px solid var(--line)", background: "var(--bg-deep)" }
                 }
               >
                 <Icon size={15} strokeWidth={2.1} />
@@ -419,14 +437,15 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
           <button
             type="button"
             onClick={() => setShowAllIcons((s) => !s)}
-            className="flex items-center gap-1 rounded-md border border-line bg-paper px-2 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-cream"
+            className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold transition"
+            style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--text)" }}
           >
             {showAllIcons ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             All
           </button>
         </div>
         {showAllIcons && (
-          <div className="mt-1.5 max-h-[160px] overflow-y-auto rounded-lg border border-line bg-paper p-1.5">
+          <div className="mt-1.5 max-h-[160px] overflow-y-auto rounded-lg border p-1.5" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
             <div className="grid grid-cols-10 gap-1">
               {iconLibrary.map((ic) => {
                 const Icon = ic.icon;
@@ -547,6 +566,24 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
         </div>
       )}
 
+      {plan === "paid" && (
+        <Field label="Monthly cost (optional)">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              className="field py-2 pl-7"
+              placeholder="e.g. 20.00"
+              value={monthlyCost}
+              onChange={(e) => setMonthlyCost(e.target.value)}
+            />
+          </div>
+          <p className="mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>Enter what you actually pay per month.</p>
+        </Field>
+      )}
+
       {plan !== "free" && expiryDate && (
         <div
           className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
@@ -608,7 +645,8 @@ function SubscriptionPicker({
     plan: PlanType,
     startDate: string,
     months: number,
-    frequency: BillingFrequency | undefined
+    frequency: BillingFrequency | undefined,
+    monthlyCost: number | null,
   ) => void;
 }) {
   const [plan, setPlan] = useState<PlanType>("paid");
@@ -617,6 +655,7 @@ function SubscriptionPicker({
   );
   const [frequency, setFrequency] = useState<BillingFrequency>("monthly");
   const [trialDays, setTrialDays] = useState<string>("14");
+  const [monthlyCost, setMonthlyCost] = useState<string>("");
 
   const months =
     plan === "trial"
@@ -637,7 +676,13 @@ function SubscriptionPicker({
   }, [plan, startDate, trialDays, frequency]);
 
   const handleConfirm = () => {
-    onConfirm(plan, startDate, Math.max(1, months), plan === "paid" ? frequency : undefined);
+    onConfirm(
+      plan,
+      startDate,
+      Math.max(1, months),
+      plan === "paid" ? frequency : undefined,
+      plan === "paid" && monthlyCost !== "" ? parseFloat(monthlyCost) : null,
+    );
   };
 
   return (
@@ -660,7 +705,7 @@ function SubscriptionPicker({
           <BrandIcon slug={app.slug} color={app.color} size={24} iconKey={app.iconKey} />
         </span>
         <div>
-          <div className="font-display text-lg font-semibold">{app.name}</div>
+          <div className="text-lg font-semibold">{app.name}</div>
           <div
             className="text-xs capitalize"
             style={{ color: "var(--text-muted)" }}
@@ -753,6 +798,29 @@ function SubscriptionPicker({
             )}
           </div>
 
+          {plan === "paid" && (
+            <div className="mt-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                  Monthly cost (optional)
+                </span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="field pl-7"
+                    placeholder="e.g. 20.00"
+                    value={monthlyCost}
+                    onChange={(e) => setMonthlyCost(e.target.value)}
+                  />
+                </div>
+                <p className="mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>Enter what you actually pay per month.</p>
+              </label>
+            </div>
+          )}
+
           {expiryDate && (
             <div
               className="mt-4 flex items-center justify-between rounded-xl px-4 py-3 text-sm"
@@ -823,7 +891,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}

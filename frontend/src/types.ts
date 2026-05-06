@@ -26,6 +26,7 @@ export interface AppItem {
   frequency?: BillingFrequency;
   manageUrl?: string;
   pendingUnsubscribeAt?: number | null;
+  monthlyCost?: number | null;
 }
 
 export interface User {
@@ -55,6 +56,16 @@ export interface Preferences {
   reminderDays: number;
   reminderEmail: boolean;
   reminderPush: boolean;
+}
+
+export type ReminderMethod = "email" | "push";
+
+export interface Reminder {
+  id: string;
+  app_id: string;
+  remind_days_before: number;
+  method: ReminderMethod;
+  active: boolean;
 }
 
 export type PageId =

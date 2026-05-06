@@ -22,13 +22,13 @@ class TokenResponse(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
-    avatar_url: Optional[str] = None
+    avatar_url: Optional[str] = Field(default=None, max_length=2048)
 
     @field_validator("avatar_url")
     @classmethod
     def avatar_must_be_url(cls, v: Optional[str]) -> Optional[str]:
-        if v and not (v.startswith("http://") or v.startswith("https://") or v.startswith("data:")):
-            raise ValueError("avatar_url must be a valid URL")
+        if v and not (v.startswith("https://") or v.startswith("data:image/")):
+            raise ValueError("avatar_url must be an https URL or a data:image URI")
         return v
 
 

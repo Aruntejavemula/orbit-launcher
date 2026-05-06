@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from typing import List
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
@@ -38,13 +38,13 @@ class RenewalEntry(BaseModel):
 
 
 @router.get("/spending", response_model=List[SpendingEntry])
-def spending(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    rows = (
-        db.query(AppItem.id, AppItem.name, AppItem.slug, AppItem.plan, AppItem.frequency, AppItem.expires_at)
-        .filter(AppItem.user_id == user_id, AppItem.plan == "paid", AppItem.is_deleted == False)  # noqa: E712
+async def spending(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AppItem.id, AppItem.name, AppItem.slug, AppItem.plan, AppItem.frequency, AppItem.expires_at)
+        .where(AppItem.user_id == user_id, AppItem.plan == "paid", AppItem.is_deleted == False)  # noqa: E712
         .limit(200)
-        .all()
     )
+    rows = result.all()
     return [
         SpendingEntry(app_id=r.id, app_name=r.name, slug=r.slug, plan=r.plan, frequency=r.frequency, expires_at=r.expires_at)
         for r in rows
@@ -52,29 +52,27 @@ def spending(user_id: str = Depends(get_current_user_id), db: Session = Depends(
 
 
 @router.get("/usage", response_model=List[UsageStat])
-def usage_stats(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    app_rows = (
-        db.query(AppItem.id, AppItem.name, AppItem.slug)
-        .filter(AppItem.user_id == user_id, AppItem.is_deleted == False)  # noqa: E712
-        .all()
+async def usage_stats(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    app_result = await db.execute(
+        select(AppItem.id, AppItem.name, AppItem.slug)
+        .where(AppItem.user_id == user_id, AppItem.is_deleted == False)  # noqa: E712
     )
+    app_rows = app_result.all()
     app_map = {str(r.id): r for r in app_rows}
 
-    usage_rows = (
-        db.query(UsageSession.app_id, func.sum(UsageSession.duration_minutes).label("total"))
-        .filter(UsageSession.user_id == user_id)
+    usage_result = await db.execute(
+        select(UsageSession.app_id, func.sum(UsageSession.duration_minutes).label("total"))
+        .where(UsageSession.user_id == user_id)
         .group_by(UsageSession.app_id)
-        .all()
     )
-    launch_rows = (
-        db.query(LaunchEvent.app_id, func.count(LaunchEvent.id).label("cnt"))
-        .filter(LaunchEvent.user_id == user_id)
+    launch_result = await db.execute(
+        select(LaunchEvent.app_id, func.count(LaunchEvent.id).label("cnt"))
+        .where(LaunchEvent.user_id == user_id)
         .group_by(LaunchEvent.app_id)
-        .all()
     )
 
-    usage_by_app = {str(r.app_id): int(r.total) for r in usage_rows}
-    launches_by_app = {str(r.app_id): int(r.cnt) for r in launch_rows}
+    usage_by_app = {str(r.app_id): int(r.total) for r in usage_result.all()}
+    launches_by_app = {str(r.app_id): int(r.cnt) for r in launch_result.all()}
 
     result = [
         UsageStat(
@@ -90,20 +88,20 @@ def usage_stats(user_id: str = Depends(get_current_user_id), db: Session = Depen
 
 
 @router.get("/renewals", response_model=List[RenewalEntry])
-def renewals(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+async def renewals(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
     cutoff = now + timedelta(days=30)
-    rows = (
-        db.query(AppItem.id, AppItem.name, AppItem.slug, AppItem.expires_at)
-        .filter(
+    result = await db.execute(
+        select(AppItem.id, AppItem.name, AppItem.slug, AppItem.expires_at)
+        .where(
             AppItem.user_id == user_id,
             AppItem.expires_at.isnot(None),
             AppItem.expires_at <= cutoff,
             AppItem.is_deleted == False,  # noqa: E712
         )
         .order_by(AppItem.expires_at)
-        .all()
     )
+    rows = result.all()
     return [
         RenewalEntry(
             app_id=r.id,

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Enum, ForeignKey, Index, func
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Enum, ForeignKey, Index, UniqueConstraint, Numeric, func
 from sqlalchemy.dialects.postgresql import UUID
 from database import Base
 import enum
@@ -47,8 +47,11 @@ class AppItem(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     last_opened_at = Column(DateTime(timezone=True), nullable=True)
+    monthly_cost = Column(Numeric(10, 2), nullable=True)
 
     __table_args__ = (
         Index("ix_apps_user_display_order", "user_id", "display_order"),
         Index("ix_apps_user_expires_at", "user_id", "expires_at"),
+        Index("uq_apps_user_slug_active", "user_id", "slug", unique=True,
+              postgresql_where=~Column("is_deleted")),
     )

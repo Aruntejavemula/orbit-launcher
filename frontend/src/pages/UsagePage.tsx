@@ -1,14 +1,10 @@
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { useApps } from "../context/AppsContext";
 import BrandIcon from "../components/BrandIcon";
 import { Timer, TrendingUp } from "lucide-react";
-
-function fmt(m: number) {
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r === 0 ? `${h}h` : `${h}h ${r}m`;
-}
+import { fmtMinutes as fmt } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -55,9 +51,11 @@ export default function UsagePage() {
         <div className="grid h-52 grid-cols-7 items-end gap-3">
           {bars.map((b, i) => (
             <div key={i} className="flex h-full flex-col justify-end gap-2">
-              <div
-                className="w-full rounded-t-md bg-sage transition-all"
-                style={{ height: `${Math.max(8, (b.mins / dayMax) * 100)}%` }}
+              <motion.div
+                className="w-full rounded-t-md bg-sage"
+                initial={{ height: 0 }}
+                animate={{ height: `${Math.max(8, (b.mins / dayMax) * 100)}%` }}
+                transition={{ duration: 0.6, delay: i * 0.04, ease: "easeOut" }}
                 title={fmt(b.mins)}
               />
               <div className="text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
@@ -95,9 +93,12 @@ export default function UsagePage() {
                     </div>
                   </div>
                   <div className="mt-1.5 h-2 w-full rounded-full" style={{ background: "var(--bg-deep)" }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: `#${a.color}` }}
+                    <motion.div
+                      className="h-full rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      style={{ background: `#${a.color}` }}
                     />
                   </div>
                 </div>
@@ -117,12 +118,8 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string | num
         {Icon && <Icon size={14} />}
         <span>{label}</span>
       </div>
-      <div className="mt-1 truncate font-display text-2xl font-semibold">{value}</div>
+      <div className="mt-1 truncate text-2xl font-semibold">{value}</div>
     </div>
   );
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}

@@ -30,7 +30,7 @@ const STEPS = [
   },
   {
     title: "4. Set date and frequency",
-    body: "Enter the subscription date and choose Monthly, Quarterly, or Yearly. Orbit calculates the renewal automatically.",
+    body: "Enter the subscription date and choose Monthly, Quarterly, or Yearly. Remio calculates the renewal automatically.",
     visual: "date",
   },
   {

@@ -11,12 +11,10 @@ import type { User } from "../types";
 import api from "../api";
 import { queryClient } from "../queryClient";
 
-const TOKEN_KEY = "orbit:token";
-
 interface AuthCtx {
   user: User | null;
   loading: boolean;
-  signIn: (token: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -28,24 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) { setLoading(false); return; }
     api.get<User>("/auth/me")
       .then((r) => setUser(r.data))
-      .catch(() => localStorage.removeItem(TOKEN_KEY))
+      .catch(() => { /* no session cookie — stay signed out */ })
       .finally(() => setLoading(false));
   }, []);
 
-  const signIn = useCallback(async (token: string) => {
-    localStorage.setItem(TOKEN_KEY, token);
+  const signIn = useCallback(async () => {
     const r = await api.get<User>("/auth/me");
     setUser(r.data);
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
+    api.post("/auth/logout").catch(() => {});
     setUser(null);
     queryClient.clear();
+    localStorage.clear();
+    sessionStorage.clear();
   }, []);
 
   const refreshUser = useCallback(async () => {

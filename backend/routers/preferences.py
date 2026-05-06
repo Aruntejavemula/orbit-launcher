@@ -1,18 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from pydantic import BaseModel, Field
 from typing import Optional
 from database import get_db
 from models import Preferences
 from models.preferences import ThemeEnum
 from auth.jwt import get_current_user_id
-import uuid
 
 router = APIRouter()
 
 
 class PreferencesResponse(BaseModel):
-    id: uuid.UUID
     theme: ThemeEnum
     start_week_on_monday: bool
     compact_cards: bool
@@ -32,29 +31,41 @@ class PreferencesUpdate(BaseModel):
     compact_cards: Optional[bool] = None
     show_last_opened: Optional[bool] = None
     notify_expirations: Optional[bool] = None
-    reminder_days: Optional[int] = None
+    reminder_days: Optional[int] = Field(default=None, ge=1, le=365)
     reminder_email: Optional[bool] = None
     reminder_push: Optional[bool] = None
 
 
 @router.get("", response_model=PreferencesResponse)
-def get_preferences(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    prefs = db.query(Preferences).filter(Preferences.user_id == user_id).first()
+async def get_preferences(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Preferences).where(Preferences.user_id == user_id))
+    prefs = result.scalar_one_or_none()
     if not prefs:
-        prefs = Preferences(user_id=user_id)
-        db.add(prefs)
-        db.commit()
-        db.refresh(prefs)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preferences not found. Please reload the page.")
+    return prefs
+
+
+@router.post("/init", response_model=PreferencesResponse, status_code=201)
+async def init_preferences(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Preferences).where(Preferences.user_id == user_id))
+    prefs = result.scalar_one_or_none()
+    if prefs:
+        return prefs
+    prefs = Preferences(user_id=user_id)
+    db.add(prefs)
+    await db.commit()
+    await db.refresh(prefs)
     return prefs
 
 
 @router.patch("", response_model=PreferencesResponse)
-def update_preferences(body: PreferencesUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    prefs = db.query(Preferences).filter(Preferences.user_id == user_id).first()
+async def update_preferences(body: PreferencesUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Preferences).where(Preferences.user_id == user_id))
+    prefs = result.scalar_one_or_none()
     if not prefs:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preferences not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Your preferences could not be found. Please reload the page.")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(prefs, field, value)
-    db.commit()
-    db.refresh(prefs)
+    await db.commit()
+    await db.refresh(prefs)
     return prefs

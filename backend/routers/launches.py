@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 from typing import List
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
@@ -13,7 +14,6 @@ router = APIRouter()
 
 
 class LaunchEventResponse(BaseModel):
-    id: uuid.UUID
     app_id: uuid.UUID
     launched_at: datetime
 
@@ -22,24 +22,24 @@ class LaunchEventResponse(BaseModel):
 
 
 @router.get("", response_model=List[LaunchEventResponse])
-def get_launches(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    return (
-        db.query(LaunchEvent)
-        .filter(LaunchEvent.user_id == user_id)
+async def get_launches(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(LaunchEvent)
+        .where(LaunchEvent.user_id == user_id)
         .order_by(LaunchEvent.launched_at.desc())
         .limit(200)
-        .all()
     )
+    return result.scalars().all()
 
 
 @router.delete("/purge-old", status_code=200)
-def purge_old_launches(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    """Delete launch events older than RETENTION_DAYS for the current user."""
+async def purge_old_launches(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)
-    deleted = (
-        db.query(LaunchEvent)
-        .filter(LaunchEvent.user_id == user_id, LaunchEvent.launched_at < cutoff)
-        .delete(synchronize_session=False)
+    result = await db.execute(
+        delete(LaunchEvent)
+        .where(LaunchEvent.user_id == user_id, LaunchEvent.launched_at < cutoff)
+        .returning(LaunchEvent.id)
     )
-    db.commit()
+    deleted = len(result.fetchall())
+    await db.commit()
     return {"deleted": deleted, "cutoff": cutoff.isoformat()}

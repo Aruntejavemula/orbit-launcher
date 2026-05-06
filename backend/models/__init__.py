@@ -5,3 +5,4 @@ from .usage_session import UsageSession
 from .reminder import Reminder, ReminderMethodEnum
 from .preferences import Preferences, ThemeEnum
 from .api_key import ApiKey
+from .otp import PasswordResetOtp

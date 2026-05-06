@@ -5,19 +5,28 @@ import uuid
 import re
 from models.app_item import PlanEnum, BillingFrequencyEnum, CategoryEnum
 
-_HEX_COLOR = re.compile(r"^[0-9A-Fa-f]{6}$")
+_HEX_COLOR = re.compile(r"^#?[0-9A-Fa-f]{6}$")
 
 
 def _validate_color(v: Optional[str]) -> Optional[str]:
-    if v and not _HEX_COLOR.match(v):
-        raise ValueError("color must be a 6-char hex string e.g. FF5733")
+    if v:
+        stripped = v.lstrip("#")
+        if not re.match(r"^[0-9A-Fa-f]{6}$", stripped):
+            raise ValueError("color must be a 6-char hex string e.g. #FF5733 or FF5733")
+        return stripped
+    return v
+
+
+def _require_https(v: Optional[AnyHttpUrl]) -> Optional[AnyHttpUrl]:
+    if v and str(v).startswith("http://"):
+        raise ValueError("URL must use https://")
     return v
 
 
 class AppCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     slug: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9\-]+$")
-    color: str = Field(min_length=6, max_length=6)
+    color: str = Field(min_length=6, max_length=7)
     url: AnyHttpUrl
     category: CategoryEnum
     plan: PlanEnum = PlanEnum.free
@@ -25,11 +34,17 @@ class AppCreate(BaseModel):
     manage_url: Optional[AnyHttpUrl] = None
     icon_key: Optional[str] = Field(default=None, max_length=80)
     frequency: Optional[BillingFrequencyEnum] = None
+    monthly_cost: Optional[float] = Field(default=None, ge=0, le=99999)
 
     @field_validator("color")
     @classmethod
     def color_hex(cls, v: str) -> str:
         return _validate_color(v)  # type: ignore[return-value]
+
+    @field_validator("url", "manage_url", mode="before")
+    @classmethod
+    def url_https(cls, v: Optional[AnyHttpUrl]) -> Optional[AnyHttpUrl]:
+        return _require_https(v)
 
 
 class AppUpdate(BaseModel):
@@ -45,11 +60,17 @@ class AppUpdate(BaseModel):
     frequency: Optional[BillingFrequencyEnum] = None
     pending_unsubscribe_at: Optional[datetime] = None
     display_order: Optional[int] = Field(default=None, ge=0)
+    monthly_cost: Optional[float] = Field(default=None, ge=0, le=99999)
 
     @field_validator("color")
     @classmethod
     def color_hex(cls, v: Optional[str]) -> Optional[str]:
         return _validate_color(v)
+
+    @field_validator("url", "manage_url", mode="before")
+    @classmethod
+    def url_https(cls, v: Optional[AnyHttpUrl]) -> Optional[AnyHttpUrl]:
+        return _require_https(v)
 
 
 class AppResponse(BaseModel):
@@ -68,6 +89,7 @@ class AppResponse(BaseModel):
     display_order: int
     created_at: datetime
     last_opened_at: Optional[datetime] = None
+    monthly_cost: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -75,4 +97,4 @@ class AppResponse(BaseModel):
 
 class ReorderItem(BaseModel):
     id: uuid.UUID
-    order: int
+    order: int = Field(ge=0)

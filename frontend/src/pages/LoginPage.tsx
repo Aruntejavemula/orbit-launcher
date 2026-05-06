@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Orbit as OrbitIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import api from "../api";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Mode = "login" | "register";
 
@@ -12,7 +15,7 @@ const ERROR_MAP: Record<string, string> = {
 
 function friendlyError(raw: string | undefined): string {
   if (!raw) return "Something went wrong. Please try again.";
-  return ERROR_MAP[raw] ?? raw;
+  return ERROR_MAP[raw] ?? "Something went wrong. Please try again.";
 }
 
 export default function LoginPage() {
@@ -23,15 +26,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
 
+  // Google OAuth redirects to /auth/callback with a session cookie already set.
+  // We only need to fetch the user — no token in URL.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
+    if (window.location.pathname === "/auth/callback") {
       window.history.replaceState({}, "", "/");
-      signIn(token).catch(() => setError("Google sign-in failed."));
+      signIn().catch(() => setError("Google sign-in failed."));
     }
   }, [signIn]);
 
@@ -48,15 +52,26 @@ export default function LoginPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (mode === "register" && !name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      setError("Password is required.");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "register") {
-        const r = await api.post<{ access_token: string }>("/auth/register", { name, email, password });
-        await signIn(r.data.access_token);
+        await api.post("/auth/register", { name, email, password });
       } else {
-        const r = await api.post<{ access_token: string }>("/auth/login", { email, password });
-        await signIn(r.data.access_token);
+        await api.post("/auth/login", { email, password });
       }
+      await signIn();
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(friendlyError(raw));
@@ -79,8 +94,8 @@ export default function LoginPage() {
             <OrbitIcon size={22} strokeWidth={2.5} />
           </span>
           <div>
-            <div className="font-display text-2xl font-semibold text-ink">Orbit</div>
-            <div className="text-xs text-ink-muted">Your tool ecosystem, organized.</div>
+            <div className="text-2xl font-semibold text-ink">Remio</div>
+            <div className="text-xs text-ink-muted">Your subscriptions, organized.</div>
           </div>
         </div>
 
@@ -137,6 +152,17 @@ export default function LoginPage() {
               required
             />
           </Field>
+          {mode === "login" && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForgot(true)}
+                className="text-xs text-ink-muted hover:text-sage-ink hover:underline transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           {error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 border border-red-100">
@@ -168,6 +194,8 @@ export default function LoginPage() {
           Continue with Google
         </button>
       </div>
+
+      <ForgotPasswordModal open={showForgot} onClose={() => setShowForgot(false)} />
     </main>
   );
 }

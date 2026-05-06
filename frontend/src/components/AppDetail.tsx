@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowLeft,
   ExternalLink,
@@ -10,7 +11,9 @@ import {
 import type { AppItem } from "../types";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
+import ConfirmModal from "./ConfirmModal";
 import { relativeTime } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 import { useApps } from "../context/AppsContext";
 
 interface Props {
@@ -20,6 +23,7 @@ interface Props {
 
 export default function AppDetail({ app, onBack }: Props) {
   const { launch, removeApp } = useApps();
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const tileBg = `rgba(${hexToRgb(app.color)}, 0.18)`;
   const shadow = `0 12px 28px rgba(${hexToRgb(app.color)}, 0.35)`;
 
@@ -84,14 +88,18 @@ export default function AppDetail({ app, onBack }: Props) {
           icon={Trash2}
           label="Remove App"
           danger
-          onClick={() => {
-            if (confirm(`Remove ${app.name}? This cannot be undone.`)) {
-              removeApp(app.id);
-              onBack();
-            }
-          }}
+          onClick={() => setConfirmRemove(true)}
         />
       </section>
+
+      <ConfirmModal
+        open={confirmRemove}
+        title={`Remove ${app.name}?`}
+        body="This cannot be undone. The app will be removed from your dashboard."
+        confirmLabel="Remove"
+        onConfirm={() => { setConfirmRemove(false); removeApp(app.id); onBack(); }}
+        onCancel={() => setConfirmRemove(false)}
+      />
 
       <section className="grid grid-cols-2 gap-4">
         <Tile icon={Clock} label="Time this week" value={fmtMins(app.weeklyMinutes ?? 0)} />
@@ -139,15 +147,11 @@ function Tile({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
       <div className="mt-2 text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
         {label}
       </div>
-      <div className="mt-0.5 font-display text-lg font-semibold">{value}</div>
+      <div className="mt-0.5 text-lg font-semibold">{value}</div>
     </div>
   );
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}
 
 function fmtMins(m: number): string {
   if (m < 60) return `${m}m`;

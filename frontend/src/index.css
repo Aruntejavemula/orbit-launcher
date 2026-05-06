@@ -13,6 +13,8 @@
   --line: #e7e2d9;
   --hero: #d4e3d2;
   --hero-2: #b4d3b8;
+  --modal-bg: #ffffff;
+  --confirm-bg: #ffffff;
 }
 html.dark {
   color-scheme: dark;
@@ -25,6 +27,56 @@ html.dark {
   --line: #334038;
   --hero: #2c3e2f;
   --hero-2: #38503c;
+  --modal-bg: #1e1e1e;
+  --confirm-bg: #1a2e1a;
+}
+
+/* ── Modal dark mode token overrides ────────────────────────────────────────
+   Scoping to .modal-panel lets CSS custom-property cascade fix every
+   inline style({ color: "var(--text-muted)" }) etc. automatically.       */
+html.dark .modal-panel {
+  --bg:       #1e1e1e;
+  --bg-deep:  #252525;
+  --surface:  #2a2a2a;
+  --surface-2:#2f2f2f;
+  --text:     #f0f0f0;
+  --text-muted: #a0a0a0;
+  --line:     #3a3a3a;
+}
+html.dark .modal-panel .field {
+  background:   #2a2a2a;
+  border-color: #3a3a3a;
+  color:        #f0f0f0;
+}
+html.dark .modal-panel .field::placeholder {
+  color:   #6b6b6b;
+  opacity: 1;
+}
+/* Tailwind bg-paper is hardcoded #fff — override inside modal in dark mode */
+html.dark .modal-panel .bg-paper {
+  background-color: #2a2a2a !important;
+}
+html.dark .modal-panel .border-line {
+  border-color: #3a3a3a !important;
+}
+html.dark .modal-panel .hover\:bg-cream:hover,
+html.dark .modal-panel .hover\:bg-cream\/40:hover {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+html.dark .modal-panel .text-ink {
+  color: #f0f0f0 !important;
+}
+html.dark .modal-panel .text-ink-muted {
+  color: #a0a0a0 !important;
+}
+html.dark .modal-panel .bg-red-50 {
+  background-color: rgba(239,68,68,0.12) !important;
+}
+html.dark .modal-panel .hover\:bg-red-100:hover {
+  background-color: rgba(239,68,68,0.2) !important;
+}
+html.dark .modal-panel .border-red-200 {
+  border-color: rgba(239,68,68,0.3) !important;
 }
 
 /* Smooth light↔dark transition — only on color properties, not layout */
@@ -51,6 +103,15 @@ body {
 
 button {
   font-family: inherit;
+}
+
+/* Fraunces swash/ligature chars look bad in data strings.
+   All remaining font-display usages are intentional headings — keep ligatures. */
+h1.font-display,
+h2.font-display,
+h3.font-display {
+  font-variant-ligatures: normal;
+  font-feature-settings: normal;
 }
 
 input,

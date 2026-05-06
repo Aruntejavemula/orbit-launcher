@@ -24,7 +24,7 @@ export const appCatalog: CatalogApp[] = [
   { name: "Runway", slug: "runway", color: "000000", category: "ai", url: "https://runwayml.com" },
   { name: "ElevenLabs", slug: "elevenlabs", color: "000000", category: "ai", url: "https://elevenlabs.io" },
   { name: "Replit", slug: "replit", color: "F26207", category: "ai", url: "https://replit.com" },
-  { name: "v0", slug: "vercel", color: "000000", category: "ai", url: "https://v0.dev" },
+  { name: "v0", slug: "vercel-v0", color: "000000", category: "ai", url: "https://v0.dev" },
   { name: "Bolt", slug: "stackblitz", color: "1389FD", category: "ai", url: "https://bolt.new" },
   { name: "Lovable", slug: "lovable", color: "FF4F8B", category: "ai", url: "https://lovable.dev" },
   { name: "Ollama", slug: "ollama", color: "000000", category: "ai", url: "https://ollama.com" },

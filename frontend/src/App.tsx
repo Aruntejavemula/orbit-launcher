@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { Sun, Moon } from "lucide-react";
 import { ToastContainer } from "./components/Toast";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
@@ -13,26 +14,29 @@ import CalendarPage from "./pages/CalendarPage";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
 import LoginPage from "./pages/LoginPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
 
+const KNOWN_PATHS = new Set(["/", "/auth/callback"]);
+
 export default function App() {
-  const { user, loading } = useAuth();
+  // ALL hooks unconditionally at top — no hooks after conditional returns
+  const { user, loading: authLoading } = useAuth();
   const { apps } = useApps();
-  const { prefs } = usePrefs();
+  const { prefs, update } = usePrefs();
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
   const prevUserId = useRef<string | null>(null);
+  const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
 
-  // Apply theme with CSS transition already handled in index.css
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
   }, [prefs.theme]);
 
-  // Reset to home whenever auth state changes (sign in or sign out)
   useEffect(() => {
     const currentId = user?.id ?? null;
     if (currentId !== prevUserId.current) {
@@ -42,23 +46,44 @@ export default function App() {
     }
   }, [user]);
 
+  // Redirect unknown paths when auth resolves to logged-out
+  useEffect(() => {
+    if (isUnknownPath && !authLoading && !user) {
+      window.location.replace("/");
+    }
+  }, [isUnknownPath, authLoading, user]);
+
   const openApp = useMemo(
     () => apps.find((a) => a.id === openAppId) ?? null,
     [apps, openAppId]
   );
 
-  if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-app">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-sage" />
-          <span className="text-sm text-ink-muted">Loading…</span>
-        </div>
-      </div>
-    );
+  // Unknown path + confirmed logged in → 404
+  if (isUnknownPath && !authLoading && user) {
+    return <NotFoundPage />;
   }
 
-  if (!user) return <LoginPage />;
+  // Unknown path + redirecting (logged out) → render nothing
+  if (isUnknownPath && !authLoading && !user) {
+    return null;
+  }
+
+  // Auth resolved, no user → login
+  if (!authLoading && !user) {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="login"
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.97 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <LoginPage />
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   const renderPage = () => {
     switch (page) {
@@ -71,15 +96,47 @@ export default function App() {
     }
   };
 
+  // Still resolving session — render nothing to prevent flash of app shell
+  if (authLoading) {
+    return null;
+  }
+
+  // Confirmed user → render shell
   return (
-    <div className="flex min-h-screen bg-app">
+    <motion.div
+      key="app"
+      className="flex min-h-screen bg-app"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Sidebar page={page} onNavigate={setPage} />
       <main className="relative flex-1 overflow-x-hidden">
+        <div className="absolute right-5 top-5 z-10 md:right-10 md:top-8">
+          <motion.button
+            onClick={() => update({ theme: prefs.theme === "dark" ? "light" : "dark" })}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.93 }}
+            transition={{ duration: 0.15 }}
+            className="grid h-9 w-9 place-items-center rounded-full shadow-card transition-colors"
+            style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--line)" }}
+            aria-label="Toggle theme"
+          >
+            {prefs.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </motion.button>
+        </div>
         <div className="mx-auto max-w-[1240px] px-5 pb-32 pt-6 md:px-10 md:pt-10">
-          {/* key forces remount + page-enter animation on every page change */}
-          <div key={page} className="page-enter">
-            {renderPage()}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={page}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {renderPage()}
+            </motion.div>
+          </AnimatePresence>
         </div>
         <FloatingAddButton onClick={() => setShowAdd(true)} />
       </main>
@@ -91,6 +148,6 @@ export default function App() {
         )}
       </AnimatePresence>
       <ToastContainer />
-    </div>
+    </motion.div>
   );
 }

@@ -1,8 +1,11 @@
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { useApps } from "../context/AppsContext";
+import { usePrefs } from "../context/PreferencesContext";
 import { categories } from "../data/categories";
 import BrandIcon from "../components/BrandIcon";
 import { relativeTime } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 
 const CAT_COLORS: Record<string, string> = {
   ai: "#6B8F71",
@@ -12,8 +15,11 @@ const CAT_COLORS: Record<string, string> = {
   music: "#1DB954",
 };
 
+
 export default function InsightsPage() {
   const { apps, history } = useApps();
+  const { prefs } = usePrefs();
+  const isDark = prefs.theme === "dark";
 
   const stats = useMemo(() => {
     const total = apps.length;
@@ -31,6 +37,26 @@ export default function InsightsPage() {
       }));
     const totalCat = Math.max(1, byCategory.reduce((s, c) => s + c.count, 0));
 
+    // Renewals in next 30 days
+    const now = Date.now();
+    const in30 = now + 30 * 86_400_000;
+    const renewingSoon = apps.filter((a) => a.expiresAt && a.expiresAt > now && a.expiresAt <= in30);
+
+    // Spend breakdown — only apps where user entered a real price
+    const paidApps = apps.filter((a) => a.plan === "paid");
+    const knownCost = paidApps.filter((a) => a.monthlyCost != null && a.monthlyCost > 0);
+    const unknownCost = paidApps.filter((a) => a.monthlyCost == null || a.monthlyCost === 0);
+
+    const spendByCategory = categories
+      .filter((c) => c.id !== "all")
+      .map((c) => {
+        const catApps = knownCost.filter((a) => a.category === c.id);
+        const monthly = catApps.reduce((s, a) => s + (a.monthlyCost ?? 0), 0);
+        return { id: c.id, label: c.label, monthly, count: catApps.length, color: CAT_COLORS[c.id] ?? "#6B8F71" };
+      })
+      .filter((c) => c.count > 0);
+    const totalMonthly = spendByCategory.reduce((s, c) => s + c.monthly, 0);
+
     const opensByDay: { day: string; count: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -39,21 +65,11 @@ export default function InsightsPage() {
       const start = d.getTime();
       const end = start + 24 * 60 * 60 * 1000;
       const count = history.filter((h) => h.ts >= start && h.ts < end).length;
-      opensByDay.push({
-        day: d.toLocaleDateString(undefined, { weekday: "short" }),
-        count,
-      });
+      opensByDay.push({ day: d.toLocaleDateString(undefined, { weekday: "short" }), count });
     }
     const dayMax = Math.max(1, ...opensByDay.map((d) => d.count));
 
-    const counts = new Map<string, number>();
-    history.forEach((h) => counts.set(h.appId, (counts.get(h.appId) ?? 0) + 1));
-    const top = apps
-      .map((a) => ({ app: a, count: counts.get(a.id) ?? 0, mins: a.weeklyMinutes ?? 0 }))
-      .sort((a, b) => b.mins - a.mins)
-      .slice(0, 6);
-
-    return { total, trial, free, paid, byCategory, totalCat, opensByDay, dayMax, top };
+    return { total, trial, free, paid, byCategory, totalCat, renewingSoon, spendByCategory, totalMonthly, unknownCost, opensByDay, dayMax };
   }, [apps, history]);
 
   return (
@@ -61,18 +77,78 @@ export default function InsightsPage() {
       <header>
         <h1 className="font-display text-3xl font-semibold">Insights</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-          A clear view of your tool ecosystem.
+          A clear view of your subscription ecosystem.
         </p>
       </header>
 
+      {/* KPI row */}
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPI label="Total apps" value={stats.total} accent="bg-sage-soft" />
+        <KPI
+          label="Total apps"
+          value={stats.total}
+          style={isDark
+            ? { background: "#1a2e1a", border: "1px solid #2a4a2a", color: "#ffffff", labelColor: "#8aab8a" }
+            : { background: "#D4E3D2" }
+          }
+        />
         <KPI label="Paid" value={stats.paid} />
         <KPI label="Free" value={stats.free} />
         <KPI label="Trials" value={stats.trial} accent="bg-amberish/15" />
       </section>
 
+      {/* Spend + category split */}
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr]">
+        <Card title="Monthly spend">
+          <div className="mb-4 flex items-end gap-2">
+            {stats.totalMonthly > 0 ? (
+              <>
+                <span className="text-4xl font-semibold">${stats.totalMonthly.toFixed(2)}</span>
+                <span className="mb-1 text-sm" style={{ color: "var(--text-muted)" }}>/mo (confirmed)</span>
+              </>
+            ) : (
+              <span className="text-lg font-semibold" style={{ color: "var(--text-muted)" }}>No prices set yet</span>
+            )}
+          </div>
+          <ul className="space-y-2.5">
+            {stats.spendByCategory.length === 0 && stats.unknownCost.length === 0 && (
+              <li className="text-sm" style={{ color: "var(--text-muted)" }}>No paid apps yet.</li>
+            )}
+            {stats.spendByCategory.map((c) => (
+              <li key={c.id}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
+                    <span>{c.label}</span>
+                  </span>
+                  <span className="font-semibold tabular-nums">${c.monthly.toFixed(2)}/mo</span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: "var(--bg-deep)" }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.max(4, (c.monthly / Math.max(1, stats.totalMonthly)) * 100)}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    style={{ background: c.color }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          {stats.unknownCost.length > 0 && (
+            <div className="mt-4 rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--line)", background: "var(--bg-deep)" }}>
+              <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                Price unknown for {stats.unknownCost.length} paid app{stats.unknownCost.length > 1 ? "s" : ""}:
+              </p>
+              <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                {stats.unknownCost.map((a) => a.name).join(", ")}
+              </p>
+              <p className="mt-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                Edit each app and add its monthly cost to see your true total.
+              </p>
+            </div>
+          )}
+        </Card>
+
         <Card title="Distribution by category">
           <div className="flex items-center gap-6">
             <Donut segments={stats.byCategory.map((c) => ({ value: c.count, color: c.color }))} />
@@ -91,66 +167,61 @@ export default function InsightsPage() {
             </ul>
           </div>
         </Card>
-
-        <Card title="Opens this week">
-          <div className="grid h-44 grid-cols-7 items-end gap-3">
-            {stats.opensByDay.map((d, i) => (
-              <div key={i} className="flex h-full flex-col justify-end gap-2">
-                <div
-                  className="w-full rounded-t-md bg-sage transition-all"
-                  style={{ height: `${Math.max(4, (d.count / stats.dayMax) * 100)}%` }}
-                  title={`${d.count} opens`}
-                />
-                <span className="text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
-                  {d.day}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
       </section>
 
-      <Card title="App usage this week">
-        <ul className="space-y-3">
-          {stats.top.map(({ app, mins }) => {
-            const max = Math.max(1, ...stats.top.map((t) => t.mins));
-            return (
-              <li key={app.id} className="flex items-center gap-3">
-                <span
-                  className="grid h-9 w-9 place-items-center rounded-lg"
-                  style={{
-                    background: `rgba(${hexToRgb(app.color)}, 0.16)`,
-                    boxShadow: `0 4px 10px rgba(${hexToRgb(app.color)}, 0.25)`,
-                    ["--brand" as string]: `#${app.color}`,
-                  }}
-                >
-                  <BrandIcon slug={app.slug} color={app.color} size={20} iconKey={app.iconKey} className="icon-shadow" />
-                </span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold">{app.name}</div>
-                    <div className="text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>
-                      {fmt(mins)}
+      {/* Renewals soon */}
+      <Card title="Renewing in the next 30 days">
+        {stats.renewingSoon.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No renewals in the next 30 days.</p>
+        ) : (
+          <ul className="space-y-3">
+            {stats.renewingSoon.map((a) => {
+              const days = Math.ceil(((a.expiresAt ?? 0) - Date.now()) / 86_400_000);
+              return (
+                <li key={a.id} className="flex items-center gap-3">
+                  <span
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+                    style={{ background: `rgba(${hexToRgb(a.color)}, 0.16)` }}
+                  >
+                    <BrandIcon slug={a.slug} color={a.color} size={20} iconKey={a.iconKey} />
+                  </span>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold">{a.name}</div>
+                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {a.plan === "trial" ? "Trial ends" : "Renews"} in {days} day{days === 1 ? "" : "s"}
                     </div>
                   </div>
-                  <div className="mt-1.5 h-2 rounded-full" style={{ background: "var(--bg-deep)" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(mins / max) * 100}%`, background: `#${app.color}` }}
-                    />
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        {stats.top.length === 0 && (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Open a few apps from the dashboard to start building your usage history.
-          </p>
+                  <span className={`badge ${days <= 7 ? "bg-amberish/15 text-amberish" : "bg-sage-soft text-sage-ink"}`}>
+                    {days}d
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </Card>
 
+      {/* Opens this week */}
+      <Card title="Opens this week">
+        <div className="grid h-44 grid-cols-7 items-end gap-3">
+          {stats.opensByDay.map((d, i) => (
+            <div key={i} className="flex h-full flex-col justify-end gap-2">
+              <motion.div
+                className="w-full rounded-t-md bg-sage"
+                initial={{ height: 0 }}
+                animate={{ height: `${Math.max(4, (d.count / stats.dayMax) * 100)}%` }}
+                transition={{ duration: 0.6, delay: i * 0.04, ease: "easeOut" }}
+                title={`${d.count} opens`}
+              />
+              <span className="text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
+                {d.day}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Recent activity */}
       <Card title="Recent activity">
         <ul className="divide-y" style={{ borderColor: "var(--line)" }}>
           {history.slice(0, 5).length === 0 && (
@@ -166,9 +237,7 @@ export default function InsightsPage() {
                 <BrandIcon slug={a.slug} color={a.color} size={20} iconKey={a.iconKey} />
                 <div className="flex-1">
                   <div className="text-sm font-semibold">{a.name}</div>
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {relativeTime(h.ts)}
-                  </div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{relativeTime(h.ts)}</div>
                 </div>
               </li>
             );
@@ -179,16 +248,19 @@ export default function InsightsPage() {
   );
 }
 
-function KPI({ label, value, accent }: { label: string; value: number; accent?: string }) {
+function KPI({ label, value, accent, style }: {
+  label: string;
+  value: number;
+  accent?: string;
+  style?: { background: string; border?: string; color?: string; labelColor?: string };
+}) {
+  const containerStyle: React.CSSProperties = style
+    ? { background: style.background, border: style.border, color: style.color }
+    : accent ? {} : { background: "var(--surface)" };
   return (
-    <div
-      className={`rounded-2xl p-4 shadow-card ${accent ?? ""}`}
-      style={!accent ? { background: "var(--surface)" } : undefined}
-    >
-      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-        {label}
-      </div>
-      <div className="mt-1 font-display text-3xl font-semibold">{value}</div>
+    <div className={`rounded-2xl p-4 shadow-card ${!style && accent ? accent : ""}`} style={containerStyle}>
+      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: style?.labelColor ?? "var(--text-muted)" }}>{label}</div>
+      <div className="mt-1 text-3xl font-semibold">{value}</div>
     </div>
   );
 }
@@ -217,42 +289,18 @@ function Donut({ segments }: { segments: { value: number; color: string }[] }) {
           const offset = c - acc;
           acc += len;
           return (
-            <circle
-              key={i}
-              cx="70"
-              cy="70"
-              r={r}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="20"
-              strokeDasharray={`${len} ${c - len}`}
-              strokeDashoffset={offset}
-              transform="rotate(-90 70 70)"
-              strokeLinecap="butt"
-            />
+            <circle key={i} cx="70" cy="70" r={r} fill="none" stroke={s.color} strokeWidth="20"
+              strokeDasharray={`${len} ${c - len}`} strokeDashoffset={offset}
+              transform="rotate(-90 70 70)" strokeLinecap="butt" />
           );
         })}
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
-          <div className="font-display text-2xl font-semibold">{total}</div>
-          <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Apps
-          </div>
+          <div className="text-2xl font-semibold">{total}</div>
+          <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Apps</div>
         </div>
       </div>
     </div>
   );
-}
-
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}
-
-function fmt(m: number) {
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r === 0 ? `${h}h` : `${h}h ${r}m`;
 }

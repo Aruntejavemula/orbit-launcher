@@ -3,9 +3,15 @@ uvicorn[standard]
 sqlalchemy
 alembic
 psycopg2-binary
+asyncpg
 python-jose[cryptography]
 bcrypt
 python-multipart
 httpx
 python-dotenv
 pydantic[email]
+resend
+slowapi
+sentry-sdk[fastapi]
+arq
+redis

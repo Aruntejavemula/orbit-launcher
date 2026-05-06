@@ -46,7 +46,19 @@ export function usePrefs() {
 
   const { data: prefs = DEFAULTS } = useQuery({
     queryKey: ["preferences"],
-    queryFn: () => api.get("/preferences").then((r) => toPrefs(r.data)),
+    queryFn: async () => {
+      try {
+        const r = await api.get("/preferences");
+        return toPrefs(r.data);
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404) {
+          const r = await api.post("/preferences/init");
+          return toPrefs(r.data);
+        }
+        throw err;
+      }
+    },
     enabled: !!user,
   });
 
@@ -68,6 +80,14 @@ export function usePrefs() {
       if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
       if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
       return api.patch("/preferences", body).then((r) => toPrefs(r.data));
+    },
+    onMutate: (patch) => {
+      const prev = qc.getQueryData<Preferences>(["preferences"]);
+      qc.setQueryData<Preferences>(["preferences"], (old = DEFAULTS) => ({ ...old, ...patch }));
+      return { prev };
+    },
+    onError: (_err, _patch, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["preferences"], ctx.prev);
     },
     onSuccess: (updated) => {
       qc.setQueryData(["preferences"], updated);
@@ -91,7 +111,7 @@ export function usePrefs() {
 
   return {
     prefs,
-    update: updateMutation.mutateAsync,
+    update: updateMutation.mutate,
     apiKeys,
     createApiKey: async (name: string): Promise<ApiKey & { secret: string }> => {
       const raw = await createKeyMutation.mutateAsync(name);

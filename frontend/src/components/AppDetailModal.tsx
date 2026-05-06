@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -23,7 +23,9 @@ import {
 import type { AppItem } from "../types";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
+import ConfirmModal from "./ConfirmModal";
 import { relativeTime } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 import { useApps } from "../context/AppsContext";
 import { iconLibrary } from "../data/iconLibrary";
 
@@ -52,21 +54,48 @@ const RENEW_LINKS: Record<string, string> = {
 export default function AppDetailModal({ app, onClose }: Props) {
   const { launch, removeApp, updateApp } = useApps();
   const [manageMode, setManageMode] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [iconDraft, setIconDraft] = useState<string>(app?.iconKey ?? "rocket");
+  const [costDraft, setCostDraft] = useState<string>("");
   const [showAllIcons, setShowAllIcons] = useState(false);
+  const [nameEditError, setNameEditError] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const FOCUSABLE = [
+    'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+    'select:not([disabled])', 'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
 
   useEffect(() => {
     if (!app) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const frame = requestAnimationFrame(() => {
+      panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab") return;
+      const els = Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []
+      ).filter((el) => !el.closest('[aria-hidden="true"]'));
+      if (!els.length) return;
+      const first = els[0], last = els[els.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", onKey); };
   }, [app, onClose]);
 
   useEffect(() => {
     if (app) {
       setNameDraft(app.name);
       setIconDraft(app.iconKey ?? "rocket");
+      setCostDraft(app.monthlyCost != null ? String(app.monthlyCost) : "");
     }
   }, [app?.id]);
 
@@ -122,21 +151,27 @@ export default function AppDetailModal({ app, onClose }: Props) {
     }
   };
 
+  const dark = document.documentElement.classList.contains("dark");
+  const backdropHidden = dark ? "rgba(0,0,0,0)" : "rgba(31,36,33,0)";
+  const backdropVisible = dark ? "rgba(0,0,0,0.7)" : "rgba(31,36,33,0.45)";
+
   return (
+    <>
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-4 sm:items-center sm:pb-0"
-      style={{ background: "rgba(31,36,33,0)" }}
-      animate={{ background: "rgba(31,36,33,0.45)" }}
-      exit={{ background: "rgba(31,36,33,0)" }}
+      style={{ background: backdropHidden }}
+      animate={{ background: backdropVisible }}
+      exit={{ background: backdropHidden }}
       transition={{ duration: 0.2 }}
       onClick={onClose}
     >
       <div className="pointer-events-none absolute inset-0 backdrop-blur-sm" />
       <motion.div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-md rounded-3xl shadow-pop overflow-y-auto pointer-events-auto"
-        style={{ background: "var(--surface)", maxHeight: "calc(100vh - 48px)" }}
+        className="modal-panel relative w-full max-w-md rounded-3xl shadow-pop overflow-y-auto pointer-events-auto"
+        style={{ background: "var(--modal-bg)", maxHeight: "calc(100vh - 48px)" }}
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -167,6 +202,16 @@ export default function AppDetailModal({ app, onClose }: Props) {
           <div className="mt-2 flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
             <Badge plan={app.plan} size="md" />
             <span className="capitalize">{categoryLabel(app.category)}</span>
+            {app.plan === "paid" && app.monthlyCost != null && app.monthlyCost > 0 && (
+              <span className="rounded-full bg-sage-soft px-2 py-0.5 text-[11px] font-semibold text-sage-ink">
+                ${app.monthlyCost.toFixed(2)}/mo
+              </span>
+            )}
+            {app.plan === "paid" && (app.monthlyCost == null || app.monthlyCost === 0) && (
+              <span className="rounded-full border border-dashed px-2 py-0.5 text-[11px] font-medium" style={{ borderColor: "var(--line)", color: "var(--text-muted)" }}>
+                price not set
+              </span>
+            )}
           </div>
           <div className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
             {relativeTime(app.lastOpened)}
@@ -206,7 +251,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
                 </span>
               )}
             </div>
-            <div className="mt-1.5 font-display text-lg font-semibold">
+            <div className="mt-1.5 text-lg font-semibold">
               {expiryStr}
             </div>
             <div className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
@@ -285,10 +330,11 @@ export default function AppDetailModal({ app, onClose }: Props) {
                   <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>App name</span>
                   <input
                     value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    className="field mt-1 text-sm"
+                    onChange={(e) => { setNameDraft(e.target.value); if (nameEditError) setNameEditError(null); }}
+                    className={`field mt-1 text-sm ${nameEditError ? "border-red-400 focus:ring-red-300" : ""}`}
                     placeholder={app.name}
                   />
+                  {nameEditError && <p className="mt-1 text-xs text-red-600">{nameEditError}</p>}
                 </label>
 
                 <div>
@@ -359,13 +405,38 @@ export default function AppDetailModal({ app, onClose }: Props) {
                   )}
                 </div>
 
+                {app.plan === "paid" && (
+                  <label className="block">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Monthly cost</span>
+                    <div className="relative mt-1">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="field text-sm pl-7"
+                        placeholder="e.g. 20.00"
+                        value={costDraft}
+                        onChange={(e) => setCostDraft(e.target.value)}
+                      />
+                    </div>
+                    <p className="mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>What you actually pay per month.</p>
+                  </label>
+                )}
+
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
+                      if (!nameDraft.trim()) {
+                        setNameEditError("Name cannot be empty.");
+                        return;
+                      }
                       updateApp(app.id, {
-                        name: nameDraft.trim() || app.name,
+                        name: nameDraft.trim(),
                         iconKey: iconDraft,
+                        monthlyCost: app.plan === "paid" && costDraft !== "" ? parseFloat(costDraft) : null,
                       });
+                      setNameEditError(null);
                       setManageMode(false);
                     }}
                     className="btn-primary flex-1 py-2 text-sm"
@@ -376,6 +447,8 @@ export default function AppDetailModal({ app, onClose }: Props) {
                     onClick={() => {
                       setNameDraft(app.name);
                       setIconDraft(app.iconKey ?? "rocket");
+                      setCostDraft(app.monthlyCost != null ? String(app.monthlyCost) : "");
+                      setNameEditError(null);
                       setManageMode(false);
                     }}
                     className="rounded-lg border border-line bg-paper px-3 py-2 text-sm font-medium text-ink transition hover:bg-cream"
@@ -394,17 +467,22 @@ export default function AppDetailModal({ app, onClose }: Props) {
             icon={Trash2}
             label="Remove App"
             danger
-            onClick={() => {
-              if (confirm(`Remove ${app.name}? This cannot be undone.`)) {
-                removeApp(app.id);
-                onClose();
-              }
-            }}
+            onClick={() => setConfirmRemove(true)}
           />
         </div>
       </div>{/* p-6 */}
       </motion.div>
     </motion.div>
+
+    <ConfirmModal
+      open={confirmRemove}
+      title={`Remove ${app.name}?`}
+      body="This cannot be undone. The app will be removed from your dashboard."
+      confirmLabel="Remove"
+      onConfirm={() => { setConfirmRemove(false); removeApp(app.id); onClose(); }}
+      onCancel={() => setConfirmRemove(false)}
+    />
+    </>
   );
 }
 
@@ -443,10 +521,6 @@ function Divider() {
   return <div className="mx-4 h-px" style={{ background: "var(--line)" }} />;
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}
 
 function categoryLabel(c: string): string {
   const map: Record<string, string> = {

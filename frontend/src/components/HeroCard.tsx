@@ -21,10 +21,10 @@ export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Pr
     >
       <HeroIllustration />
       <div className="relative max-w-[560px]">
-        <h1 className="font-display text-5xl font-semibold leading-tight tracking-tight">
+        <h1 className="font-display font-semibold tracking-tight" style={{ color: "#1a2e1a", fontSize: "3rem", lineHeight: 1.25, minHeight: "7.5rem" }}>
           {greeting()}, {firstName}
         </h1>
-        <p className="mt-3 text-base" style={{ color: "var(--text-muted)" }}>
+        <p className="mt-3 text-base" style={{ color: "#3a5a3a" }}>
           Your ecosystem is optimized.
         </p>
 
@@ -39,7 +39,8 @@ export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Pr
               value={query}
               onChange={(e) => onQuery(e.target.value)}
               placeholder="Search your tools…"
-              className="w-full rounded-full border border-line bg-paper py-3 pl-10 pr-4 text-sm outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25"
+              className="w-full rounded-full border border-line py-3 pl-10 pr-4 text-sm outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25"
+              style={{ background: "var(--surface)", color: "var(--text)" }}
             />
           </div>
         </div>
@@ -59,7 +60,7 @@ function Stat({ label, value }: { label: string; value: number }) {
       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
         {label}
       </div>
-      <div className="mt-0.5 font-display text-2xl font-semibold">{value}</div>
+      <div className="mt-0.5 text-2xl font-semibold">{value}</div>
     </div>
   );
 }

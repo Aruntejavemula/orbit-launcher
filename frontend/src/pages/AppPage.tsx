@@ -12,6 +12,7 @@ import { useApps } from "../context/AppsContext";
 import BrandIcon from "../components/BrandIcon";
 import Badge from "../components/Badge";
 import { relativeTime } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 
 interface Props {
   appId: string;
@@ -214,7 +215,7 @@ function SpaceStat({
       <div className="mt-2 text-xs uppercase tracking-wide text-white/40">
         {label}
       </div>
-      <div className="mt-0.5 font-display text-xl font-semibold text-white">
+      <div className="mt-0.5 text-xl font-semibold text-white">
         {value}
       </div>
     </div>
@@ -249,10 +250,6 @@ function InfoRow({
   );
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}
 
 function fmtMins(m: number): string {
   if (m < 60) return `${m}m`;

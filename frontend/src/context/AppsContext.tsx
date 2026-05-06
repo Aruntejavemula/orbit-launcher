@@ -4,6 +4,7 @@ import type { AppItem } from "../types";
 import { smartLaunch } from "../utils/launch";
 import api from "../api";
 import { useAuth } from "./AuthContext";
+import { toast } from "../components/Toast";
 
 export interface OpenEvent {
   appId: string;
@@ -29,6 +30,7 @@ function toAppItem(raw: any): AppItem {
     pendingUnsubscribeAt: raw.pending_unsubscribe_at
       ? new Date(raw.pending_unsubscribe_at).getTime()
       : null,
+    monthlyCost: raw.monthly_cost != null ? Number(raw.monthly_cost) : null,
   };
 }
 
@@ -38,7 +40,7 @@ function toOpenEvent(raw: any): OpenEvent {
 }
 
 export function useApps() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
 
   const { data: apps = [], isLoading: appsLoading } = useQuery({
@@ -53,7 +55,8 @@ export function useApps() {
     enabled: !!user,
   });
 
-  const loading = appsLoading || historyLoading;
+  // loading = true while auth resolving OR while queries are fetching
+  const loading = authLoading || appsLoading || historyLoading;
 
   const addMutation = useMutation({
     mutationFn: (data: Omit<AppItem, "id" | "createdAt" | "lastOpened">) =>
@@ -64,6 +67,7 @@ export function useApps() {
         manage_url: data.manageUrl ?? null,
         icon_key: data.iconKey ?? null,
         frequency: data.frequency ?? null,
+        monthly_cost: data.monthlyCost ?? null,
       }).then((r) => toAppItem(r.data)),
     onSuccess: (newApp) => {
       qc.setQueryData<AppItem[]>(["apps"], (prev = []) => [newApp, ...prev]);
@@ -92,6 +96,7 @@ export function useApps() {
       if (patch.frequency !== undefined) body.frequency = patch.frequency;
       if (patch.pendingUnsubscribeAt !== undefined)
         body.pending_unsubscribe_at = patch.pendingUnsubscribeAt ? new Date(patch.pendingUnsubscribeAt).toISOString() : null;
+      if (patch.monthlyCost !== undefined) body.monthly_cost = patch.monthlyCost ?? null;
       return api.patch(`/apps/${id}`, body).then((r) => toAppItem(r.data));
     },
     onSuccess: (updated) => {
@@ -104,6 +109,10 @@ export function useApps() {
   const reorderMutation = useMutation({
     mutationFn: (ordered: AppItem[]) =>
       api.post("/apps/reorder", ordered.map((a, i) => ({ id: a.id, order: i }))),
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["apps"] });
+      toast("Could not save new order. Please try again.", "error");
+    },
   });
 
   const reorder = useCallback(
@@ -129,12 +138,15 @@ export function useApps() {
       qc.setQueryData<OpenEvent[]>(["launches"], (prev = []) =>
         [{ appId: id, ts }, ...prev].slice(0, 200)
       );
-      api.post(`/apps/${id}/launch`).then((r) => {
+      const postLaunch = () => api.post(`/apps/${id}/launch`).then((r) => {
         const updated = toAppItem(r.data);
         qc.setQueryData<AppItem[]>(["apps"], (prev = []) =>
           prev.map((a) => (a.id === updated.id ? updated : a))
         );
-      }).catch(console.error);
+      });
+      postLaunch().catch(() => {
+        setTimeout(() => postLaunch().catch(console.error), 2000);
+      });
     },
     [qc]
   );

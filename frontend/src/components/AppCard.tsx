@@ -2,6 +2,7 @@ import { GripVertical, AlertTriangle, RefreshCw, Infinity as InfinityIcon } from
 import { motion } from "framer-motion";
 import type { AppItem } from "../types";
 import { relativeTime } from "../utils/time";
+import { hexToRgb } from "../utils/color";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
 
@@ -29,14 +30,14 @@ export default function AppCard({
   const rgb = hexToRgb(app.color);
   const cardBg = `rgba(${rgb}, 0.14)`;
   const cardBorder = `rgba(${rgb}, 0.22)`;
-  const tileBg = isDark(app.color) ? "#fff" : "#fff";
+  const tileBg = "#fff";
 
   return (
     <motion.div
       role="button"
       tabIndex={0}
       onClick={() => onOpen(app.id)}
-      onKeyDown={(e) => e.key === "Enter" && onOpen(app.id)}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(app.id))}
       draggable
       onDragStart={(e) => {
         (e as unknown as React.DragEvent).dataTransfer.effectAllowed = "move";
@@ -70,7 +71,7 @@ export default function AppCard({
         <BrandIcon slug={app.slug} color={app.color} size={20} iconKey={app.iconKey} />
       </span>
 
-      <div className="mt-3 truncate font-display text-[15px] font-semibold">
+      <div className="mt-3 truncate text-[15px] font-semibold">
         {app.name}
       </div>
 
@@ -135,22 +136,8 @@ function ExpiryLine({ app }: { app: AppItem }) {
   );
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
-  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
-}
-
-function isDark(hex: string): boolean {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(4, 6), 16);
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  return lum < 128;
-}
 
 function shortRelative(ts: number | null): string {
   if (!ts) return "Never";
-  const t = relativeTime(ts).replace("Opened ", "Opened ");
-  return t;
+  return relativeTime(ts);
 }

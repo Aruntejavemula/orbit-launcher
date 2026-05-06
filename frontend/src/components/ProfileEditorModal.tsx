@@ -4,6 +4,28 @@ import Modal from "./Modal";
 import { useAuth } from "../context/AuthContext";
 import api from "../api";
 
+function compressImage(file: File, maxPx = 256, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round((height * maxPx) / width); width = maxPx; }
+        else { width = Math.round((width * maxPx) / height); height = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Failed to load image")); };
+    img.src = objectUrl;
+  });
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -22,33 +44,39 @@ export default function ProfileEditorModal({ open, onClose }: Props) {
   const [name, setName] = useState(user?.name ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (open) {
       setName(user?.name ?? "");
       setAvatarUrl(user?.avatar_url ?? "");
+      setError(null);
     }
   }, [open, user]);
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setAvatarUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
+  const handleFile = async (file: File) => {
+    setError(null);
+    try {
+      const compressed = await compressImage(file);
+      setAvatarUrl(compressed);
+    } catch {
+      setError("Failed to load image. Try a different file.");
+    }
   };
 
   const handleSave = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    setError(null);
     setSaving(true);
     try {
       await api.patch("/auth/me", { name: trimmed, avatar_url: avatarUrl || null });
       await refreshUser();
       onClose();
-    } catch {
-      // error silently — modal stays open
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg ?? "Save failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -66,10 +94,11 @@ export default function ProfileEditorModal({ open, onClose }: Props) {
               src={avatarUrl}
               alt=""
               className="h-24 w-24 rounded-full object-cover ring-4 ring-line"
+              onError={() => setAvatarUrl("")}
             />
           ) : (
             <div
-              className="h-24 w-24 rounded-full ring-4 flex items-center justify-center font-display text-3xl font-semibold"
+              className="h-24 w-24 rounded-full ring-4 flex items-center justify-center text-3xl font-semibold"
               style={{
                 background: "var(--hero)",
                 color: "var(--text)",
@@ -95,7 +124,7 @@ export default function ProfileEditorModal({ open, onClose }: Props) {
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) handleFile(f);
+              if (f) void handleFile(f);
               e.target.value = "";
             }}
           />
@@ -135,7 +164,10 @@ export default function ProfileEditorModal({ open, onClose }: Props) {
       </div>
 
       {/* Actions */}
-      <div className="mt-6 flex items-center justify-end gap-2">
+      {error && (
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+      )}
+      <div className="mt-4 flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onClose}

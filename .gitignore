@@ -10,6 +10,8 @@ dist-ssr
 __pycache__
 *.pyc
 .env
+.env.*
+!.env.example
 backend/alembic/versions/*.py
 !backend/alembic/versions/.gitkeep
 backend/backups/
