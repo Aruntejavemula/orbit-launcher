@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from database import get_db
 from models import User, Preferences
 from models.otp import PasswordResetOtp
-from schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserResponse, UserUpdate
+from schemas.auth import RegisterRequest, LoginRequest, UserResponse, UserUpdate
 from auth.password import hash_password, verify_password
 from auth.password_policy import validate_password
 from auth.jwt import COOKIE_NAME, EXPIRE_MINUTES, create_access_token, get_current_user_id
@@ -15,11 +15,19 @@ from auth.google import get_google_auth_url, exchange_code_for_user
 from auth.email_otp import generate_otp, send_otp_email
 from job_queue import enqueue_send_otp
 from limiter import limiter
+from utils import get_or_404
 from dotenv import load_dotenv
 import os
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Return dt as UTC-aware; safe whether DB gives naive or aware."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 load_dotenv()
 
@@ -38,14 +46,18 @@ async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
     await db.commit()
 
 
-def _set_auth_cookie(response: Response, token: str) -> None:
+_REMEMBER_EXPIRE_MINUTES = 90 * 24 * 60  # 90 days
+
+
+def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> None:
+    max_age = _REMEMBER_EXPIRE_MINUTES * 60 if remember else EXPIRE_MINUTES * 60
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
         secure=_IS_PROD,
         samesite="lax",
-        max_age=EXPIRE_MINUTES * 60,
+        max_age=max_age,
         path="/",
     )
 
@@ -78,9 +90,10 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    token = create_access_token(str(user.id))
+    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else None
+    token = create_access_token(str(user.id), expire_minutes=expire)
     response = JSONResponse(content={"ok": True})
-    _set_auth_cookie(response, token)
+    _set_auth_cookie(response, token, remember=body.remember_me)
     return response
 
 
@@ -131,20 +144,13 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found. Please sign in again.")
-    return user
+    return await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
 
 
 @router.patch("/me", response_model=UserResponse)
 @limiter.limit("20/minute")
 async def update_me(request: Request, body: UserUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found. Please sign in again.")
+    user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
     await db.commit()
@@ -167,10 +173,7 @@ async def change_password(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found. Please sign in again.")
+    user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
     if not user.password_hash or not verify_password(body.current_password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect.")
     err = validate_password(body.new_password, user.email)
@@ -258,14 +261,14 @@ async def verify_otp(request: Request, body: VerifyOtpRequest, db: AsyncSession 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid code.")
 
     if record.locked_until:
-        locked_until_aware = record.locked_until.replace(tzinfo=timezone.utc)
+        locked_until_aware = _as_utc(record.locked_until)
         if locked_until_aware > now:
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts. Try again in 15 minutes.")
         else:
             record.locked_until = None
             record.attempt_count = 0
 
-    if record.expires_at.replace(tzinfo=timezone.utc) <= now:
+    if _as_utc(record.expires_at) <= now:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code has expired.")
 
     if record.otp != body.otp:

@@ -6,3 +6,5 @@ from .reminder import Reminder, ReminderMethodEnum
 from .preferences import Preferences, ThemeEnum
 from .api_key import ApiKey
 from .otp import PasswordResetOtp
+from .push_subscription import PushSubscription
+from .reminder_log import ReminderLog

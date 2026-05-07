@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { ToastContainer } from "./components/Toast";
+import SplashScreen from "./components/SplashScreen";
+import OnboardingOverlay from "./components/OnboardingOverlay";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
 import FloatingAddButton from "./components/FloatingAddButton";
@@ -30,8 +32,10 @@ export default function App() {
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
+  const [splashDone, setSplashDone] = useState(false);
   const prevUserId = useRef<string | null>(null);
   const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
+  const handleSplashComplete = useCallback(() => setSplashDone(true), []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
@@ -57,6 +61,11 @@ export default function App() {
     () => apps.find((a) => a.id === openAppId) ?? null,
     [apps, openAppId]
   );
+
+  // Splash screen on first load
+  if (!splashDone) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
   // Unknown path + confirmed logged in → 404
   if (isUnknownPath && !authLoading && user) {
@@ -148,6 +157,11 @@ export default function App() {
         )}
       </AnimatePresence>
       <ToastContainer />
+      <AnimatePresence>
+        {!prefs.onboardingCompleted && (
+          <OnboardingOverlay onComplete={() => update({ onboardingCompleted: true })} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

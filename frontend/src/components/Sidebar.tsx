@@ -9,7 +9,6 @@ import {
   Timer,
   Key,
   Crown,
-  Orbit as OrbitIcon,
   Pencil,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -74,12 +73,11 @@ export default function Sidebar({ page, onNavigate }: Props) {
         onClick={() => onNavigate("home")}
         className="mb-6 flex items-center gap-2.5 px-2"
       >
-        <span
-          className="grid h-9 w-9 place-items-center rounded-xl text-paper"
-          style={dark ? { background: "#1e3a1e" } : { background: "var(--sage-dark, #4F6B54)" }}
-        >
-          <OrbitIcon size={18} strokeWidth={2.5} />
-        </span>
+        <img
+          src="/app-hero-icon.jpeg"
+          alt="Remio"
+          className="h-9 w-9 rounded-xl object-cover"
+        />
         <span
           className="text-lg font-semibold tracking-tight"
           style={{ color: dark ? "#ffffff" : "var(--text)" }}

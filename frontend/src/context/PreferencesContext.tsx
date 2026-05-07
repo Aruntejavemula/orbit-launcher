@@ -12,6 +12,7 @@ const DEFAULTS: Preferences = {
   reminderDays: 7,
   reminderEmail: true,
   reminderPush: false,
+  onboardingCompleted: false,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +26,7 @@ function toPrefs(raw: any): Preferences {
     reminderDays: raw.reminder_days ?? 7,
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
+    onboardingCompleted: raw.onboarding_completed ?? false,
   };
 }
 
@@ -79,6 +81,7 @@ export function usePrefs() {
       if (patch.reminderDays !== undefined) body.reminder_days = patch.reminderDays;
       if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
       if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
+      if (patch.onboardingCompleted !== undefined) body.onboarding_completed = patch.onboardingCompleted;
       return api.patch("/preferences", body).then((r) => toPrefs(r.data));
     },
     onMutate: (patch) => {

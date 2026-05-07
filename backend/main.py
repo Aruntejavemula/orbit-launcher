@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from limiter import limiter
+from limiter import limiter, user_limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, DatabaseError, IntegrityError, TimeoutError as SATimeoutError
@@ -18,6 +19,10 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
+_APP_ENV = os.getenv("APP_ENV", "dev")
+_env_file = os.path.join(os.path.dirname(__file__), f".env.{_APP_ENV}")
+if os.path.isfile(_env_file):
+    load_dotenv(_env_file, override=True)
 load_dotenv()
 
 _SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -29,7 +34,7 @@ if _SENTRY_DSN:
         send_default_pii=False,
     )
 
-from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions
+from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -77,18 +82,117 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Orbit Launcher API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
+app.state.user_limiter = user_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_500_BODY = b'{"detail":"Internal server error"}'
+_500_HEADERS = [
+    (b"content-type", b"application/json"),
+    (b"content-length", str(len(_500_BODY)).encode()),
+]
+
+
+class CatchAllMiddleware:
+    """Pure ASGI catch-all — BaseHTTPMiddleware wraps exceptions in ExceptionGroup
+    on Python 3.11+, breaking @app.exception_handler(Exception). This sits outside
+    all BaseHTTPMiddleware layers and guarantees a safe 500 for anything that escapes."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        try:
+            await self.app(scope, receive, send)
+        except Exception as exc:
+            import sentry_sdk as _sentry
+            _logger = logging.getLogger("orbit")
+            _logger.exception("Unhandled error escaped middleware: %s %s",
+                              scope.get("method", "?"), scope.get("path", "?"))
+            _sentry.capture_exception(exc)
+            try:
+                await send({"type": "http.response.start", "status": 500, "headers": _500_HEADERS})
+                await send({"type": "http.response.body", "body": _500_BODY, "more_body": False})
+            except Exception:
+                pass
+
+
+_LIMIT_DEFAULT = 1 * 1024 * 1024   # 1 MB
+_LIMIT_UPLOAD  = 2 * 1024 * 1024   # 2 MB
+_UPLOAD_PATHS  = {"/api/uploads"}   # extend if file-upload routes are added
+
+_413_BODY = b'{"detail":"Request too large"}'
+_413_HEADERS = [
+    (b"content-type", b"application/json"),
+    (b"content-length", str(len(_413_BODY)).encode()),
+]
+
+
+class BodySizeLimitMiddleware:
+    """Pure ASGI middleware — checks Content-Length header first, then streams."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        limit = _LIMIT_UPLOAD if path in _UPLOAD_PATHS else _LIMIT_DEFAULT
+
+        # Fast path: trust Content-Length if present
+        headers = dict(scope.get("headers", []))
+        cl = headers.get(b"content-length")
+        if cl is not None:
+            try:
+                if int(cl) > limit:
+                    await self._reject(send)
+                    return
+            except ValueError:
+                pass
+
+        # Streaming path: count bytes as they arrive
+        consumed = 0
+        overflow = False
+
+        async def checked_receive():
+            nonlocal consumed, overflow
+            message = await receive()
+            if message["type"] == "http.request":
+                consumed += len(message.get("body", b""))
+                if consumed > limit:
+                    overflow = True
+            return message
+
+        async def checked_send(message):
+            if overflow and message["type"] == "http.response.start":
+                return
+            await send(message)
+
+        await self.app(scope, checked_receive, checked_send)
+
+        if overflow:
+            await self._reject(send)
+
+    @staticmethod
+    async def _reject(send):
+        await send({"type": "http.response.start", "status": 413, "headers": _413_HEADERS})
+        await send({"type": "http.response.body", "body": _413_BODY, "more_body": False})
+
 
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -105,6 +209,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         for header, value in _SECURITY_HEADERS.items():
             response.headers[header] = value
         return response
+
+
+class UserIdMiddleware(BaseHTTPMiddleware):
+    """Populate request.state.user_id from JWT so user_limiter can key by it."""
+    async def dispatch(self, request: Request, call_next):
+        from auth.jwt import COOKIE_NAME, decode_token
+        from jose import JWTError
+        try:
+            token = request.cookies.get(COOKIE_NAME)
+            if not token:
+                auth_header = request.headers.get("Authorization", "")
+                if auth_header.startswith("Bearer "):
+                    token = auth_header[7:].strip()
+            if token:
+                request.state.user_id = decode_token(token)
+        except Exception:
+            pass
+        return await call_next(request)
 
 
 access_logger = logging.getLogger("orbit.access")
@@ -126,8 +248,20 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
         return response
 
 
-app.add_middleware(SecurityHeadersMiddleware)
+# add_middleware is LIFO — last registered = outermost at runtime.
+# Runtime execution order (outermost → innermost):
+#   SecurityHeadersMiddleware → CORSMiddleware → AccessLogMiddleware
+#   → BodySizeLimitMiddleware → CatchAllMiddleware → UserIdMiddleware → router
+#
+# SecurityHeaders and CORS must be outer to BodySizeLimit and CatchAll so
+# their short-circuit 413/500 responses still pass through both layers and
+# the browser receives correct CORS + security headers on every response type.
+app.add_middleware(UserIdMiddleware)
+app.add_middleware(CatchAllMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(AccessLogMiddleware)
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.exception_handler(OperationalError)
@@ -150,16 +284,22 @@ async def db_integrity_error(request: Request, exc: IntegrityError):
 
 @app.exception_handler(DatabaseError)
 async def db_error(request: Request, exc: DatabaseError):
-    logger.error("DB error on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "Something went wrong on our end. Please try again in a moment."})
+    logger.exception("DB error on %s %s", request.method, request.url.path)
+    sentry_sdk.capture_exception(exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception(request: Request, exc: Exception):
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    if _SENTRY_DSN:
-        sentry_sdk.capture_exception(exc)
-    return JSONResponse(status_code=500, content={"detail": "Something went wrong on our end. Please try again in a moment."})
+    sentry_sdk.capture_exception(exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 _REQUIRED_ENV = ["JWT_SECRET", "DATABASE_URL", "RESEND_API_KEY"]
@@ -177,6 +317,7 @@ app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"]
 app.include_router(preferences.router, prefix="/api/preferences", tags=["preferences"])
 app.include_router(api_keys.router, prefix="/api/api-keys", tags=["api-keys"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
+app.include_router(push.router, prefix="/api/push", tags=["push"])
 
 
 @app.get("/api/health")

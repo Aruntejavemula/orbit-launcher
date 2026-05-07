@@ -5,6 +5,8 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+.vs/
+.claude/
 .idea
 *.log
 __pycache__

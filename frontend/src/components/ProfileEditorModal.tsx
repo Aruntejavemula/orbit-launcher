@@ -75,8 +75,9 @@ export default function ProfileEditorModal({ open, onClose }: Props) {
       await refreshUser();
       onClose();
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Save failed. Please try again.");
+      const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof detail === "string" ? detail : "Save failed. Please try again.";
+      setError(msg);
     } finally {
       setSaving(false);
     }

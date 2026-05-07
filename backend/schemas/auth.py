@@ -12,6 +12,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)
+    remember_me: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -22,7 +23,7 @@ class TokenResponse(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
-    avatar_url: Optional[str] = Field(default=None, max_length=2048)
+    avatar_url: Optional[str] = Field(default=None, max_length=100_000)
 
     @field_validator("avatar_url")
     @classmethod

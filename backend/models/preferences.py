@@ -23,5 +23,6 @@ class Preferences(Base):
     reminder_days = Column(Integer, nullable=False, default=7)
     reminder_email = Column(Boolean, nullable=False, default=True)
     reminder_push = Column(Boolean, nullable=False, default=False)
+    onboarding_completed = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

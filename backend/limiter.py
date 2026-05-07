@@ -14,4 +14,3 @@ def _get_user_id(request: Request) -> str:
 
 limiter = Limiter(key_func=get_remote_address)
 user_limiter = Limiter(key_func=_get_user_id)
-ai_user_limiter = Limiter(key_func=_get_user_id)

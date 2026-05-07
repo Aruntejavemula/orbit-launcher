@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from typing import List
@@ -8,6 +8,7 @@ from database import get_db
 from models import LaunchEvent
 from models.launch_event import RETENTION_DAYS
 from auth.jwt import get_current_user_id
+from limiter import user_limiter
 import uuid
 
 router = APIRouter()
@@ -22,7 +23,8 @@ class LaunchEventResponse(BaseModel):
 
 
 @router.get("", response_model=List[LaunchEventResponse])
-async def get_launches(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def get_launches(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(LaunchEvent)
         .where(LaunchEvent.user_id == user_id)
@@ -33,7 +35,8 @@ async def get_launches(user_id: str = Depends(get_current_user_id), db: AsyncSes
 
 
 @router.delete("/purge-old", status_code=200)
-async def purge_old_launches(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("10/minute")
+async def purge_old_launches(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)
     result = await db.execute(
         delete(LaunchEvent)

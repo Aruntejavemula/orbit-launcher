@@ -56,6 +56,7 @@ export interface Preferences {
   reminderDays: number;
   reminderEmail: boolean;
   reminderPush: boolean;
+  onboardingCompleted: boolean;
 }
 
 export type ReminderMethod = "email" | "push";

@@ -20,6 +20,7 @@ import { hexToRgb } from "../utils/color";
 import BrandIcon from "../components/BrandIcon";
 import ConfirmModal from "../components/ConfirmModal";
 import type { AppItem, ReminderMethod } from "../types";
+import { subscribeToPush, unsubscribeFromPush } from "../utils/pushSubscription";
 
 const REMINDER_PRESETS = [1, 3, 7, 14, 30];
 const DAYS_OPTIONS = [1, 3, 7, 14, 30];
@@ -36,7 +37,7 @@ async function requestPushPermission(): Promise<boolean> {
 
 function firePushNotification(title: string, body: string) {
   if (Notification.permission !== "granted") return;
-  new Notification(title, { body, icon: "/favicon.ico" });
+  new Notification(title, { body, icon: "/appicon.jpeg" });
 }
 
 export default function CalendarPage() {
@@ -113,11 +114,13 @@ export default function CalendarPage() {
 
   const handlePushToggle = async () => {
     if (!prefs.reminderPush) {
-      const granted = await requestPushPermission();
-      if (!granted) {
+      const success = await subscribeToPush();
+      if (!success) {
         alert("Push notifications were blocked. Please allow them in your browser settings.");
         return;
       }
+    } else {
+      await unsubscribeFromPush();
     }
     update({ reminderPush: !prefs.reminderPush });
   };

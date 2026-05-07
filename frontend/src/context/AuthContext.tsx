@@ -26,9 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<User>("/auth/me")
-      .then((r) => setUser(r.data))
-      .catch(() => { /* no session cookie — stay signed out */ })
+    api.get<User>("/auth/me", { validateStatus: (s) => s < 500 })
+      .then((r) => { if (r.status === 200) setUser(r.data); })
       .finally(() => setLoading(false));
   }, []);
 

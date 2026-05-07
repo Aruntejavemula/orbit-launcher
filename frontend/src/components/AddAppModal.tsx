@@ -5,19 +5,12 @@ import {
   PenLine,
   ArrowLeft,
   Check,
-  ChevronDown,
-  ChevronUp,
-  Rocket,
-  Star,
-  Sun,
-  Zap,
-  Heart,
 } from "lucide-react";
 import Modal from "./Modal";
 import BrandIcon from "./BrandIcon";
+import IconPicker from "./IconPicker";
 import { useApps } from "../context/AppsContext";
 import { appCatalog, type CatalogApp } from "../data/appCatalog";
-import { iconLibrary } from "../data/iconLibrary";
 import { hexToRgb } from "../utils/color";
 import type { CategoryId, BillingFrequency } from "../types";
 
@@ -66,13 +59,6 @@ const FREQUENCIES: { id: BillingFrequency; label: string; months: number }[] = [
   { id: "yearly", label: "Yearly (12 mo)", months: 12 },
 ];
 
-const TOP_ICONS = [
-  { key: "rocket", Icon: Rocket },
-  { key: "star", Icon: Star },
-  { key: "sun", Icon: Sun },
-  { key: "zap", Icon: Zap },
-  { key: "heart", Icon: Heart },
-];
 
 export default function AddAppModal({ open, onClose }: Props) {
   const { addApp, apps } = useApps();
@@ -295,7 +281,6 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
   const [category, setCategory] = useState<Exclude<CategoryId, "all">>("productivity");
   const [color, setColor] = useState("6B8F71");
   const [iconKey, setIconKey] = useState<string>("rocket");
-  const [showAllIcons, setShowAllIcons] = useState(false);
   const [plan, setPlan] = useState<PlanType>("paid");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [frequency, setFrequency] = useState<BillingFrequency>("monthly");
@@ -413,65 +398,7 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
       </Field>
 
       <Field label="Icon">
-        <div className="flex items-center gap-1.5">
-          {TOP_ICONS.map(({ key, Icon }) => {
-            const selected = iconKey === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setIconKey(key)}
-                className={`grid h-8 w-8 place-items-center rounded-md transition ${
-                  selected ? "ring-2 ring-sage" : ""
-                }`}
-                style={
-                  selected
-                    ? { background: `rgba(${hexToRgb(color)}, 0.18)`, color: `#${color}` }
-                    : { color: "var(--text-muted)", border: "1px solid var(--line)", background: "var(--bg-deep)" }
-                }
-              >
-                <Icon size={15} strokeWidth={2.1} />
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setShowAllIcons((s) => !s)}
-            className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold transition"
-            style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--text)" }}
-          >
-            {showAllIcons ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            All
-          </button>
-        </div>
-        {showAllIcons && (
-          <div className="mt-1.5 max-h-[160px] overflow-y-auto rounded-lg border p-1.5" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
-            <div className="grid grid-cols-10 gap-1">
-              {iconLibrary.map((ic) => {
-                const Icon = ic.icon;
-                const selected = iconKey === ic.key;
-                return (
-                  <button
-                    type="button"
-                    key={ic.key}
-                    onClick={() => setIconKey(ic.key)}
-                    title={ic.label}
-                    className={`grid aspect-square place-items-center rounded-md transition ${
-                      selected ? "ring-2 ring-sage" : "hover:bg-cream"
-                    }`}
-                    style={
-                      selected
-                        ? { background: `rgba(${hexToRgb(color)}, 0.18)`, color: `#${color}` }
-                        : { color: "var(--text-muted)" }
-                    }
-                  >
-                    <Icon size={14} strokeWidth={2.1} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <IconPicker value={iconKey} onChange={setIconKey} color={color} />
       </Field>
 
       <Field label="Colour">

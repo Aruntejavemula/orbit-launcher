@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Orbit as OrbitIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import api from "../api";
@@ -13,9 +12,15 @@ const ERROR_MAP: Record<string, string> = {
   "Email already registered": "An account with that email already exists. Sign in instead.",
 };
 
+// Errors that must not leak internal detail to the user
+const OPAQUE_ERRORS = new Set(["Invalid credentials"]);
+
 function friendlyError(raw: string | undefined): string {
   if (!raw) return "Something went wrong. Please try again.";
-  return ERROR_MAP[raw] ?? "Something went wrong. Please try again.";
+  if (ERROR_MAP[raw]) return ERROR_MAP[raw];
+  if (OPAQUE_ERRORS.has(raw)) return "Something went wrong. Please try again.";
+  // Pass through backend validation messages (password policy, etc.)
+  return raw;
 }
 
 export default function LoginPage() {
@@ -26,6 +31,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showRememberPrompt, setShowRememberPrompt] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
@@ -64,12 +70,21 @@ export default function LoginPage() {
       setError("Password is required.");
       return;
     }
+    if (mode === "login") {
+      setShowRememberPrompt(true);
+      return;
+    }
+    await doLogin(false);
+  };
+
+  const doLogin = async (remember: boolean) => {
+    setShowRememberPrompt(false);
     setLoading(true);
     try {
       if (mode === "register") {
         await api.post("/auth/register", { name, email, password });
       } else {
-        await api.post("/auth/login", { email, password });
+        await api.post("/auth/login", { email, password, remember_me: remember });
       }
       await signIn();
     } catch (err: unknown) {
@@ -90,9 +105,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-white/85 p-8 shadow-pop backdrop-blur-md fade-in">
         <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-sage text-paper">
-            <OrbitIcon size={22} strokeWidth={2.5} />
-          </span>
+          <img src="/app-hero-icon.jpeg" alt="Remio" className="h-11 w-11 rounded-2xl object-cover" />
           <div>
             <div className="text-2xl font-semibold text-ink">Remio</div>
             <div className="text-xs text-ink-muted">Your subscriptions, organized.</div>
@@ -196,6 +209,34 @@ export default function LoginPage() {
       </div>
 
       <ForgotPasswordModal open={showForgot} onClose={() => setShowForgot(false)} />
+
+      {/* Remember device popup */}
+      {showRememberPrompt && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-sm fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 shadow-pop">
+            <h3 className="text-lg font-semibold text-ink">Remember this device?</h3>
+            <p className="mt-2 text-sm text-ink-muted">
+              Stay signed in so you don't have to log in every time you open Remio.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => doLogin(false)}
+                className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink-muted transition hover:bg-cream"
+              >
+                No thanks
+              </button>
+              <button
+                type="button"
+                onClick={() => doLogin(true)}
+                className="btn-primary flex-1 py-2.5 text-sm"
+              >
+                Yes, remember
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

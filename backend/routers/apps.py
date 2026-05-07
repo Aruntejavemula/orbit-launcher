@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from typing import List
@@ -7,7 +7,8 @@ from database import get_db
 from models import AppItem
 from schemas.app import AppCreate, AppUpdate, AppResponse, ReorderItem
 from auth.jwt import get_current_user_id
-from limiter import limiter
+from limiter import limiter, user_limiter
+from utils import get_or_404
 import uuid
 
 router = APIRouter()
@@ -18,21 +19,19 @@ def _active_q(user_id: str):
 
 
 async def _get_app_or_404(app_id: uuid.UUID, user_id: str, db: AsyncSession) -> AppItem:
-    result = await db.execute(_active_q(user_id).where(AppItem.id == app_id))
-    app = result.scalar_one_or_none()
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That app could not be found.")
-    return app
+    return await get_or_404(db, _active_q(user_id).where(AppItem.id == app_id), "That app could not be found.")
 
 
 @router.get("", response_model=List[AppResponse])
-async def list_apps(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def list_apps(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(_active_q(user_id).order_by(AppItem.display_order).limit(200))
     return result.scalars().all()
 
 
 @router.post("", response_model=AppResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("30/minute")
+@user_limiter.limit("30/minute")
 async def create_app(request: Request, body: AppCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     count_result = await db.execute(select(AppItem).where(AppItem.user_id == user_id, AppItem.is_deleted == False))  # noqa: E712
     max_order = len(count_result.scalars().all())
@@ -49,6 +48,7 @@ async def create_app(request: Request, body: AppCreate, user_id: str = Depends(g
 
 @router.patch("/{app_id}", response_model=AppResponse)
 @limiter.limit("30/minute")
+@user_limiter.limit("30/minute")
 async def update_app(request: Request, app_id: uuid.UUID, body: AppUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     app = await _get_app_or_404(app_id, user_id, db)
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -62,6 +62,7 @@ async def update_app(request: Request, app_id: uuid.UUID, body: AppUpdate, user_
 
 @router.delete("/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("30/minute")
+@user_limiter.limit("30/minute")
 async def delete_app(request: Request, app_id: uuid.UUID, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     app = await _get_app_or_404(app_id, user_id, db)
     app.is_deleted = True
@@ -70,7 +71,8 @@ async def delete_app(request: Request, app_id: uuid.UUID, user_id: str = Depends
 
 
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
-async def reorder_apps(items: List[ReorderItem], user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("30/minute")
+async def reorder_apps(request: Request, items: List[ReorderItem], user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     for item in items:
         await db.execute(
             update(AppItem)
@@ -81,7 +83,8 @@ async def reorder_apps(items: List[ReorderItem], user_id: str = Depends(get_curr
 
 
 @router.post("/{app_id}/launch", response_model=AppResponse)
-async def launch_app(app_id: uuid.UUID, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("30/minute")
+async def launch_app(request: Request, app_id: uuid.UUID, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     from models import LaunchEvent
     app = await _get_app_or_404(app_id, user_id, db)
     app.last_opened_at = datetime.now(timezone.utc)
