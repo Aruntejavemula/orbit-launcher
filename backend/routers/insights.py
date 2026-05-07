@@ -3,18 +3,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List
 from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel
+import uuid
+
+from database import get_db
+from models import AppItem, UsageSession, LaunchEvent
+from auth.jwt import get_current_user_id
+from limiter import user_limiter
 
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
-from pydantic import BaseModel
-from database import get_db
-from models import AppItem, UsageSession, LaunchEvent
-from auth.jwt import get_current_user_id
-from limiter import user_limiter
-import uuid
+
 
 router = APIRouter()
 
