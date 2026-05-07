@@ -1,12 +1,19 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List
 from datetime import datetime, timedelta, timezone
+
+
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 from pydantic import BaseModel
 from database import get_db
 from models import AppItem, UsageSession, LaunchEvent
 from auth.jwt import get_current_user_id
+from limiter import user_limiter
 import uuid
 
 router = APIRouter()
@@ -38,7 +45,8 @@ class RenewalEntry(BaseModel):
 
 
 @router.get("/spending", response_model=List[SpendingEntry])
-async def spending(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def spending(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(AppItem.id, AppItem.name, AppItem.slug, AppItem.plan, AppItem.frequency, AppItem.expires_at)
         .where(AppItem.user_id == user_id, AppItem.plan == "paid", AppItem.is_deleted == False)  # noqa: E712
@@ -52,7 +60,8 @@ async def spending(user_id: str = Depends(get_current_user_id), db: AsyncSession
 
 
 @router.get("/usage", response_model=List[UsageStat])
-async def usage_stats(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def usage_stats(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     app_result = await db.execute(
         select(AppItem.id, AppItem.name, AppItem.slug)
         .where(AppItem.user_id == user_id, AppItem.is_deleted == False)  # noqa: E712
@@ -88,7 +97,8 @@ async def usage_stats(user_id: str = Depends(get_current_user_id), db: AsyncSess
 
 
 @router.get("/renewals", response_model=List[RenewalEntry])
-async def renewals(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def renewals(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
     cutoff = now + timedelta(days=30)
     result = await db.execute(
@@ -108,7 +118,7 @@ async def renewals(user_id: str = Depends(get_current_user_id), db: AsyncSession
             app_name=r.name,
             slug=r.slug,
             expires_at=r.expires_at,
-            days_until=max(0, (r.expires_at.replace(tzinfo=timezone.utc) - now).days),
+            days_until=max(0, (_as_utc(r.expires_at) - now).days),
         )
         for r in rows
     ]
