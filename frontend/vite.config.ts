@@ -18,6 +18,18 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ["react", "react-dom"],
+            motion: ["framer-motion"],
+            query: ["@tanstack/react-query"],
+            icons: ["lucide-react"],
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       open: true,
