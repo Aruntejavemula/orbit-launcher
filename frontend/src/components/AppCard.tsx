@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { GripVertical, AlertTriangle, RefreshCw, Infinity as InfinityIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import type { AppItem } from "../types";
@@ -17,7 +18,7 @@ interface Props {
   onDrop: (id: string) => void;
 }
 
-export default function AppCard({
+export default memo(function AppCard({
   app,
   onOpen,
   isDragging,
@@ -94,7 +95,7 @@ export default function AppCard({
       </span>
     </motion.div>
   );
-}
+});
 
 function ExpiryLine({ app }: { app: AppItem }) {
   if (app.plan === "free") {

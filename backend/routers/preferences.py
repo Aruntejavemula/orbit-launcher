@@ -7,7 +7,7 @@ from database import get_db
 from models import Preferences
 from models.preferences import ThemeEnum
 from auth.jwt import get_current_user_id
-from utils import get_or_404
+from utils import get_or_404, apply_partial_update
 
 from limiter import user_limiter
 
@@ -65,8 +65,7 @@ async def init_preferences(request: Request, user_id: str = Depends(get_current_
 @user_limiter.limit("30/minute")
 async def update_preferences(request: Request, body: PreferencesUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     prefs = await get_or_404(db, select(Preferences).where(Preferences.user_id == user_id), "Your preferences could not be found. Please reload the page.")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(prefs, field, value)
+    apply_partial_update(prefs, body.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(prefs)
     return prefs

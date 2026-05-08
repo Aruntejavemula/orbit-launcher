@@ -3,8 +3,15 @@ import type { Reminder, ReminderMethod } from "../types";
 import api from "../api";
 import { useAuth } from "./AuthContext";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toReminder(raw: any): Reminder {
+interface ReminderApiResponse {
+  id: string;
+  app_id: string;
+  remind_days_before: number;
+  method: string;
+  active: boolean;
+}
+
+function toReminder(raw: ReminderApiResponse): Reminder {
   return {
     id: raw.id,
     app_id: raw.app_id,

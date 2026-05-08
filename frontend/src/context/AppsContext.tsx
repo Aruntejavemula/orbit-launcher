@@ -11,8 +11,30 @@ export interface OpenEvent {
   ts: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toAppItem(raw: any): AppItem {
+interface AppApiResponse {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  url: string;
+  category: AppItem["category"];
+  plan: AppItem["plan"];
+  created_at: string;
+  last_opened_at: string | null;
+  expires_at: string | null;
+  manage_url: string | null;
+  icon_key: string | null;
+  frequency: string | null;
+  pending_unsubscribe_at: string | null;
+  monthly_cost: number | null;
+}
+
+interface LaunchApiResponse {
+  app_id: string;
+  launched_at: string;
+}
+
+function toAppItem(raw: AppApiResponse): AppItem {
   return {
     id: raw.id,
     name: raw.name,
@@ -26,7 +48,7 @@ function toAppItem(raw: any): AppItem {
     expiresAt: raw.expires_at ? new Date(raw.expires_at).getTime() : null,
     manageUrl: raw.manage_url ?? undefined,
     iconKey: raw.icon_key ?? undefined,
-    frequency: raw.frequency ?? undefined,
+    frequency: raw.frequency as AppItem["frequency"],
     pendingUnsubscribeAt: raw.pending_unsubscribe_at
       ? new Date(raw.pending_unsubscribe_at).getTime()
       : null,
@@ -34,8 +56,7 @@ function toAppItem(raw: any): AppItem {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toOpenEvent(raw: any): OpenEvent {
+function toOpenEvent(raw: LaunchApiResponse): OpenEvent {
   return { appId: raw.app_id, ts: new Date(raw.launched_at).getTime() };
 }
 

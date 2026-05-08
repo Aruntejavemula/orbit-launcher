@@ -16,14 +16,18 @@ SLOW_QUERY_MS = int(os.getenv("SLOW_QUERY_MS", "200"))
 # Convert postgres:// / postgresql:// → postgresql+asyncpg://
 _ASYNC_URL = _DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1).replace("postgres://", "postgresql+asyncpg://", 1)
 
+_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
+_POOL_OVERFLOW = int(os.getenv("DB_POOL_OVERFLOW", "20"))
+
 engine = create_async_engine(
     _ASYNC_URL,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=_POOL_SIZE,
+    max_overflow=_POOL_OVERFLOW,
     pool_timeout=30,
     pool_recycle=1800,
     pool_pre_ping=True,
     echo=False,
+    connect_args={"server_settings": {"statement_timeout": "30000"}},
 )
 
 AsyncSessionLocal = async_sessionmaker(

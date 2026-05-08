@@ -2,7 +2,6 @@ export default function HeroIllustration() {
   const hour = new Date().getHours();
   const isSunrise = hour >= 5 && hour < 9;
   const isDay = hour >= 9 && hour < 16;
-  const isSunset = hour >= 16 && hour < 20;
   const isNight = hour >= 20 || hour < 5;
 
   const skyColors = isNight

@@ -8,14 +8,14 @@ from models import AppItem
 from schemas.app import AppCreate, AppUpdate, AppResponse, ReorderItem
 from auth.jwt import get_current_user_id
 from limiter import limiter, user_limiter
-from utils import get_or_404
+from utils import get_or_404, apply_partial_update
 import uuid
 
 router = APIRouter()
 
 
 def _active_q(user_id: str):
-    return select(AppItem).where(AppItem.user_id == user_id, AppItem.is_deleted == False)  # noqa: E712
+    return select(AppItem).where(AppItem.user_id == user_id, ~AppItem.is_deleted)
 
 
 async def _get_app_or_404(app_id: uuid.UUID, user_id: str, db: AsyncSession) -> AppItem:
@@ -33,7 +33,7 @@ async def list_apps(request: Request, user_id: str = Depends(get_current_user_id
 @limiter.limit("30/minute")
 @user_limiter.limit("30/minute")
 async def create_app(request: Request, body: AppCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    count_result = await db.execute(select(AppItem).where(AppItem.user_id == user_id, AppItem.is_deleted == False))  # noqa: E712
+    count_result = await db.execute(select(AppItem).where(AppItem.user_id == user_id, ~AppItem.is_deleted))
     max_order = len(count_result.scalars().all())
     data = body.model_dump()
     data["url"] = str(data["url"])
@@ -51,10 +51,11 @@ async def create_app(request: Request, body: AppCreate, user_id: str = Depends(g
 @user_limiter.limit("30/minute")
 async def update_app(request: Request, app_id: uuid.UUID, body: AppUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     app = await _get_app_or_404(app_id, user_id, db)
-    for field, value in body.model_dump(exclude_unset=True).items():
-        if field in ("url", "manage_url") and value is not None:
-            value = str(value)
-        setattr(app, field, value)
+    data = body.model_dump(exclude_unset=True)
+    for field in ("url", "manage_url"):
+        if field in data and data[field] is not None:
+            data[field] = str(data[field])
+    apply_partial_update(app, data)
     await db.commit()
     await db.refresh(app)
     return app

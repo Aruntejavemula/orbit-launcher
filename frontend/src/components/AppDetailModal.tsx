@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ExternalLink,
@@ -9,7 +9,6 @@ import {
   Trash2,
   Calendar,
   Repeat,
-  Pencil,
   Check,
   ChevronDown,
   ChevronUp,

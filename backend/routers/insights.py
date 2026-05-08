@@ -10,12 +10,7 @@ from database import get_db
 from models import AppItem, UsageSession, LaunchEvent
 from auth.jwt import get_current_user_id
 from limiter import user_limiter
-
-
-def _as_utc(dt: datetime) -> datetime:
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+from utils import as_utc
 
 
 router = APIRouter()
@@ -51,7 +46,7 @@ class RenewalEntry(BaseModel):
 async def spending(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(AppItem.id, AppItem.name, AppItem.slug, AppItem.plan, AppItem.frequency, AppItem.expires_at)
-        .where(AppItem.user_id == user_id, AppItem.plan == "paid", AppItem.is_deleted == False)  # noqa: E712
+        .where(AppItem.user_id == user_id, AppItem.plan == "paid", ~AppItem.is_deleted)
         .limit(200)
     )
     rows = result.all()
@@ -64,38 +59,42 @@ async def spending(request: Request, user_id: str = Depends(get_current_user_id)
 @router.get("/usage", response_model=List[UsageStat])
 @user_limiter.limit("60/minute")
 async def usage_stats(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    app_result = await db.execute(
-        select(AppItem.id, AppItem.name, AppItem.slug)
-        .where(AppItem.user_id == user_id, AppItem.is_deleted == False)  # noqa: E712
-    )
-    app_rows = app_result.all()
-    app_map = {str(r.id): r for r in app_rows}
-
-    usage_result = await db.execute(
-        select(UsageSession.app_id, func.sum(UsageSession.duration_minutes).label("total"))
+    usage_sub = (
+        select(UsageSession.app_id, func.coalesce(func.sum(UsageSession.duration_minutes), 0).label("total"))
         .where(UsageSession.user_id == user_id)
         .group_by(UsageSession.app_id)
+        .subquery()
     )
-    launch_result = await db.execute(
+    launch_sub = (
         select(LaunchEvent.app_id, func.count(LaunchEvent.id).label("cnt"))
         .where(LaunchEvent.user_id == user_id)
         .group_by(LaunchEvent.app_id)
+        .subquery()
     )
-
-    usage_by_app = {str(r.app_id): int(r.total) for r in usage_result.all()}
-    launches_by_app = {str(r.app_id): int(r.cnt) for r in launch_result.all()}
-
-    result = [
+    stmt = (
+        select(
+            AppItem.id,
+            AppItem.name,
+            AppItem.slug,
+            func.coalesce(usage_sub.c.total, 0).label("total_minutes"),
+            func.coalesce(launch_sub.c.cnt, 0).label("launch_count"),
+        )
+        .outerjoin(usage_sub, AppItem.id == usage_sub.c.app_id)
+        .outerjoin(launch_sub, AppItem.id == launch_sub.c.app_id)
+        .where(AppItem.user_id == user_id, ~AppItem.is_deleted)
+        .order_by(func.coalesce(usage_sub.c.total, 0).desc())
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
         UsageStat(
             app_id=r.id,
             app_name=r.name,
             slug=r.slug,
-            total_minutes=usage_by_app.get(aid, 0),
-            launch_count=launches_by_app.get(aid, 0),
+            total_minutes=int(r.total_minutes),
+            launch_count=int(r.launch_count),
         )
-        for aid, r in app_map.items()
+        for r in rows
     ]
-    return sorted(result, key=lambda x: x.total_minutes, reverse=True)
 
 
 @router.get("/renewals", response_model=List[RenewalEntry])
@@ -120,7 +119,7 @@ async def renewals(request: Request, user_id: str = Depends(get_current_user_id)
             app_name=r.name,
             slug=r.slug,
             expires_at=r.expires_at,
-            days_until=max(0, (_as_utc(r.expires_at) - now).days),
+            days_until=max(0, (as_utc(r.expires_at) - now).days),
         )
         for r in rows
     ]

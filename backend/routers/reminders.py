@@ -9,7 +9,7 @@ from models.app_item import AppItem
 from models.reminder import ReminderMethodEnum
 from auth.jwt import get_current_user_id
 from limiter import limiter, user_limiter
-from utils import get_or_404
+from utils import get_or_404, apply_partial_update
 import uuid
 
 router = APIRouter()
@@ -66,8 +66,7 @@ async def create_reminder(request: Request, body: ReminderCreate, user_id: str =
 @user_limiter.limit("30/minute")
 async def update_reminder(request: Request, reminder_id: uuid.UUID, body: ReminderUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     r = await get_or_404(db, select(Reminder).where(Reminder.id == reminder_id, Reminder.user_id == user_id), "That reminder could not be found.")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(r, field, value)
+    apply_partial_update(r, body.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(r)
     return r

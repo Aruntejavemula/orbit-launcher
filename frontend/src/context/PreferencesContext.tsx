@@ -15,10 +15,30 @@ const DEFAULTS: Preferences = {
   onboardingCompleted: false,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toPrefs(raw: any): Preferences {
+interface PrefsApiResponse {
+  theme: string;
+  start_week_on_monday: boolean;
+  compact_cards: boolean;
+  show_last_opened: boolean;
+  notify_expirations: boolean;
+  reminder_days: number;
+  reminder_email: boolean;
+  reminder_push: boolean;
+  onboarding_completed: boolean;
+}
+
+interface ApiKeyApiResponse {
+  id: string;
+  name: string;
+  prefix: string;
+  secret?: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+function toPrefs(raw: PrefsApiResponse): Preferences {
   return {
-    theme: raw.theme ?? "light",
+    theme: (raw.theme as Preferences["theme"]) ?? "light",
     startWeekOnMonday: raw.start_week_on_monday ?? false,
     compactCards: raw.compact_cards ?? false,
     showLastOpened: raw.show_last_opened ?? true,
@@ -30,8 +50,7 @@ function toPrefs(raw: any): Preferences {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toApiKey(raw: any): ApiKey {
+function toApiKey(raw: ApiKeyApiResponse): ApiKey {
   return {
     id: raw.id,
     name: raw.name,

@@ -91,8 +91,8 @@ _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 _cors_kwargs = dict(
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 _500_BODY = b'{"detail":"Internal server error"}'
@@ -129,8 +129,8 @@ class CatchAllMiddleware:
                 pass
 
 
-_LIMIT_DEFAULT = 1 * 1024 * 1024   # 1 MB
-_LIMIT_UPLOAD  = 2 * 1024 * 1024   # 2 MB
+_LIMIT_DEFAULT = int(os.getenv("BODY_LIMIT_MB", "1")) * 1024 * 1024
+_LIMIT_UPLOAD  = int(os.getenv("BODY_LIMIT_UPLOAD_MB", "2")) * 1024 * 1024
 _UPLOAD_PATHS  = {"/api/uploads"}   # extend if file-upload routes are added
 
 _413_BODY = b'{"detail":"Request too large"}'
@@ -198,7 +198,7 @@ _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "Referrer-Policy": "strict-origin-when-cross-origin",
 }
 
@@ -232,14 +232,26 @@ class UserIdMiddleware(BaseHTTPMiddleware):
 access_logger = logging.getLogger("orbit.access")
 
 
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        import uuid as _uuid
+        request_id = request.headers.get("X-Request-ID") or str(_uuid.uuid4())
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
 class AccessLogMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         import time
         t0 = time.perf_counter()
         response = await call_next(request)
         ms = (time.perf_counter() - t0) * 1000
+        req_id = getattr(request.state, "request_id", "-")
         access_logger.info(
-            '"%s %s" %s %.0fms',
+            '[%s] "%s %s" %s %.0fms',
+            req_id[:8],
             request.method,
             request.url.path,
             response.status_code,
@@ -259,6 +271,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
 app.add_middleware(UserIdMiddleware)
 app.add_middleware(CatchAllMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
+app.add_middleware(RequestIdMiddleware)
 app.add_middleware(AccessLogMiddleware)
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -299,7 +312,11 @@ async def unhandled_exception(request: Request, exc: Exception):
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    messages = []
+    for err in exc.errors():
+        field = ".".join(str(loc) for loc in err.get("loc", []) if loc != "body")
+        messages.append(f"{field}: {err.get('msg', 'invalid')}" if field else err.get("msg", "invalid"))
+    return JSONResponse(status_code=422, content={"detail": messages})
 
 
 _REQUIRED_ENV = ["JWT_SECRET", "DATABASE_URL", "RESEND_API_KEY"]
@@ -344,5 +361,4 @@ async def health(db: AsyncSession = Depends(get_db)):
         "status": "ok" if healthy else "degraded",
         "db": "reachable" if db_reachable else "unreachable",
         "redis": "reachable" if redis_reachable else "unreachable",
-        "pool": await pool_status(),
     })

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useApps } from "../context/AppsContext";
 import BrandIcon from "../components/BrandIcon";
-import { Timer, TrendingUp } from "lucide-react";
+import { Timer, TrendingUp, type LucideIcon } from "lucide-react";
 import { fmtMinutes as fmt } from "../utils/time";
 import { hexToRgb } from "../utils/color";
 
@@ -111,7 +111,7 @@ export default function UsagePage() {
   );
 }
 
-function Stat({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
+function Stat({ label, value, icon: Icon }: { label: string; value: string | number; icon: LucideIcon | null }) {
   return (
     <div className="rounded-2xl p-4 shadow-card" style={{ background: "var(--surface)" }}>
       <div className="flex items-center gap-2 text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>

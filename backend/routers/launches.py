@@ -9,7 +9,6 @@ from models import LaunchEvent
 from models.launch_event import RETENTION_DAYS
 from auth.jwt import get_current_user_id
 from limiter import user_limiter
-import uuid
 
 router = APIRouter()
 

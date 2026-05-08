@@ -50,7 +50,7 @@ class AppCreate(BaseModel):
 class AppUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     slug: Optional[str] = Field(default=None, min_length=1, max_length=80, pattern=r"^[a-z0-9\-]+$")
-    color: Optional[str] = Field(default=None, min_length=6, max_length=6)
+    color: Optional[str] = Field(default=None, min_length=6, max_length=7)
     url: Optional[AnyHttpUrl] = None
     category: Optional[CategoryEnum] = None
     plan: Optional[PlanEnum] = None

@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from typing import List
 from pydantic import BaseModel
+from limiter import limiter
 
 router = APIRouter()
 
@@ -142,5 +143,6 @@ CATALOG: List[CatalogEntry] = [
 
 
 @router.get("", response_model=List[CatalogEntry])
-async def get_catalog():
+@limiter.limit("30/minute")
+async def get_catalog(request: Request):
     return CATALOG

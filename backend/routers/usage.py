@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from models import UsageSession
 from auth.jwt import get_current_user_id
+from limiter import user_limiter
 import uuid
 
 router = APIRouter()
@@ -14,7 +15,7 @@ router = APIRouter()
 
 class UsageCreate(BaseModel):
     app_id: uuid.UUID
-    duration_minutes: int
+    duration_minutes: int = Field(ge=1, le=1440)
 
 
 class UsageResponse(BaseModel):
@@ -27,7 +28,8 @@ class UsageResponse(BaseModel):
 
 
 @router.get("", response_model=List[UsageResponse])
-async def get_usage(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def get_usage(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(UsageSession)
         .where(UsageSession.user_id == user_id)
@@ -38,7 +40,8 @@ async def get_usage(user_id: str = Depends(get_current_user_id), db: AsyncSessio
 
 
 @router.post("", response_model=UsageResponse, status_code=status.HTTP_201_CREATED)
-async def log_usage(body: UsageCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+@user_limiter.limit("60/minute")
+async def log_usage(request: Request, body: UsageCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     session = UsageSession(user_id=user_id, app_id=body.app_id, duration_minutes=body.duration_minutes)
     db.add(session)
     await db.commit()

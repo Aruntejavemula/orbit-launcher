@@ -15,19 +15,12 @@ from auth.google import get_google_auth_url, exchange_code_for_user
 from auth.email_otp import generate_otp, send_otp_email
 from job_queue import enqueue_send_otp
 from limiter import limiter
-from utils import get_or_404
+from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
-
-
-def _as_utc(dt: datetime) -> datetime:
-    """Return dt as UTC-aware; safe whether DB gives naive or aware."""
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
 
 load_dotenv()
 
@@ -43,7 +36,7 @@ _IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
     prefs = Preferences(user_id=user_id)
     db.add(prefs)
-    await db.commit()
+    await db.flush()
 
 
 _REMEMBER_EXPIRE_MINUTES = 90 * 24 * 60  # 90 days
@@ -56,7 +49,7 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
         value=token,
         httponly=True,
         secure=_IS_PROD,
-        samesite="lax",
+        samesite="strict",
         max_age=max_age,
         path="/",
     )
@@ -71,12 +64,16 @@ def _clear_auth_cookie(response: Response) -> None:
 async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Could not create account. Please try again or sign in.")
+    err = validate_password(body.password, body.email)
+    if err:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=err)
     user = User(name=body.name, email=body.email, password_hash=hash_password(body.password))
     db.add(user)
+    await db.flush()
+    await _create_default_prefs(db, user.id)
     await db.commit()
     await db.refresh(user)
-    await _create_default_prefs(db, user.id)
     token = create_access_token(str(user.id))
     response = JSONResponse(content={"ok": True})
     _set_auth_cookie(response, token)
@@ -132,9 +129,10 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
         else:
             user = User(name=name, email=email, google_id=google_id, avatar_url=avatar)
             db.add(user)
+            await db.flush()
+            await _create_default_prefs(db, user.id)
             await db.commit()
             await db.refresh(user)
-            await _create_default_prefs(db, user.id)
 
     token = create_access_token(str(user.id))
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
@@ -151,8 +149,7 @@ async def me(user_id: str = Depends(get_current_user_id), db: AsyncSession = Dep
 @limiter.limit("20/minute")
 async def update_me(request: Request, body: UserUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(user, field, value)
+    apply_partial_update(user, body.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(user)
     return user
@@ -261,14 +258,14 @@ async def verify_otp(request: Request, body: VerifyOtpRequest, db: AsyncSession 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid code.")
 
     if record.locked_until:
-        locked_until_aware = _as_utc(record.locked_until)
+        locked_until_aware = as_utc(record.locked_until)
         if locked_until_aware > now:
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts. Try again in 15 minutes.")
         else:
             record.locked_until = None
             record.attempt_count = 0
 
-    if _as_utc(record.expires_at) <= now:
+    if as_utc(record.expires_at) <= now:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Code has expired.")
 
     if record.otp != body.otp:

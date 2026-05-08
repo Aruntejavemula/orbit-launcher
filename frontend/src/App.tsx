@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { ToastContainer } from "./components/Toast";
@@ -10,17 +10,18 @@ import FloatingAddButton from "./components/FloatingAddButton";
 import AddAppModal from "./components/AddAppModal";
 import AppDetailModal from "./components/AppDetailModal";
 import HomePage from "./pages/HomePage";
-import InsightsPage from "./pages/InsightsPage";
-import UsagePage from "./pages/UsagePage";
-import CalendarPage from "./pages/CalendarPage";
-import SettingsPage from "./pages/SettingsPage";
-import ApiKeysPage from "./pages/ApiKeysPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
+
+const InsightsPage = lazy(() => import("./pages/InsightsPage"));
+const UsagePage = lazy(() => import("./pages/UsagePage"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
 
 const KNOWN_PATHS = new Set(["/", "/auth/callback"]);
 
@@ -143,7 +144,7 @@ export default function App() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              {renderPage()}
+              <Suspense fallback={null}>{renderPage()}</Suspense>
             </motion.div>
           </AnimatePresence>
         </div>
