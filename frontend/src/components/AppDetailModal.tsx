@@ -3,13 +3,9 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ExternalLink,
-  RefreshCw,
-  XCircle,
-  Settings,
   Trash2,
   Calendar,
   Repeat,
-  Check,
   ChevronDown,
   ChevronUp,
   Rocket,
@@ -33,22 +29,6 @@ interface Props {
   onClose: () => void;
 }
 
-const RENEW_LINKS: Record<string, string> = {
-  netflix: "https://www.netflix.com/youraccount",
-  spotify: "https://www.spotify.com/account/subscription/",
-  notion: "https://www.notion.so/my-account",
-  figma: "https://www.figma.com/settings/billing",
-  slack: "https://app.slack.com/billing",
-  github: "https://github.com/settings/billing",
-  openai: "https://platform.openai.com/account/billing",
-  claude: "https://claude.ai/settings/billing",
-  perplexity: "https://www.perplexity.ai/settings/account",
-  cursor: "https://www.cursor.com/settings",
-  linear: "https://linear.app/settings/billing",
-  framer: "https://www.framer.com/account",
-  raycast: "https://www.raycast.com/account",
-  stripe: "https://dashboard.stripe.com/settings/billing",
-};
 
 export default function AppDetailModal({ app, onClose }: Props) {
   const { launch, removeApp, updateApp } = useApps();
@@ -100,8 +80,6 @@ export default function AppDetailModal({ app, onClose }: Props) {
 
   if (!app) return null;
   const rgb = hexToRgb(app.color);
-  const fallbackUrl = `${app.url.replace(/\/$/, "")}/account`;
-  const manageUrl = app.manageUrl ?? RENEW_LINKS[app.slug] ?? fallbackUrl;
 
   const expiryStr = app.expiresAt
     ? new Date(app.expiresAt).toLocaleDateString(undefined, {
@@ -115,40 +93,6 @@ export default function AppDetailModal({ app, onClose }: Props) {
     ? Math.ceil((app.expiresAt - Date.now()) / 86_400_000)
     : null;
   const expired = daysLeft !== null && daysLeft < 0;
-  const showActions = daysLeft !== null && (expired || daysLeft <= 5);
-
-  const renew = () => {
-    const months =
-      app.frequency === "yearly"
-        ? 12
-        : app.frequency === "quarterly"
-        ? 3
-        : 1;
-    const base =
-      app.expiresAt && app.expiresAt > Date.now() ? app.expiresAt : Date.now();
-    const next = new Date(base);
-    next.setMonth(next.getMonth() + months);
-    updateApp(app.id, { expiresAt: next.getTime() });
-    if (manageUrl) window.open(manageUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const startUnsubscribe = () => {
-    window.open(manageUrl, "_blank", "noopener,noreferrer");
-    updateApp(app.id, { pendingUnsubscribeAt: Date.now() });
-  };
-
-  const confirmUnsubscribe = (confirmed: boolean) => {
-    if (confirmed) {
-      updateApp(app.id, {
-        plan: "free",
-        expiresAt: null,
-        frequency: undefined,
-        pendingUnsubscribeAt: null,
-      });
-    } else {
-      updateApp(app.id, { pendingUnsubscribeAt: null });
-    }
-  };
 
   const dark = document.documentElement.classList.contains("dark");
   const backdropHidden = dark ? "rgba(0,0,0,0)" : "rgba(31,36,33,0)";
@@ -261,46 +205,6 @@ export default function AppDetailModal({ app, onClose }: Props) {
                 : `In ${daysLeft} day${daysLeft === 1 ? "" : "s"}`}
             </div>
 
-            {app.pendingUnsubscribeAt && (
-              <div className="mt-3 rounded-xl border border-amberish/30 bg-amberish/10 p-3">
-                <p className="text-xs font-semibold text-amberish">
-                  Did you complete the cancellation on {app.name}?
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => confirmUnsubscribe(true)}
-                    className="flex items-center gap-1 rounded-lg bg-amberish px-3 py-1.5 text-xs font-semibold text-paper transition hover:bg-amberish/80"
-                  >
-                    <Check size={12} /> Yes, unsubscribed
-                  </button>
-                  <button
-                    onClick={() => confirmUnsubscribe(false)}
-                    className="rounded-lg border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-cream"
-                  >
-                    No, keep it
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {showActions && !app.pendingUnsubscribeAt && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  onClick={renew}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-sage px-3 py-2 text-sm font-semibold text-paper transition hover:bg-sage-dark"
-                >
-                  <RefreshCw size={14} />
-                  Renew
-                </button>
-                <button
-                  onClick={startUnsubscribe}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
-                >
-                  <XCircle size={14} />
-                  Unsubscribe
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -459,9 +363,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
             </div>
           )}
 
-          <Divider />
-          <Row icon={Settings} label="Manage subscription" hint={manageUrl} onClick={() => window.open(manageUrl, "_blank", "noopener,noreferrer")} />
-          <Divider />
+
           <Row
             icon={Trash2}
             label="Remove App"
