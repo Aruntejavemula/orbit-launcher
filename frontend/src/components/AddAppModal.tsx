@@ -12,6 +12,7 @@ import IconPicker from "./IconPicker";
 import { useApps } from "../context/AppsContext";
 import { appCatalog, type CatalogApp } from "../data/appCatalog";
 import { hexToRgb } from "../utils/color";
+import { toast } from "./Toast";
 import type { CategoryId, BillingFrequency } from "../types";
 
 interface Props {
@@ -111,6 +112,7 @@ export default function AddAppModal({ open, onClose }: Props) {
       frequency: plan === "free" ? undefined : frequency,
       monthlyCost: plan === "paid" ? monthlyCost : null,
     });
+    toast(`${app.name} added!`, "success");
     close();
   };
 
@@ -339,6 +341,7 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
       frequency: plan === "free" ? undefined : frequency,
       monthlyCost: plan === "paid" && monthlyCost !== "" ? parseFloat(monthlyCost) : null,
     });
+    toast(`${name.trim()} added!`, "success");
     onAdd();
   };
 

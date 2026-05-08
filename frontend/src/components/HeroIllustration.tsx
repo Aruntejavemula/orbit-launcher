@@ -1,4 +1,6 @@
-export default function HeroIllustration() {
+import { memo } from "react";
+
+export default memo(function HeroIllustration() {
   const hour = new Date().getHours();
   const isSunrise = hour >= 5 && hour < 9;
   const isDay = hour >= 9 && hour < 16;
@@ -345,4 +347,4 @@ export default function HeroIllustration() {
       </g>
     </svg>
   );
-}
+});

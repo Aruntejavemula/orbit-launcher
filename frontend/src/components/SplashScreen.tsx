@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -6,38 +6,45 @@ interface Props {
 }
 
 export default function SplashScreen({ onComplete }: Props) {
-  const [fading, setFading] = useState(false);
+  const [phase, setPhase] = useState<"in" | "out">("in");
+  const called = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setFading(true);
-      setTimeout(onComplete, 600);
-    }, 2000);
+    const timer = setTimeout(() => setPhase("out"), 1800);
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, []);
+
+  const handleExitComplete = () => {
+    if (!called.current) {
+      called.current = true;
+      onComplete();
+    }
+  };
 
   return (
-    <AnimatePresence>
-      {!fading && (
+    <AnimatePresence onExitComplete={handleExitComplete}>
+      {phase === "in" && (
         <motion.div
+          key="splash"
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
           style={{ background: "#0a1a0a" }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         >
           <motion.img
             src="/app-hero-icon.jpeg"
             alt="Remio"
             className="h-24 w-24 rounded-2xl shadow-2xl"
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
           />
           <motion.h1
             className="mt-5 text-3xl font-semibold tracking-tight text-white"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.5, ease: "easeOut" }}
           >
             Remio
           </motion.h1>

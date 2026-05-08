@@ -4,6 +4,7 @@ from sqlalchemy import select, delete
 from typing import List
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
+import uuid
 from database import get_db
 from models import LaunchEvent
 from models.launch_event import RETENTION_DAYS

@@ -65,7 +65,7 @@ export function usePrefs() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  const { data: prefs = DEFAULTS } = useQuery({
+  const { data: prefs = DEFAULTS, isFetched: prefsFetched } = useQuery({
     queryKey: ["preferences"],
     queryFn: async () => {
       try {
@@ -133,6 +133,7 @@ export function usePrefs() {
 
   return {
     prefs,
+    prefsFetched,
     update: updateMutation.mutate,
     apiKeys,
     createApiKey: async (name: string): Promise<ApiKey & { secret: string }> => {

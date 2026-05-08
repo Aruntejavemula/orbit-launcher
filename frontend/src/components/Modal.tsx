@@ -84,10 +84,10 @@ export default function Modal({ open, onClose, title, children, width = 480 }: P
             aria-labelledby="modal-title"
             className="modal-panel relative my-auto w-full overflow-y-auto rounded-2xl p-6 shadow-pop pointer-events-auto"
             style={{ width, maxHeight: "calc(100vh - 48px)", background: "var(--modal-bg)" }}
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">

@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Sun, Moon, PlayCircle, Crown } from "lucide-react";
+import { Sun, Moon, PlayCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
 import HowToUseTutorial from "../components/HowToUseTutorial";
-import ManageSubscriptionModal from "../components/ManageSubscriptionModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import ConfirmModal from "../components/ConfirmModal";
@@ -19,13 +18,11 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [showSubModal, setShowSubModal] = useState(false);
   const [showChangePass, setShowChangePass] = useState(false);
   const [showForgotPass, setShowForgotPass] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const isPremium = true;
   const hasPassword = !!user;
 
   const save = async (e: React.FormEvent) => {
@@ -136,48 +133,6 @@ export default function SettingsPage() {
       <ChangePasswordModal open={showChangePass} onClose={() => setShowChangePass(false)} />
       <ForgotPasswordModal open={showForgotPass} onClose={() => setShowForgotPass(false)} />
 
-      <Card title="Subscription">
-        {isPremium ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--text)" }}>
-                <Crown size={15} className="text-amberish" />
-                Premium Member
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                Unlimited apps · advanced insights · priority support
-              </div>
-            </div>
-            <button onClick={() => setShowSubModal(true)} className="btn-primary text-sm">
-              Manage
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Upgrade to Premium to unlock unlimited apps, advanced insights, and priority support.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { label: "Monthly", price: "$9/mo", note: "Billed monthly" },
-                { label: "Yearly", price: "$79/yr", note: "Save 27%" },
-              ].map((plan) => (
-                <button
-                  key={plan.label}
-                  className="flex flex-col items-start rounded-xl border p-4 text-left transition hover:border-sage hover:bg-sage-soft/40"
-                  style={{ borderColor: "var(--line)", background: "var(--bg-deep)" }}
-                >
-                  <div className="text-lg font-semibold">{plan.price}</div>
-                  <div className="text-sm font-medium">{plan.label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{plan.note}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
-
-      <ManageSubscriptionModal open={showSubModal} onClose={() => setShowSubModal(false)} />
 
       <Card title="Data">
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>

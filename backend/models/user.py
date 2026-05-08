@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, DateTime, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from database import Base
 
@@ -13,5 +13,6 @@ class User(Base):
     password_hash = Column(String(256), nullable=True)
     google_id = Column(String(128), nullable=True, unique=True, index=True)
     avatar_url = Column(Text, nullable=True)
+    token_version = Column(Integer, nullable=False, server_default="0", default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

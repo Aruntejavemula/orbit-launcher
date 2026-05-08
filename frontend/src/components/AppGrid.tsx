@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { AppItem } from "../types";
 import AppCard from "./AppCard";
 import { useApps } from "../context/AppsContext";
@@ -65,26 +66,35 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {page.map((a) => (
-          <AppCard
-            key={a.id}
-            app={a}
-            onOpen={onOpenApp}
-            isDragging={draggingId === a.id}
-            isDropTarget={overId === a.id && draggingId !== a.id}
-            onDragStart={setDraggingId}
-            onDragOver={(id) => setOverId(id)}
-            onDragEnd={() => {
-              setDraggingId(null);
-              setOverId(null);
-            }}
-            onDrop={(toId) => {
-              if (draggingId && draggingId !== toId) reorder(draggingId, toId);
-              setDraggingId(null);
-              setOverId(null);
-            }}
-          />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {page.map((a) => (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <AppCard
+                app={a}
+                onOpen={onOpenApp}
+                isDragging={draggingId === a.id}
+                isDropTarget={overId === a.id && draggingId !== a.id}
+                onDragStart={setDraggingId}
+                onDragOver={(id) => setOverId(id)}
+                onDragEnd={() => {
+                  setDraggingId(null);
+                  setOverId(null);
+                }}
+                onDrop={(toId) => {
+                  if (draggingId && draggingId !== toId) reorder(draggingId, toId);
+                  setDraggingId(null);
+                  setOverId(null);
+                }}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       {hasMore && (
         <div className="flex items-center justify-center pt-2">

@@ -1,6 +1,5 @@
 import { memo } from "react";
 import { GripVertical, AlertTriangle, RefreshCw, Infinity as InfinityIcon } from "lucide-react";
-import { motion } from "framer-motion";
 import type { AppItem } from "../types";
 import { relativeTime } from "../utils/time";
 import { hexToRgb } from "../utils/color";
@@ -34,15 +33,15 @@ export default memo(function AppCard({
   const tileBg = "#fff";
 
   return (
-    <motion.div
+    <div
       role="button"
       tabIndex={0}
       onClick={() => onOpen(app.id)}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(app.id))}
       draggable
       onDragStart={(e) => {
-        (e as unknown as React.DragEvent).dataTransfer.effectAllowed = "move";
-        (e as unknown as React.DragEvent).dataTransfer.setData("text/plain", app.id);
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", app.id);
         onDragStart(app.id);
       }}
       onDragOver={(e) => {
@@ -54,10 +53,7 @@ export default memo(function AppCard({
         e.preventDefault();
         onDrop(app.id);
       }}
-      whileHover={{ y: -2, boxShadow: "0 8px 28px rgba(31,36,33,0.13)" }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
-      className={`group relative flex cursor-pointer flex-col rounded-2xl p-4 text-left ${
+      className={`app-card group relative flex cursor-pointer flex-col rounded-2xl p-4 text-left ${
         isDragging ? "dragging" : ""
       } ${isDropTarget ? "drop-target" : ""}`}
       style={{
@@ -93,7 +89,7 @@ export default memo(function AppCard({
       >
         <GripVertical size={12} />
       </span>
-    </motion.div>
+    </div>
   );
 });
 

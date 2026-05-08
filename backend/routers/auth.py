@@ -10,7 +10,7 @@ from models.otp import PasswordResetOtp
 from schemas.auth import RegisterRequest, LoginRequest, UserResponse, UserUpdate
 from auth.password import hash_password, verify_password
 from auth.password_policy import validate_password
-from auth.jwt import COOKIE_NAME, EXPIRE_MINUTES, create_access_token, get_current_user_id
+from auth.jwt import COOKIE_NAME, EXPIRE_MINUTES, SECRET as _JWT_SECRET, ALGORITHM as _JWT_ALGO, create_access_token, get_current_user_id
 from auth.google import get_google_auth_url, exchange_code_for_user
 from auth.email_otp import generate_otp, send_otp_email
 from job_queue import enqueue_send_otp
@@ -23,9 +23,6 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 load_dotenv()
-
-_JWT_SECRET = os.getenv("JWT_SECRET", "change-me")
-_JWT_ALGO = os.getenv("JWT_ALGORITHM", "HS256")
 
 router = APIRouter()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
@@ -74,7 +71,7 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
     await _create_default_prefs(db, user.id)
     await db.commit()
     await db.refresh(user)
-    token = create_access_token(str(user.id))
+    token = create_access_token(str(user.id), token_version=user.token_version)
     response = JSONResponse(content={"ok": True})
     _set_auth_cookie(response, token)
     return response
@@ -88,14 +85,17 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else None
-    token = create_access_token(str(user.id), expire_minutes=expire)
+    token = create_access_token(str(user.id), token_version=user.token_version, expire_minutes=expire)
     response = JSONResponse(content={"ok": True})
     _set_auth_cookie(response, token, remember=body.remember_me)
     return response
 
 
 @router.post("/logout", status_code=204)
-async def logout(response: Response):
+async def logout(request: Request, response: Response, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found.")
+    user.token_version += 1
+    await db.commit()
     _clear_auth_cookie(response)
     return None
 
@@ -134,15 +134,19 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
             await db.commit()
             await db.refresh(user)
 
-    token = create_access_token(str(user.id))
+    token = create_access_token(str(user.id), token_version=user.token_version)
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
     _set_auth_cookie(redirect, token)
     return redirect
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    return await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
+async def me(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
+    token_tv = getattr(request.state, "token_version", 0)
+    if user.token_version != token_tv:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Your session has expired. Please sign in again.")
+    return user
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -179,6 +183,7 @@ async def change_password(
     if verify_password(body.new_password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="New password must differ from current password.")
     user.password_hash = hash_password(body.new_password)
+    user.token_version += 1
     await db.commit()
 
 
@@ -297,5 +302,6 @@ async def reset_password(request: Request, body: ResetPasswordRequest, db: Async
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=err)
 
     user.password_hash = hash_password(body.new_password)
+    user.token_version += 1
     await db.execute(delete(PasswordResetOtp).where(PasswordResetOtp.email == email))
     await db.commit()

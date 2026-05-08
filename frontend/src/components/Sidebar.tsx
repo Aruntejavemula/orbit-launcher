@@ -8,14 +8,12 @@ import {
   Calendar as CalendarIcon,
   Timer,
   Key,
-  Crown,
   Pencil,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { usePrefs } from "../context/PreferencesContext";
 import type { PageId } from "../types";
 import ProfileEditorModal from "./ProfileEditorModal";
-import PremiumModal from "./PremiumModal";
 
 function Initials({ name, avatarUrl, dark }: { name: string; avatarUrl?: string | null; dark: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -58,7 +56,6 @@ export default function Sidebar({ page, onNavigate }: Props) {
   const { prefs } = usePrefs();
   const dark = prefs.theme === "dark";
   const [editProfile, setEditProfile] = useState(false);
-  const [showPremium, setShowPremium] = useState(false);
 
   return (
     <aside
@@ -125,15 +122,6 @@ export default function Sidebar({ page, onNavigate }: Props) {
             >
               {user.name}
             </div>
-            <span
-              className="badge mt-1 text-[10px]"
-              style={dark
-                ? { background: "#2a4a2a", color: "#f59e0b", border: "none" }
-                : { background: "var(--paper, #fff)", color: "var(--sage-ink, #2E4332)", border: "1px solid rgba(107,143,113,0.5)" }
-              }
-            >
-              Premium Member
-            </span>
           </div>
         </button>
       )}
@@ -227,62 +215,7 @@ export default function Sidebar({ page, onNavigate }: Props) {
         <span>Log out</span>
       </button>
 
-      {/* ── Premium card ── */}
-      <div className="mt-auto pt-4">
-        <PremiumCard dark={dark} onUpgrade={() => setShowPremium(true)} />
-      </div>
-      <PremiumModal open={showPremium} onClose={() => setShowPremium(false)} />
     </aside>
   );
 }
 
-function PremiumCard({ dark, onUpgrade }: { dark: boolean; onUpgrade: () => void }) {
-  const reasons = [
-    "Unlimited app integrations",
-    "Advanced analytics dashboard",
-    "Priority 24/7 support",
-    "Custom branding & themes",
-  ];
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl p-4 shadow-card"
-      style={dark
-        ? { background: "#1e3a1e", border: "1px solid #2a4a2a" }
-        : { background: "var(--sage-dark, #4F6B54)", color: "#fff" }
-      }
-    >
-      <div className="relative">
-        <div className="flex items-center gap-1.5">
-          <Crown size={14} style={{ color: "#f59e0b" }} />
-          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#f59e0b" }}>
-            Upgrade to Premium
-          </div>
-        </div>
-        <ul className="mt-3 space-y-1.5">
-          {reasons.map((r) => (
-            <li
-              key={r}
-              className="flex items-start gap-1.5 text-[11px] leading-snug"
-              style={{ color: dark ? "#a0c0a0" : "rgba(255,255,255,0.9)" }}
-            >
-              <span className="mt-0.5" style={{ color: "#6B8F71" }}>✓</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-        <button
-          onClick={onUpgrade}
-          className="mt-3 w-full rounded-full px-3 py-2 text-xs font-semibold transition"
-          style={dark
-            ? { background: "#ffffff", color: "#162616" }
-            : { background: "#ffffff", color: "#2E4332" }
-          }
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f0f0f0"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#ffffff"; }}
-        >
-          Upgrade Now
-        </button>
-      </div>
-    </div>
-  );
-}

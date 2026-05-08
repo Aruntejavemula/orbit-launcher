@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { CheckCircle, AlertCircle, Info } from "lucide-react";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -30,33 +30,39 @@ export function ToastContainer() {
   const dismiss = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   return (
-    <div className="fixed right-4 top-4 z-[100] flex flex-col gap-2">
-      <AnimatePresence>
-        {toasts.map((t) => (
+    <AnimatePresence>
+      {toasts.map((t) => (
+        <motion.div
+          key={t.id}
+          className="fixed inset-0 z-[200] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => dismiss(t.id)} />
           <motion.div
-            key={t.id}
-            initial={{ opacity: 0, x: 60, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 60, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-pop"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--line)",
-              minWidth: 260,
-              maxWidth: 360,
-            }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative flex flex-col items-center gap-4 rounded-2xl px-8 py-6 shadow-pop"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", minWidth: 280 }}
           >
-            {t.type === "success" && <CheckCircle size={16} className="shrink-0 text-sage" />}
-            {t.type === "error" && <AlertCircle size={16} className="shrink-0 text-red-500" />}
-            {t.type === "info" && <Info size={16} className="shrink-0 text-sage-ink" />}
-            <span className="flex-1 text-sm font-medium">{t.message}</span>
-            <button onClick={() => dismiss(t.id)} className="shrink-0 text-ink-muted hover:text-ink">
-              <X size={14} />
+            {t.type === "success" && <CheckCircle size={40} className="text-sage" />}
+            {t.type === "error" && <AlertCircle size={40} className="text-red-500" />}
+            {t.type === "info" && <Info size={40} className="text-sage-ink" />}
+            <span className="text-base font-semibold text-center">{t.message}</span>
+            <button
+              onClick={() => dismiss(t.id)}
+              className="mt-1 rounded-full px-6 py-2 text-sm font-semibold transition-colors"
+              style={{ background: "var(--sage-dark, #4F6B54)", color: "#fff" }}
+            >
+              Dismiss
             </button>
           </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
+        </motion.div>
+      ))}
+    </AnimatePresence>
   );
 }

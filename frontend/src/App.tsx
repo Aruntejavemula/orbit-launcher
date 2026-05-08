@@ -29,7 +29,7 @@ export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
   const { user, loading: authLoading } = useAuth();
   const { apps } = useApps();
-  const { prefs, update } = usePrefs();
+  const { prefs, prefsFetched, update } = usePrefs();
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
@@ -116,33 +116,30 @@ export default function App() {
     <motion.div
       key="app"
       className="flex min-h-screen bg-app"
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
     >
       <Sidebar page={page} onNavigate={setPage} />
       <main className="relative flex-1 overflow-x-hidden">
         <div className="absolute right-5 top-5 z-10 md:right-10 md:top-8">
-          <motion.button
+          <button
             onClick={() => update({ theme: prefs.theme === "dark" ? "light" : "dark" })}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            transition={{ duration: 0.15 }}
-            className="grid h-9 w-9 place-items-center rounded-full shadow-card transition-colors"
+            className="grid h-9 w-9 place-items-center rounded-full shadow-card transition-all hover:scale-[1.08] active:scale-[0.93]"
             style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--line)" }}
             aria-label="Toggle theme"
           >
             {prefs.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </motion.button>
+          </button>
         </div>
         <div className="mx-auto max-w-[1240px] px-5 pb-32 pt-6 md:px-10 md:pt-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={page}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: "easeOut" }}
             >
               <Suspense fallback={null}>{renderPage()}</Suspense>
             </motion.div>
@@ -159,7 +156,7 @@ export default function App() {
       </AnimatePresence>
       <ToastContainer />
       <AnimatePresence>
-        {!prefs.onboardingCompleted && (
+        {prefsFetched && !prefs.onboardingCompleted && (
           <OnboardingOverlay onComplete={() => update({ onboardingCompleted: true })} />
         )}
       </AnimatePresence>

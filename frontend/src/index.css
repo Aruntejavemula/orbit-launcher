@@ -253,6 +253,18 @@ body, aside, nav, header, section, main, footer,
   to   { transform: scaleX(1); }
 }
 
+.app-card {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  will-change: transform;
+}
+.app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(31,36,33,0.13);
+}
+.app-card:active {
+  transform: scale(0.97);
+}
+
 .dragging {
   opacity: 0.4;
 }
@@ -342,3 +354,11 @@ body, aside, nav, header, section, main, footer,
 .sun-glow { animation: sun-pulse 6s ease-in-out infinite; }
 .grass-sway { animation: sway 3s ease-in-out infinite; transform-origin: bottom center; }
 .cloud-drift { animation: drift-cloud 20s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
