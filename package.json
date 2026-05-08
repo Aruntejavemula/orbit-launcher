@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
+    "workbox-precaching": "^7.4.1"
+  }
+}

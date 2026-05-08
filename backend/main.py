@@ -223,8 +223,10 @@ class UserIdMiddleware(BaseHTTPMiddleware):
                 if auth_header.startswith("Bearer "):
                     token = auth_header[7:].strip()
             if token:
-                request.state.user_id = decode_token(token)
-        except Exception:
+                claims = decode_token(token)
+                request.state.user_id = claims["user_id"]
+                request.state.token_version = claims["token_version"]
+        except JWTError:
             pass
         return await call_next(request)
 
