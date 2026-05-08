@@ -19,6 +19,7 @@ from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
 import asyncio
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -28,6 +29,7 @@ router = APIRouter()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 _IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
+_GOOGLE_STATE_COOKIE = "orbit_google_state"
 
 
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
@@ -102,11 +104,25 @@ async def logout(request: Request, response: Response, user_id: str = Depends(ge
 
 @router.get("/google")
 def google_login():
-    return RedirectResponse(get_google_auth_url())
+    state = secrets.token_urlsafe(16)
+    redirect = RedirectResponse(get_google_auth_url(state))
+    redirect.set_cookie(
+        key=_GOOGLE_STATE_COOKIE,
+        value=state,
+        httponly=True,
+        secure=_IS_PROD,
+        samesite="lax",
+        max_age=300,
+        path="/api/auth/google",
+    )
+    return redirect
 
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
+async def google_callback(request: Request, code: str, state: str | None = None, db: AsyncSession = Depends(get_db)):
+    if not state or state != request.cookies.get(_GOOGLE_STATE_COOKIE):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state.")
+
     try:
         guser = await exchange_code_for_user(code)
     except Exception:
@@ -136,6 +152,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
 
     token = create_access_token(str(user.id), token_version=user.token_version)
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
+    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth/google")
     _set_auth_cookie(redirect, token)
     return redirect
 
@@ -153,6 +170,11 @@ async def me(request: Request, user_id: str = Depends(get_current_user_id), db: 
 @limiter.limit("20/minute")
 async def update_me(request: Request, body: UserUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
+    if body.email and body.email != user.email:
+        existing = await db.execute(select(User).where(User.email == body.email, User.id != user_id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="That email is already in use.")
+
     apply_partial_update(user, body.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(user)

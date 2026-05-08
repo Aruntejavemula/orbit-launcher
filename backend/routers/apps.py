@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from typing import List
 from datetime import datetime, timezone
 from database import get_db
@@ -33,8 +33,10 @@ async def list_apps(request: Request, user_id: str = Depends(get_current_user_id
 @limiter.limit("30/minute")
 @user_limiter.limit("30/minute")
 async def create_app(request: Request, body: AppCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    count_result = await db.execute(select(AppItem).where(AppItem.user_id == user_id, ~AppItem.is_deleted))
-    max_order = len(count_result.scalars().all())
+    count_result = await db.execute(
+        select(func.count()).where(AppItem.user_id == user_id, ~AppItem.is_deleted)
+    )
+    max_order = count_result.scalar_one() or 0
     data = body.model_dump()
     data["url"] = str(data["url"])
     if data.get("manage_url"):
@@ -74,6 +76,21 @@ async def delete_app(request: Request, app_id: uuid.UUID, user_id: str = Depends
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("30/minute")
 async def reorder_apps(request: Request, items: List[ReorderItem], user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    if not items:
+        return
+
+    ids = [item.id for item in items]
+    if len(ids) != len(set(ids)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Duplicate app IDs in reorder payload.")
+
+    result = await db.execute(
+        select(AppItem.id).where(AppItem.user_id == user_id, ~AppItem.is_deleted, AppItem.id.in_(ids))
+    )
+    existing_ids = {row[0] for row in result.all()}
+    missing = set(ids) - existing_ids
+    if missing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="One or more apps in reorder payload could not be found.")
+
     for item in items:
         await db.execute(
             update(AppItem)
