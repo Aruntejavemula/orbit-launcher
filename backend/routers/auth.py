@@ -33,6 +33,9 @@ _GOOGLE_STATE_COOKIE = "orbit_google_state"
 
 
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
+    result = await db.execute(select(Preferences).where(Preferences.user_id == user_id))
+    if result.scalar_one_or_none():
+        return
     prefs = Preferences(user_id=user_id)
     db.add(prefs)
     await db.flush()
@@ -247,6 +250,16 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Asy
     result = await db.execute(select(User).where(User.email == body.email))
     if not result.scalar_one_or_none():
         return  # no email enumeration
+
+    recent_cutoff = datetime.now(timezone.utc) - timedelta(seconds=60)
+    recent = await db.execute(
+        select(PasswordResetOtp).where(
+            PasswordResetOtp.email == body.email,
+            PasswordResetOtp.created_at > recent_cutoff,
+        )
+    )
+    if recent.scalar_one_or_none():
+        return  # silent per-email cooldown; still 204 to avoid enumeration
 
     await db.execute(delete(PasswordResetOtp).where(PasswordResetOtp.email == body.email))
 

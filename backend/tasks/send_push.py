@@ -33,5 +33,5 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, payload: dict)
         if e.response and e.response.status_code in (404, 410):
             logger.info("Push subscription expired: %s", endpoint[:60])
             return False
-        logger.error("Push send failed: %s", e)
+        logger.warning("Push send failed (transient): %s", e)
         return True  # Don't delete sub on transient errors

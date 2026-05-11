@@ -56,7 +56,11 @@ async def _process_day(db: AsyncSession, today: date, target_date: date, days_be
         user_apps.setdefault(uid, []).append(app)
 
     for user_id, apps in user_apps.items():
-        await _notify_user(db, user_id, apps, days_before, today)
+        try:
+            await _notify_user(db, user_id, apps, days_before, today)
+        except Exception:
+            logger.exception("reminder notify failed for user %s (days_before=%d)", user_id[:8], days_before)
+            await db.rollback()
 
 
 async def _notify_user(db: AsyncSession, user_id: str, apps: list[AppItem], days_before: int, today: date):
@@ -110,7 +114,11 @@ async def _notify_user(db: AsyncSession, user_id: str, apps: list[AppItem], days
     # Send to all devices
     expired_endpoints = []
     for sub in subscriptions:
-        success = send_push_notification(sub.endpoint, sub.p256dh, sub.auth, payload)
+        try:
+            success = send_push_notification(sub.endpoint, sub.p256dh, sub.auth, payload)
+        except Exception:
+            logger.exception("push send raised for %s", sub.endpoint[:60])
+            success = True  # don't delete on unknown errors
         if not success:
             expired_endpoints.append(sub.endpoint)
 

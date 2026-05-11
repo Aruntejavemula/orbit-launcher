@@ -14,12 +14,20 @@ logger = logging.getLogger("orbit.worker")
 
 async def send_otp_email_task(ctx, to_email: str, otp: str) -> None:
     from auth.email_otp import send_otp_email
-    send_otp_email(to_email, otp)
+    try:
+        send_otp_email(to_email, otp)
+    except Exception:
+        logger.exception("send_otp_email_task failed for %s", to_email)
+        raise
 
 
 async def reminder_cron_task(ctx) -> None:
     from tasks.reminder_cron import run_reminder_cron
-    await run_reminder_cron(ctx)
+    try:
+        await run_reminder_cron(ctx)
+    except Exception:
+        logger.exception("reminder_cron_task failed")
+        raise
 
 
 class WorkerSettings:

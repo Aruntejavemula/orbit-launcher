@@ -20,6 +20,8 @@ def as_utc(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def apply_partial_update(obj: object, data: dict) -> None:
+def apply_partial_update(obj: object, data: dict, allowed: set[str] | None = None) -> None:
     for field, value in data.items():
+        if allowed is not None and field not in allowed:
+            continue
         setattr(obj, field, value)

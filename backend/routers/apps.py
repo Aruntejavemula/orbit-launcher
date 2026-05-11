@@ -33,10 +33,11 @@ async def list_apps(request: Request, user_id: str = Depends(get_current_user_id
 @limiter.limit("30/minute")
 @user_limiter.limit("30/minute")
 async def create_app(request: Request, body: AppCreate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    count_result = await db.execute(
-        select(func.count()).where(AppItem.user_id == user_id, ~AppItem.is_deleted)
+    max_order_result = await db.execute(
+        select(func.coalesce(func.max(AppItem.display_order) + 1, 0))
+        .where(AppItem.user_id == user_id, ~AppItem.is_deleted)
     )
-    max_order = count_result.scalar_one() or 0
+    max_order = max_order_result.scalar_one() or 0
     data = body.model_dump()
     data["url"] = str(data["url"])
     if data.get("manage_url"):

@@ -12,7 +12,7 @@ SECRET = os.getenv("JWT_SECRET")
 if not SECRET:
     raise RuntimeError("JWT_SECRET environment variable must be set")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))
+EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
 COOKIE_NAME = "orbit_session"
 
 bearer_scheme = HTTPBearer(auto_error=False)
