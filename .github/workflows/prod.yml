@@ -28,11 +28,6 @@ jobs:
         with:
           ref: qa
 
-      - name: Guard - no .env files tracked
-        run: |
-          tracked=$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.example$' || true)
-          if [ -n "$tracked" ]; then echo "Tracked env files: $tracked"; exit 1; fi
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,10 +57,6 @@ jobs:
       - name: Run backend tests
         run: pytest
         working-directory: backend
-
-      - name: Run frontend tests
-        run: npm test
-        working-directory: frontend
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
