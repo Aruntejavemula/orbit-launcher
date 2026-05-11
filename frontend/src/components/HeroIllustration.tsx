@@ -1,10 +1,14 @@
 import { memo } from "react";
 
-export default memo(function HeroIllustration() {
-  const hour = new Date().getHours();
+interface Props {
+  hour?: number;
+}
+
+export default memo(function HeroIllustration({ hour: hourProp }: Props) {
+  const hour = hourProp ?? new Date().getHours();
   const isSunrise = hour >= 5 && hour < 9;
   const isDay = hour >= 9 && hour < 16;
-  const isNight = hour >= 20 || hour < 5;
+  const isNight = hour >= 21 || hour < 5;
 
   const skyColors = isNight
     ? ["#1A2332", "#2B3A4D", "#3D5266"]

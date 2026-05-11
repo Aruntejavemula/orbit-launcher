@@ -22,6 +22,8 @@ import ConfirmModal from "./ConfirmModal";
 import { relativeTime } from "../utils/time";
 import { hexToRgb } from "../utils/color";
 import { useApps } from "../context/AppsContext";
+import { usePrefs } from "../context/PreferencesContext";
+import { formatCurrency, currencySymbol } from "../utils/countryData";
 import { iconLibrary } from "../data/iconLibrary";
 
 interface Props {
@@ -32,6 +34,9 @@ interface Props {
 
 export default function AppDetailModal({ app, onClose }: Props) {
   const { launch, removeApp, updateApp } = useApps();
+  const { prefs } = usePrefs();
+  const country = prefs.country ?? "";
+  const symb = currencySymbol(country);
   const [manageMode, setManageMode] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -47,11 +52,18 @@ export default function AppDetailModal({ app, onClose }: Props) {
     '[tabindex]:not([tabindex="-1"])',
   ].join(',');
 
+  // Initial focus — only runs when app changes
   useEffect(() => {
     if (!app) return;
     const frame = requestAnimationFrame(() => {
       panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     });
+    return () => cancelAnimationFrame(frame);
+  }, [app?.id]);
+
+  // Keyboard listener — re-attaches on app/onClose change
+  useEffect(() => {
+    if (!app) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onClose(); return; }
       if (e.key !== "Tab") return;
@@ -67,8 +79,8 @@ export default function AppDetailModal({ app, onClose }: Props) {
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", onKey); };
-  }, [app, onClose]);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [app?.id, onClose]);
 
   useEffect(() => {
     if (app) {
@@ -147,7 +159,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
             <span className="capitalize">{categoryLabel(app.category)}</span>
             {app.plan === "paid" && app.monthlyCost != null && app.monthlyCost > 0 && (
               <span className="rounded-full bg-sage-soft px-2 py-0.5 text-[11px] font-semibold text-sage-ink">
-                ${app.monthlyCost.toFixed(2)}/mo
+                {formatCurrency(app.monthlyCost, country)}/mo
               </span>
             )}
             {app.plan === "paid" && (app.monthlyCost == null || app.monthlyCost === 0) && (
@@ -312,7 +324,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
                   <label className="block">
                     <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Monthly cost</span>
                     <div className="relative mt-1">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>{symb}</span>
                       <input
                         type="number"
                         min={0}
@@ -430,6 +442,9 @@ function categoryLabel(c: string): string {
     productivity: "Productivity",
     finance: "Finance",
     music: "Music",
+    ott: "Streaming",
+    gaming: "Gaming",
+    sports: "Sports",
   };
   return map[c] ?? c;
 }

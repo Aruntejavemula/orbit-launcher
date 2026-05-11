@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from database import get_db
 from models import Preferences
@@ -24,6 +24,7 @@ class PreferencesResponse(BaseModel):
     reminder_email: bool
     reminder_push: bool
     onboarding_completed: bool
+    country: str
 
     class Config:
         from_attributes = True
@@ -39,6 +40,14 @@ class PreferencesUpdate(BaseModel):
     reminder_email: Optional[bool] = None
     reminder_push: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    country: Optional[str] = Field(default=None, max_length=2)
+
+    @field_validator("country")
+    @classmethod
+    def uppercase_country(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return v.upper() if v else v
 
 
 @router.get("", response_model=PreferencesResponse)

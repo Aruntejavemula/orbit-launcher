@@ -16,13 +16,33 @@ export function relativeTime(ts: number | null): string {
   return `Opened ${mo}mo ago`;
 }
 
-export function greeting(d: Date = new Date()): string {
-  const h = d.getHours();
+export function hourInTimezone(timezone?: string): number {
+  if (!timezone) return new Date().getHours();
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: timezone,
+    }).formatToParts(new Date());
+    const h = parts.find((p) => p.type === "hour");
+    return h ? parseInt(h.value, 10) % 24 : new Date().getHours();
+  } catch {
+    return new Date().getHours();
+  }
+}
+
+export function greeting(timezone?: string): string {
+  const h = hourInTimezone(timezone);
   if (h < 5) return "Working late";
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   if (h < 21) return "Good evening";
   return "Good night";
+}
+
+export function isNightTime(timezone?: string): boolean {
+  const h = hourInTimezone(timezone);
+  return h >= 21 || h < 5;
 }
 
 export function fmtMinutes(m: number): string {

@@ -10,6 +10,8 @@ type Mode = "login" | "register";
 const ERROR_MAP: Record<string, string> = {
   "Invalid credentials": "Wrong email or password.",
   "Email already registered": "An account with that email already exists. Sign in instead.",
+  "Could not create account. Please try again or sign in.": "An account with that email already exists. Sign in instead.",
+  "That item already exists. Please try a different name or value.": "An account with that email already exists. Sign in instead.",
 };
 
 // Errors that must not leak internal detail to the user

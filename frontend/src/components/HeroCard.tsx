@@ -1,7 +1,9 @@
 import { Search } from "lucide-react";
 import HeroIllustration from "./HeroIllustration";
 import { useAuth } from "../context/AuthContext";
-import { greeting } from "../utils/time";
+import { usePrefs } from "../context/PreferencesContext";
+import { greeting, isNightTime, hourInTimezone } from "../utils/time";
+import { timezoneForCountry } from "../utils/countryData";
 
 interface Props {
   query: string;
@@ -12,19 +14,35 @@ interface Props {
 
 export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Props) {
   const { user } = useAuth();
+  const { prefs } = usePrefs();
   const firstName = (user?.name ?? "there").split(" ")[0];
+  const tz = prefs.country ? timezoneForCountry(prefs.country) : undefined;
+  const hour = hourInTimezone(tz);
+  const night = isNightTime(tz);
+  const isSunrise = hour >= 5 && hour < 9;
+  const isDay = hour >= 9 && hour < 16;
+  // evening = 16–20 (uses sunset gradient)
 
   return (
     <section
-      className="bg-hero relative overflow-hidden rounded-3xl px-8 py-9"
-      style={{ minHeight: 240 }}
+      className="relative overflow-hidden rounded-3xl px-8 py-9"
+      style={{
+        minHeight: 240,
+        background: night
+          ? "linear-gradient(135deg, #1A2332 0%, #2B3A4D 100%)"
+          : isSunrise
+          ? "linear-gradient(135deg, #FFD6A5 0%, #FFAA7F 100%)"
+          : isDay
+          ? "linear-gradient(135deg, #E8F4FD 0%, #CFDBC4 100%)"
+          : "linear-gradient(135deg, #FFE6BD 0%, #CFDBC4 100%)",
+      }}
     >
-      <HeroIllustration />
+      <HeroIllustration hour={hour} />
       <div className="relative max-w-[560px]">
-        <h1 className="font-display font-semibold tracking-tight" style={{ color: "#1a2e1a", fontSize: "3rem", lineHeight: 1.25, minHeight: "7.5rem" }}>
-          {greeting()}, {firstName}
+        <h1 className="font-display font-semibold tracking-tight" style={{ color: night ? "#ffffff" : isSunrise ? "#7A3B1E" : "#1a2e1a", fontSize: "3rem", lineHeight: 1.25, minHeight: "7.5rem" }}>
+          {greeting(tz)}, {firstName}
         </h1>
-        <p className="mt-3 text-base" style={{ color: "#3a5a3a" }}>
+        <p className="mt-3 text-base" style={{ color: night ? "#d0d0c0" : isSunrise ? "#9A5230" : "#3a5a3a" }}>
           Your ecosystem is optimized.
         </p>
 

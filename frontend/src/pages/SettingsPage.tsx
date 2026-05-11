@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Sun, Moon, PlayCircle } from "lucide-react";
+import { Sun, Moon, PlayCircle, Globe } from "lucide-react";
+import { COUNTRIES } from "../utils/countryData";
 import { useAuth } from "../context/AuthContext";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
@@ -22,6 +23,7 @@ export default function SettingsPage() {
   const [showForgotPass, setShowForgotPass] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [countrySaved, setCountrySaved] = useState(false);
 
   const hasPassword = !!user;
 
@@ -65,11 +67,11 @@ export default function SettingsPage() {
 
       <Card title="Profile">
         <form onSubmit={save} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Name">
-            <input className="field" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Field label="Name" htmlFor="settings-name">
+            <input id="settings-name" name="name" className="field" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
           </Field>
-          <Field label="Email">
-            <input className="field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Field label="Email" htmlFor="settings-email">
+            <input id="settings-email" name="email" className="field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           </Field>
           <div className="flex flex-col gap-2 md:col-span-2">
             {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{saveError}</p>}
@@ -87,6 +89,45 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3">
           <ThemeOption label="Light" icon={Sun} active={prefs.theme === "light"} onClick={() => update({ theme: "light" })} />
           <ThemeOption label="Dark" icon={Moon} active={prefs.theme === "dark"} onClick={() => update({ theme: "dark" })} />
+        </div>
+      </Card>
+
+      <Card title="Region">
+        <div className="flex items-start gap-3">
+          <Globe size={18} className="mt-0.5 shrink-0 text-sage-ink" />
+          <div className="flex-1">
+            <label htmlFor="settings-country" className="text-sm font-semibold">
+              Country
+            </label>
+            <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              Used for time-based greetings and regional app links.
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <select
+                id="settings-country"
+                className="field flex-1"
+                value={prefs.country}
+                onChange={(e) => {
+                  update({ country: e.target.value });
+                  setCountrySaved(true);
+                  setTimeout(() => setCountrySaved(false), 2000);
+                }}
+              >
+                <option value="">— Select your country —</option>
+                <option value="IN">India</option>
+                <option value="US">United States</option>
+                <option value="GB">United Kingdom</option>
+                <option value="AU">Australia</option>
+                <option disabled>──────────</option>
+                {COUNTRIES.filter((c) => !["IN", "US", "GB", "AU"].includes(c.code)).map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {countrySaved && <span className="text-sm text-sage-ink">Saved</span>}
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -181,9 +222,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
-    <label className="block">
+    <label htmlFor={htmlFor} className="block">
       <span className="mb-1 block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>

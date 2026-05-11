@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Search,
   Sparkles,
@@ -10,8 +10,10 @@ import Modal from "./Modal";
 import BrandIcon from "./BrandIcon";
 import IconPicker from "./IconPicker";
 import { useApps } from "../context/AppsContext";
+import { usePrefs } from "../context/PreferencesContext";
 import { appCatalog, type CatalogApp } from "../data/appCatalog";
 import { hexToRgb } from "../utils/color";
+import { resolveAppUrl, currencySymbol } from "../utils/countryData";
 import { toast } from "./Toast";
 import type { CategoryId, BillingFrequency } from "../types";
 
@@ -33,6 +35,9 @@ const CATS: { id: Exclude<CategoryId, "all">; label: string }[] = [
   { id: "productivity", label: "Productivity" },
   { id: "finance", label: "Finance" },
   { id: "music", label: "Music" },
+  { id: "ott", label: "Streaming" },
+  { id: "gaming", label: "Gaming" },
+  { id: "sports", label: "Sports" },
 ];
 
 const COLOR_SWATCHES = [
@@ -63,6 +68,7 @@ const FREQUENCIES: { id: BillingFrequency; label: string; months: number }[] = [
 
 export default function AddAppModal({ open, onClose }: Props) {
   const { addApp, apps } = useApps();
+  const { prefs } = usePrefs();
   const [tab, setTab] = useState<Tab>("quick");
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<DraftApp | null>(null);
@@ -80,12 +86,12 @@ export default function AddAppModal({ open, onClose }: Props) {
     );
   }, [query]);
 
-  const close = () => {
+  const close = useCallback(() => {
     setQuery("");
     setPending(null);
     setTab("quick");
     onClose();
-  };
+  }, [onClose]);
 
   const finalizeQuick = (
     app: DraftApp,
@@ -103,7 +109,7 @@ export default function AddAppModal({ open, onClose }: Props) {
       name: app.name,
       slug: app.slug,
       color: app.color,
-      url: app.url,
+      url: resolveAppUrl(app.slug, app.url, prefs.country),
       category: app.category,
       plan: plan === "free" ? "free" : plan === "trial" ? "trial" : "paid",
       expiresAt: expiresAt ?? undefined,
@@ -278,6 +284,8 @@ function QuickAdd({
 
 function ManualForm({ onAdd }: { onAdd: () => void }) {
   const { addApp } = useApps();
+  const { prefs } = usePrefs();
+  const symb = currencySymbol(prefs.country ?? "");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [category, setCategory] = useState<Exclude<CategoryId, "all">>("productivity");
@@ -499,7 +507,7 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
       {plan === "paid" && (
         <Field label="Monthly cost (optional)">
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>{symb}</span>
             <input
               type="number"
               min={0}
@@ -579,6 +587,8 @@ function SubscriptionPicker({
     monthlyCost: number | null,
   ) => void;
 }) {
+  const { prefs } = usePrefs();
+  const symb = currencySymbol(prefs.country ?? "");
   const [plan, setPlan] = useState<PlanType>("paid");
   const [startDate, setStartDate] = useState(() =>
     new Date().toISOString().split("T")[0]
@@ -735,7 +745,7 @@ function SubscriptionPicker({
                   Monthly cost (optional)
                 </span>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>$</span>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>{symb}</span>
                   <input
                     type="number"
                     min={0}

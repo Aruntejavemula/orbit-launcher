@@ -256,6 +256,7 @@ describe("PreferencesContext - usePrefs", () => {
       reminderEmail: true,
       reminderPush: false,
       onboardingCompleted: false,
+      country: "",
     };
 
     expect(result.current.prefs).toEqual(defaults);

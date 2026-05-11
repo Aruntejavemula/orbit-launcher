@@ -8,7 +8,10 @@ export type CategoryId =
   | "design"
   | "productivity"
   | "finance"
-  | "music";
+  | "music"
+  | "ott"
+  | "gaming"
+  | "sports";
 
 export interface AppItem {
   id: string;
@@ -57,6 +60,7 @@ export interface Preferences {
   reminderEmail: boolean;
   reminderPush: boolean;
   onboardingCompleted: boolean;
+  country: string;
 }
 
 export type ReminderMethod = "email" | "push";

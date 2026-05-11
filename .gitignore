@@ -17,3 +17,8 @@ __pycache__
 backend/alembic/versions/*.py
 !backend/alembic/versions/.gitkeep
 backend/backups/
+.coverage
+coverage/
+frontend/coverage/
+test-results/
+*.tsbuildinfo

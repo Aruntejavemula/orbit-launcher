@@ -13,6 +13,7 @@ const DEFAULTS: Preferences = {
   reminderEmail: true,
   reminderPush: false,
   onboardingCompleted: false,
+  country: "",
 };
 
 interface PrefsApiResponse {
@@ -25,6 +26,7 @@ interface PrefsApiResponse {
   reminder_email: boolean;
   reminder_push: boolean;
   onboarding_completed: boolean;
+  country: string;
 }
 
 interface ApiKeyApiResponse {
@@ -47,6 +49,7 @@ function toPrefs(raw: PrefsApiResponse): Preferences {
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
     onboardingCompleted: raw.onboarding_completed ?? false,
+    country: raw.country ?? "",
   };
 }
 
@@ -101,6 +104,7 @@ export function usePrefs() {
       if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
       if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
       if (patch.onboardingCompleted !== undefined) body.onboarding_completed = patch.onboardingCompleted;
+      if (patch.country !== undefined) body.country = patch.country;
       return api.patch("/preferences", body).then((r) => toPrefs(r.data));
     },
     onMutate: (patch) => {

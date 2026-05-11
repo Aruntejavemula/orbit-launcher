@@ -67,6 +67,7 @@ class TestInitPreferences:
             obj.reminder_email = True
             obj.reminder_push = False
             obj.onboarding_completed = False
+            obj.country = ""
 
         mock_db.refresh = AsyncMock(side_effect=populate_on_refresh)
 

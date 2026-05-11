@@ -23,14 +23,19 @@ const FOCUSABLE = [
 export default function Modal({ open, onClose, title, children, width = 480 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Initial focus — only runs when modal opens
   useEffect(() => {
     if (!open) return;
-
-    // Focus first focusable element on open
     const frame = requestAnimationFrame(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
       first?.focus();
     });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  // Keyboard listener + scroll lock — re-attaches on open/onClose change
+  useEffect(() => {
+    if (!open) return;
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onClose(); return; }
@@ -55,7 +60,6 @@ export default function Modal({ open, onClose, title, children, width = 480 }: P
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      cancelAnimationFrame(frame);
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };

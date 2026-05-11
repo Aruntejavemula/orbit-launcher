@@ -52,40 +52,60 @@ describe("relativeTime", () => {
 });
 
 describe("greeting", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("returns 'Working late' for 0-4am", () => {
-    expect(greeting(new Date("2025-01-01T03:00:00"))).toBe("Working late");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T03:00:00Z"));
+    expect(greeting("UTC")).toBe("Working late");
   });
 
   it("returns 'Good morning' for 5-11am", () => {
-    expect(greeting(new Date("2025-01-01T09:00:00"))).toBe("Good morning");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T09:00:00Z"));
+    expect(greeting("UTC")).toBe("Good morning");
   });
 
   it("returns 'Good afternoon' for 12-4pm", () => {
-    expect(greeting(new Date("2025-01-01T14:00:00"))).toBe("Good afternoon");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T14:00:00Z"));
+    expect(greeting("UTC")).toBe("Good afternoon");
   });
 
   it("returns 'Good evening' for 5-8pm", () => {
-    expect(greeting(new Date("2025-01-01T19:00:00"))).toBe("Good evening");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T19:00:00Z"));
+    expect(greeting("UTC")).toBe("Good evening");
   });
 
   it("returns 'Good night' for 9pm+", () => {
-    expect(greeting(new Date("2025-01-01T22:00:00"))).toBe("Good night");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T22:00:00Z"));
+    expect(greeting("UTC")).toBe("Good night");
   });
 
   it("boundary: hour=5 is morning", () => {
-    expect(greeting(new Date("2025-01-01T05:00:00"))).toBe("Good morning");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T05:00:00Z"));
+    expect(greeting("UTC")).toBe("Good morning");
   });
 
   it("boundary: hour=12 is afternoon", () => {
-    expect(greeting(new Date("2025-01-01T12:00:00"))).toBe("Good afternoon");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T12:00:00Z"));
+    expect(greeting("UTC")).toBe("Good afternoon");
   });
 
   it("boundary: hour=17 is evening", () => {
-    expect(greeting(new Date("2025-01-01T17:00:00"))).toBe("Good evening");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T17:00:00Z"));
+    expect(greeting("UTC")).toBe("Good evening");
   });
 
   it("boundary: hour=21 is night", () => {
-    expect(greeting(new Date("2025-01-01T21:00:00"))).toBe("Good night");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T21:00:00Z"));
+    expect(greeting("UTC")).toBe("Good night");
   });
 });
 

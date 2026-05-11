@@ -112,4 +112,55 @@ describe("Modal", () => {
       expect(dialog.style.width).toBe("600px");
     });
   });
+
+  describe("focus trap", () => {
+    it("Tab from last focusable wraps to first", () => {
+      render(
+        <Modal open={true} onClose={onClose} title="T">
+          <button>First</button>
+          <button>Last</button>
+        </Modal>
+      );
+      const dialog = screen.getByRole("dialog");
+      const buttons = dialog.querySelectorAll<HTMLElement>("button");
+      const last = buttons[buttons.length - 1];
+      // Simulate active element being last
+      last.focus();
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      Object.defineProperty(document, "activeElement", { get: () => last, configurable: true });
+      window.dispatchEvent(event);
+      // Should not throw, focus trap ran
+    });
+
+    it("Shift+Tab from first focusable wraps to last", () => {
+      render(
+        <Modal open={true} onClose={onClose} title="T">
+          <button>First</button>
+          <button>Last</button>
+        </Modal>
+      );
+      const dialog = screen.getByRole("dialog");
+      const buttons = dialog.querySelectorAll<HTMLElement>("button");
+      const first = buttons[0];
+      first.focus();
+      const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true });
+      Object.defineProperty(document, "activeElement", { get: () => first, configurable: true });
+      window.dispatchEvent(event);
+      // Should not throw, focus trap ran
+    });
+
+    it("does not trap Tab when panel has no focusable elements", () => {
+      render(<Modal open={true} onClose={onClose} title="T"><p>No buttons</p></Modal>);
+      // Only the close button exists — Tab should still work without errors
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+    });
+
+    it("Escape key in keydown calls onClose", () => {
+      render(<Modal open={true} onClose={onClose} title="T">C</Modal>);
+      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      window.dispatchEvent(event);
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

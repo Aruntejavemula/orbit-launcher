@@ -37,7 +37,7 @@ async function requestPushPermission(): Promise<boolean> {
 
 function firePushNotification(title: string, body: string) {
   if (Notification.permission !== "granted") return;
-  new Notification(title, { body, icon: "/appicon.jpeg" });
+  new Notification(title, { body, icon: "/icon.png" });
 }
 
 export default function CalendarPage() {

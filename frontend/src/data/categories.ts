@@ -6,6 +6,9 @@ import {
   CalendarCheck2,
   Wallet,
   Music,
+  Tv,
+  Gamepad2,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +25,9 @@ export const categories: CategoryDef[] = [
   { id: "productivity", label: "Productivity", icon: CalendarCheck2 },
   { id: "finance", label: "Finance", icon: Wallet },
   { id: "music", label: "Music", icon: Music },
+  { id: "ott", label: "Streaming", icon: Tv },
+  { id: "gaming", label: "Gaming", icon: Gamepad2 },
+  { id: "sports", label: "Sports", icon: Trophy },
 ];
 
 export const getCategory = (id: CategoryId) =>

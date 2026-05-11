@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
 import { categories } from "../data/categories";
+import { formatCurrency } from "../utils/countryData";
 import BrandIcon from "../components/BrandIcon";
 import { relativeTime } from "../utils/time";
 import { hexToRgb } from "../utils/color";
@@ -13,6 +14,9 @@ const CAT_COLORS: Record<string, string> = {
   productivity: "#5E6AD2",
   finance: "#635BFF",
   music: "#1DB954",
+  ott: "#E50914",
+  gaming: "#9146FF",
+  sports: "#FF6600",
 };
 
 
@@ -20,6 +24,7 @@ export default function InsightsPage() {
   const { apps, history } = useApps();
   const { prefs } = usePrefs();
   const isDark = prefs.theme === "dark";
+  const country = prefs.country ?? "";
 
   const stats = useMemo(() => {
     const total = apps.length;
@@ -102,7 +107,7 @@ export default function InsightsPage() {
           <div className="mb-4 flex items-end gap-2">
             {stats.totalMonthly > 0 ? (
               <>
-                <span className="text-4xl font-semibold">${stats.totalMonthly.toFixed(2)}</span>
+                <span className="text-4xl font-semibold">{formatCurrency(stats.totalMonthly, country)}</span>
                 <span className="mb-1 text-sm" style={{ color: "var(--text-muted)" }}>/mo (confirmed)</span>
               </>
             ) : (
@@ -120,7 +125,7 @@ export default function InsightsPage() {
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
                     <span>{c.label}</span>
                   </span>
-                  <span className="font-semibold tabular-nums">${c.monthly.toFixed(2)}/mo</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(c.monthly, country)}/mo</span>
                 </div>
                 <div className="h-1.5 rounded-full" style={{ background: "var(--bg-deep)" }}>
                   <motion.div
