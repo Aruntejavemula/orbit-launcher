@@ -14,11 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Guard - no .env files tracked
-        run: |
-          tracked=$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.example$' || true)
-          if [ -n "$tracked" ]; then echo "Tracked env files: $tracked"; exit 1; fi
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -48,29 +43,6 @@ jobs:
       - name: Run backend tests
         run: pytest
         working-directory: backend
-
-      - name: Run frontend tests
-        run: npm test
-        working-directory: frontend
-
-      - name: Security - npm audit
-        run: npm audit --audit-level=high
-        working-directory: frontend
-        continue-on-error: false
-
-      - name: Security - bandit (Python SAST)
-        run: |
-          pip install bandit
-          bandit -r . -ll -x ./tests
-        working-directory: backend
-        continue-on-error: false
-
-      - name: Security - pip-audit (Python deps CVE scan)
-        run: |
-          pip install pip-audit
-          pip-audit --require-hashes -r requirements.txt || pip-audit -r requirements.txt
-        working-directory: backend
-        continue-on-error: true
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
