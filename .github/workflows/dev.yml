@@ -51,7 +51,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       - name: Cleanup 
-        run : Sudo rm -rf .scannerwork
+        run : rm -rf .scannerwork
         continue-on-error: true
 
       - name: Checkout code 
