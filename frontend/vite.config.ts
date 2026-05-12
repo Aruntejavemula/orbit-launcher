@@ -22,11 +22,11 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ["react", "react-dom"],
-            motion: ["framer-motion"],
-            query: ["@tanstack/react-query"],
-            icons: ["lucide-react"],
+          manualChunks: (id: string) => {
+            if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) return "vendor";
+            if (id.includes("node_modules/framer-motion/")) return "motion";
+            if (id.includes("node_modules/@tanstack/react-query/")) return "query";
+            if (id.includes("node_modules/lucide-react/")) return "icons";
           },
         },
       },
