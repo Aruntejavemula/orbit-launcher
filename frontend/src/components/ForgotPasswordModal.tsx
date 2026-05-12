@@ -23,7 +23,7 @@ const fade = {
 const OTP_EXPIRY_SECONDS = 600; // 10 minutes
 
 const RESEND_COOLDOWN_SECONDS = 60;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [step, setStep] = useState<Step>("email");
