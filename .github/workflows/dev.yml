@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -44,6 +46,9 @@ jobs:
         run: pytest --cov=. --cov-report=xml
         working-directory: backend
 
+      - name: Copy Coverage Report
+        run: cp backend/coverage.xml coverage.xml
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
         env:
@@ -53,9 +58,3 @@ jobs:
       - name: Cleanup 
         run : rm -rf .scannerwork
         continue-on-error: true
-
-      - name: Checkout code 
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
