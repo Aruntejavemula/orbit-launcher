@@ -1,0 +1,364 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f7f4ee;
+  --bg-deep: #efe9dc;
+  --surface: #ffffff;
+  --surface-2: #f1ede4;
+  --text: #1f2421;
+  --text-muted: #6b7269;
+  --line: #e7e2d9;
+  --hero: #d4e3d2;
+  --hero-2: #b4d3b8;
+  --modal-bg: #ffffff;
+  --confirm-bg: #ffffff;
+}
+html.dark {
+  color-scheme: dark;
+  --bg: #1e2820;
+  --bg-deep: #182018;
+  --surface: #273129;
+  --surface-2: #222c24;
+  --text: #ddeadd;
+  --text-muted: #8fa892;
+  --line: #334038;
+  --hero: #2c3e2f;
+  --hero-2: #38503c;
+  --modal-bg: #1e1e1e;
+  --confirm-bg: #1a2e1a;
+}
+
+/* ── Modal dark mode token overrides ────────────────────────────────────────
+   Scoping to .modal-panel lets CSS custom-property cascade fix every
+   inline style({ color: "var(--text-muted)" }) etc. automatically.       */
+html.dark .modal-panel {
+  --bg:       #1e1e1e;
+  --bg-deep:  #252525;
+  --surface:  #2a2a2a;
+  --surface-2:#2f2f2f;
+  --text:     #f0f0f0;
+  --text-muted: #a0a0a0;
+  --line:     #3a3a3a;
+}
+html.dark .modal-panel .field {
+  background:   #2a2a2a;
+  border-color: #3a3a3a;
+  color:        #f0f0f0;
+}
+html.dark .modal-panel .field::placeholder {
+  color:   #6b6b6b;
+  opacity: 1;
+}
+/* Tailwind bg-paper is hardcoded #fff — override inside modal in dark mode */
+html.dark .modal-panel .bg-paper {
+  background-color: #2a2a2a !important;
+}
+html.dark .modal-panel .border-line {
+  border-color: #3a3a3a !important;
+}
+html.dark .modal-panel .hover\:bg-cream:hover,
+html.dark .modal-panel .hover\:bg-cream\/40:hover {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+html.dark .modal-panel .text-ink {
+  color: #f0f0f0 !important;
+}
+html.dark .modal-panel .text-ink-muted {
+  color: #a0a0a0 !important;
+}
+html.dark .modal-panel .bg-red-50 {
+  background-color: rgba(239,68,68,0.12) !important;
+}
+html.dark .modal-panel .hover\:bg-red-100:hover {
+  background-color: rgba(239,68,68,0.2) !important;
+}
+html.dark .modal-panel .border-red-200 {
+  border-color: rgba(239,68,68,0.3) !important;
+}
+
+/* Smooth light↔dark transition — only on color properties, not layout */
+html {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text);
+  background: var(--bg);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Fraunces swash/ligature chars look bad in data strings.
+   All remaining font-display usages are intentional headings — keep ligatures. */
+h1.font-display,
+h2.font-display,
+h3.font-display {
+  font-variant-ligatures: normal;
+  font-feature-settings: normal;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.brand-tile {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  position: relative;
+}
+.brand-tile::after {
+  content: "";
+  position: absolute;
+  inset: 8px 8px -2px 8px;
+  border-radius: 14px;
+  background: var(--brand);
+  filter: blur(10px);
+  opacity: 0.35;
+  z-index: -1;
+}
+.icon-shadow {
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.14));
+}
+
+.surface { background: var(--surface); }
+.surface-2 { background: var(--surface-2); }
+.text-base-ink { color: var(--text); }
+.text-muted-ink { color: var(--text-muted); }
+.border-ui { border-color: var(--line); }
+.bg-app { background: var(--bg); }
+.bg-app-deep { background: var(--bg-deep); }
+.bg-hero { background: linear-gradient(135deg, var(--hero) 0%, var(--hero-2) 100%); }
+
+@layer components {
+  .nav-pill {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium;
+    color: var(--text-muted);
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+  .nav-pill:hover {
+    color: var(--text);
+    background: rgba(107,143,113,0.10);
+  }
+  .nav-pill.active {
+    background: #ffffff;
+    color: #2E4332;
+    box-shadow: 0 1px 2px rgba(31,36,33,.04), 0 6px 18px rgba(31,36,33,.06);
+  }
+  html.dark .nav-pill.active {
+    background: rgba(255,255,255,0.06);
+    color: #c8e0c9;
+  }
+  .filter-pill {
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+  }
+  .filter-pill:hover {
+    color: var(--text);
+    border-color: rgba(107,143,113,0.45);
+  }
+  .filter-pill:active {
+    transform: scale(0.96);
+  }
+  .filter-pill.active {
+    @apply border-sage bg-sage text-white;
+  }
+  .field {
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  .field::placeholder { color: var(--text-muted); opacity: 0.7; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition;
+  }
+  .btn-primary {
+    @apply btn bg-sage text-white hover:bg-sage-dark;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-muted hover:bg-cream hover:text-ink;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider;
+  }
+}
+
+/* Theme color transitions — only on color properties */
+body, aside, nav, header, section, main, footer,
+.surface, .field, [class*="bg-"], [class*="text-"], [class*="border-"] {
+  transition: background-color 280ms ease, border-color 280ms ease, color 280ms ease;
+}
+
+/* Shimmer skeleton loader */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--line) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+
+/* Progress bar fill animation */
+.progress-fill {
+  animation: progress-in 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left;
+}
+@keyframes progress-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.app-card {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  will-change: transform;
+}
+.app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(31,36,33,0.13);
+}
+.app-card:active {
+  transform: scale(0.97);
+}
+
+.dragging {
+  opacity: 0.4;
+}
+.drop-target {
+  outline: 2px dashed #6b8f71;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+/* ─── Core enter animations ─────────────────────────── */
+
+.fade-in {
+  animation: fadein 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Page-level transition — slightly slower, feels intentional */
+.page-enter {
+  animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal/bottom-sheet slide up */
+.slide-up {
+  animation: slide-up 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(28px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Overlay backdrop */
+.overlay-enter {
+  animation: overlay-enter 320ms ease both;
+}
+@keyframes overlay-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fly {
+  0%   { transform: translateX(-60px) translateY(0px); }
+  25%  { transform: translateX(30vw) translateY(-8px); }
+  50%  { transform: translateX(60vw) translateY(4px); }
+  75%  { transform: translateX(90vw) translateY(-4px); }
+  100% { transform: translateX(120vw) translateY(0px); }
+}
+@keyframes float-butterfly {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); }
+  25% { transform: translateY(-20px) translateX(10px) rotate(5deg); }
+  50% { transform: translateY(-10px) translateX(-5px) rotate(-3deg); }
+  75% { transform: translateY(-25px) translateX(8px) rotate(4deg); }
+}
+@keyframes ripple {
+  0% { transform: scaleX(1); opacity: 0.6; }
+  50% { transform: scaleX(1.15); opacity: 0.3; }
+  100% { transform: scaleX(1); opacity: 0.6; }
+}
+@keyframes sun-pulse {
+  0%, 100% { r: 36; opacity: 0.9; }
+  50% { r: 40; opacity: 1; }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+@keyframes drift-cloud {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(40px); }
+}
+
+.bird-1 { animation: fly 18s linear infinite; }
+.bird-2 { animation: fly 22s linear infinite 5s; }
+.bird-3 { animation: fly 16s linear infinite 10s; }
+.butterfly-1 { animation: float-butterfly 8s ease-in-out infinite; }
+.butterfly-2 { animation: float-butterfly 10s ease-in-out infinite 3s; }
+.butterfly-3 { animation: float-butterfly 7s ease-in-out infinite 1.5s; }
+.ripple-1 { animation: ripple 4s ease-in-out infinite; }
+.ripple-2 { animation: ripple 5s ease-in-out infinite 1.5s; }
+.ripple-3 { animation: ripple 3.5s ease-in-out infinite 0.8s; }
+.sun-glow { animation: sun-pulse 6s ease-in-out infinite; }
+.grass-sway { animation: sway 3s ease-in-out infinite; transform-origin: bottom center; }
+.cloud-drift { animation: drift-cloud 20s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

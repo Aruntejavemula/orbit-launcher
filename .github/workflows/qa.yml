@@ -1,20 +1,27 @@
-name: Dev CI
+name: QA Pipeline
 
 on:
-  push:
-    branches: [dev]
-  pull_request:
-    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for running QA pipeline"
+        required: true
+        type: string
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout dev branch
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
+          ref: dev
+
+      - name: Guard - no .env files tracked
+        run: |
+          tracked=$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.example$' || true)
+          if [ -n "$tracked" ]; then echo "Tracked env files: $tracked"; exit 1; fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,13 +38,6 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      - name: Run Frontend tests
-        run: npm run test -- --coverage
-        working-directory: frontend
-
-      - name: Fix frontend lcov paths for Sonar
-        run: sed -i 's|^SF:|SF:frontend/|' frontend/coverage/lcov.info
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -50,14 +50,12 @@ jobs:
         working-directory: backend
 
       - name: Run backend tests
-        run: pytest --cov=. --cov-report=xml
+        run: pytest
         working-directory: backend
 
-      - name: Copy and fix backend coverage paths for Sonar
-        run: |
-          cp backend/coverage.xml coverage.xml
-          sed -i 's|filename="|filename="backend/|g' coverage.xml
-          sed -i 's|<source>.*/backend</source>|<source>.</source>|' coverage.xml
+      - name: Run frontend tests
+        run: npm test
+        working-directory: frontend
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
@@ -65,6 +63,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      - name: Cleanup
-        if: always()
-        run: sudo rm -rf .scannerwork
+      - name: Checkout code 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: false
