@@ -35,6 +35,9 @@ jobs:
         run: npm run test -- --coverage
         working-directory: frontend
 
+      - name: Fix frontend lcov paths for Sonar
+        run: sed -i 's|^SF:|SF:frontend/|' frontend/coverage/lcov.info
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -50,8 +53,11 @@ jobs:
         run: pytest --cov=. --cov-report=xml
         working-directory: backend
 
-      - name: Copy Coverage Report
-        run: cp backend/coverage.xml coverage.xml
+      - name: Copy and fix backend coverage paths for Sonar
+        run: |
+          cp backend/coverage.xml coverage.xml
+          sed -i 's|filename="|filename="backend/|g' coverage.xml
+          sed -i 's|<source>.*/backend</source>|<source>.</source>|' coverage.xml
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
