@@ -16,3 +16,5 @@ sentry-sdk[fastapi]
 arq
 redis
 pywebpush
+pytest
+pytest-asyncio
