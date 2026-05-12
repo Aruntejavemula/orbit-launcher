@@ -14,6 +14,7 @@ describe("api module", () => {
     vi.resetModules();
     const toastModule = await import("../components/Toast");
     toastMock = toastModule.toast as unknown as ReturnType<typeof vi.fn>;
+    toastMock.mockClear();
     const apiModule = await import("../api");
     api = apiModule.default;
   });
@@ -31,29 +32,97 @@ describe("api module", () => {
   });
 
   describe("response interceptor", () => {
+    async function runInterceptor(error: any) {
+      const interceptors = api.interceptors.response as any;
+      const errorHandler = interceptors.handlers?.[0]?.rejected;
+      if (!errorHandler) throw new Error("no handler");
+      try {
+        await errorHandler(error);
+      } catch {
+        /* expected rejection */
+      }
+    }
+
     it("redirects to /login on 401", async () => {
-      const hrefSetter = vi.fn();
       Object.defineProperty(window, "location", {
         value: { href: "" },
         writable: true,
       });
 
-      const error = {
+      await runInterceptor({
         response: { status: 401 },
         isAxiosError: true,
-      };
+      });
 
-      // Test interceptor handles 401
-      const interceptors = api.interceptors.response as any;
-      const errorHandler = interceptors.handlers?.[0]?.rejected;
-      if (errorHandler) {
-        try {
-          await errorHandler(error);
-        } catch {
-          // Expected rejection
-        }
-        expect(window.location.href).toBe("/login");
-      }
+      expect(window.location.href).toBe("/login");
+    });
+
+    it("shows timeout toast on ECONNABORTED", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        code: "ECONNABORTED",
+        response: undefined,
+        isAxiosError: true,
+      });
+
+      expect(toastMock).toHaveBeenCalledWith(
+        "Server took too long to respond. Please try again.",
+        "error"
+      );
+    });
+
+    it("shows timeout toast when message includes timeout", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        message: "request timeout exceeded",
+        response: undefined,
+        isAxiosError: true,
+      });
+
+      expect(toastMock).toHaveBeenCalledWith(
+        "Server took too long to respond. Please try again.",
+        "error"
+      );
+    });
+
+    it("shows network error toast when no response", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        response: undefined,
+        isAxiosError: true,
+      });
+
+      expect(toastMock).toHaveBeenCalledWith(
+        "Cannot reach the server. Check your connection.",
+        "error"
+      );
+    });
+
+    it("does not toast on cancelled request", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "" },
+        writable: true,
+      });
+
+      vi.spyOn(axios, "isCancel").mockReturnValueOnce(true);
+      await runInterceptor({
+        __CANCEL__: true,
+        isAxiosError: true,
+      });
+
+      expect(toastMock).not.toHaveBeenCalled();
     });
   });
 });

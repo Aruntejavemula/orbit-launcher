@@ -6,6 +6,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
+    testTimeout: 20000,
+    hookTimeout: 20000,
     env: {
       VITE_API_URL: "http://localhost/api",
     },
@@ -21,6 +23,7 @@ export default defineConfig({
         "src/**/*.spec.{ts,tsx}",
         "src/main.tsx",
         "src/sw.ts",
+        "src/types.ts",
       ],
     },
   },

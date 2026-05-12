@@ -1,11 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import AppGrid from "./AppGrid";
 import type { AppItem } from "../types";
 
+const mockReorder = vi.fn();
+
 // Mock AppsContext
 vi.mock("../context/AppsContext", () => ({
-  useApps: () => ({ reorder: vi.fn() }),
+  useApps: () => ({ reorder: mockReorder }),
 }));
 
 // Mock framer-motion to avoid animation issues in tests
@@ -37,6 +39,7 @@ describe("AppGrid", () => {
   beforeEach(() => {
     onOpenApp.mockReset();
     onClearSearch.mockReset();
+    mockReorder.mockReset();
   });
 
   describe("empty states", () => {
@@ -107,6 +110,32 @@ describe("AppGrid", () => {
       render(<AppGrid apps={apps} totalApps={2} onOpenApp={onOpenApp} />);
       expect(screen.getByText("Figma")).toBeInTheDocument();
       expect(screen.getByText("Slack")).toBeInTheDocument();
+    });
+
+    it("calls onOpenApp when app card is clicked", () => {
+      const apps = [makeApp("1", "Figma")];
+      render(<AppGrid apps={apps} totalApps={1} onOpenApp={onOpenApp} />);
+      fireEvent.click(screen.getByText("Figma"));
+      expect(onOpenApp).toHaveBeenCalledWith("1");
+    });
+  });
+
+  describe("drag and drop", () => {
+    it("calls reorder when an item is dropped on another", () => {
+      const apps = [makeApp("1", "Figma"), makeApp("2", "Slack")];
+      render(<AppGrid apps={apps} totalApps={2} onOpenApp={onOpenApp} />);
+
+      const cards = screen.getAllByText(/Figma|Slack/);
+      const source = cards[0];
+      const target = cards[1];
+
+      const dt = { effectAllowed: "", setData: vi.fn(), getData: () => "1" };
+      fireEvent.dragStart(source, { dataTransfer: dt });
+      fireEvent.dragOver(target, { dataTransfer: dt });
+      fireEvent.drop(target, { dataTransfer: dt });
+      fireEvent.dragEnd(source, { dataTransfer: dt });
+
+      expect(mockReorder).toHaveBeenCalledWith("1", "2");
     });
   });
 });

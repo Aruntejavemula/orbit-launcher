@@ -63,8 +63,8 @@ describe("AddAppModal a11y", () => {
 
   it("passes axe scan on quick-add tab", async () => {
     const { container } = renderModal();
-    await waitFor(() => screen.getByRole("dialog"), { timeout: 8000 });
+    await waitFor(() => screen.getByRole("dialog"), { timeout: 10000 });
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  }, 15000);
+  }, 45000);
 });

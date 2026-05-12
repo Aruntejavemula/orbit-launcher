@@ -11,8 +11,9 @@ vi.mock("../context/AuthContext", () => ({
   }),
 }));
 
+const mockPrefs = vi.hoisted(() => ({ value: { theme: "light" } }));
 vi.mock("../context/PreferencesContext", () => ({
-  usePrefs: () => ({ prefs: { theme: "light" } }),
+  usePrefs: () => ({ prefs: mockPrefs.value }),
 }));
 
 vi.mock("./ProfileEditorModal", () => ({
@@ -134,6 +135,33 @@ describe("Sidebar", () => {
     fireEvent.mouseEnter(logoutBtn);
     fireEvent.mouseLeave(logoutBtn);
     expect(logoutBtn).toBeInTheDocument();
+  });
+
+  describe("dark theme", () => {
+    beforeEach(() => {
+      mockPrefs.value = { theme: "dark" };
+    });
+
+    it("renders nav items in dark mode", () => {
+      render(<Sidebar page="home" onNavigate={onNavigate} />);
+      expect(screen.getByText("All Apps")).toBeInTheDocument();
+    });
+
+    it("inactive nav item hover does not throw in dark", () => {
+      render(<Sidebar page="home" onNavigate={onNavigate} />);
+      const btn = screen.getByText("Insights").closest("button") as HTMLElement;
+      fireEvent.mouseEnter(btn);
+      fireEvent.mouseLeave(btn);
+      expect(btn).toBeInTheDocument();
+    });
+
+    it("Log out hover in dark mode does not throw", () => {
+      render(<Sidebar page="home" onNavigate={onNavigate} />);
+      const btn = screen.getByText("Log out").closest("button") as HTMLElement;
+      fireEvent.mouseEnter(btn);
+      fireEvent.mouseLeave(btn);
+      expect(btn).toBeInTheDocument();
+    });
   });
 });
 

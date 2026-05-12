@@ -101,5 +101,57 @@ describe("ApiKeysPage integration", () => {
       // No keys should be listed — just the create form
       expect(screen.queryByText(/abcd1234/)).not.toBeInTheDocument();
     });
+    expect(screen.getByText(/no keys yet/i)).toBeInTheDocument();
+  });
+
+  it("clears the error state when user types again", async () => {
+    renderApiKeys();
+    await waitFor(() => screen.getByText(fakeApiKeys[0].name));
+
+    fireEvent.click(screen.getByRole("button", { name: /generate key/i }));
+    const input = screen.getByPlaceholderText(/zapier/i);
+    await waitFor(() => expect(input.className).toMatch(/border-red/));
+
+    fireEvent.change(input, { target: { value: "x" } });
+    expect(input.className).not.toMatch(/border-red/);
+  });
+
+  it("dismisses the secret card via Done button", async () => {
+    renderApiKeys();
+    await waitFor(() => screen.getByText(fakeApiKeys[0].name));
+    fireEvent.change(screen.getByPlaceholderText(/zapier/i), {
+      target: { value: "My Key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /generate key/i }));
+    await waitFor(() => screen.getByText(/rawsecret123/));
+    fireEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await waitFor(() =>
+      expect(screen.queryByText(/rawsecret123/)).not.toBeInTheDocument()
+    );
+  });
+
+  it("copies a newly generated secret to the clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    renderApiKeys();
+    await waitFor(() => screen.getByText(fakeApiKeys[0].name));
+    fireEvent.change(screen.getByPlaceholderText(/zapier/i), {
+      target: { value: "Key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /generate key/i }));
+    await waitFor(() => screen.getByText(/rawsecret123/));
+    fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+    expect(writeText).toHaveBeenCalledWith("rawsecret123");
+  });
+
+  it("cancels the revoke confirmation modal", async () => {
+    renderApiKeys();
+    await waitFor(() => screen.getByText(fakeApiKeys[0].name));
+    fireEvent.click(screen.getByRole("button", { name: /revoke key/i }));
+    await screen.findByRole("button", { name: /^revoke$/i });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^revoke$/i })).not.toBeInTheDocument()
+    );
   });
 });

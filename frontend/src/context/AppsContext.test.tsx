@@ -356,6 +356,99 @@ describe("AppsContext - useApps", () => {
     });
   });
 
+  it("launch calls smartLaunch with url", async () => {
+    const { smartLaunch } = await import("../utils/launch");
+    setupDefaultMocks();
+    mockApi.post.mockResolvedValueOnce({ data: fakeAppApiResponse });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useApps(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    act(() => {
+      result.current.launch("app-1");
+    });
+
+    await waitFor(() => {
+      expect(smartLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: "notion", url: "https://notion.so" })
+      );
+    });
+  });
+
+  it("reorder rolls back and invalidates on mutation error", async () => {
+    setupDefaultMocks();
+    mockApi.post.mockRejectedValueOnce(new Error("reorder failed"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { Wrapper, queryClient } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useApps(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.apps).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.reorder("app-2", "app-1");
+    });
+
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        "/apps/reorder",
+        expect.arrayContaining([
+          expect.objectContaining({ id: "app-2", order: 0 }),
+          expect.objectContaining({ id: "app-1", order: 1 }),
+        ])
+      );
+    });
+
+    // Toast error should have been triggered via mutation onError
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["apps"] });
+    });
+
+    consoleSpy.mockRestore();
+    invalidateSpy.mockRestore();
+  });
+
+  it("open retries launch POST on failure", async () => {
+    setupDefaultMocks();
+    let attempts = 0;
+    mockApi.post.mockImplementation((url: string) => {
+      if (url === "/apps/app-1/launch") {
+        attempts++;
+        if (attempts === 1) return Promise.reject(new Error("network"));
+        return Promise.resolve({ data: fakeAppApiResponse });
+      }
+      return Promise.reject(new Error(`Unexpected POST: ${url}`));
+    });
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useApps(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    act(() => {
+      result.current.open("app-1");
+    });
+
+    // First attempt fails, second is scheduled after 2s — just verify first attempt
+    await waitFor(() => {
+      expect(attempts).toBeGreaterThanOrEqual(1);
+    });
+
+    consoleSpy.mockRestore();
+  });
+
   // ─── Table-driven: toOpenEvent transform ────────────────────────────────────
 
   describe("toOpenEvent transformation", () => {

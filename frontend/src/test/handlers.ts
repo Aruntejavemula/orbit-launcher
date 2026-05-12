@@ -45,6 +45,7 @@ export const fakeApps = [
     frequency: null,
     manage_url: null,
     icon_key: null,
+    weeklyMinutes: 120,
   },
   {
     id: "app-2",
@@ -63,6 +64,7 @@ export const fakeApps = [
     frequency: null,
     manage_url: null,
     icon_key: null,
+    weeklyMinutes: 60,
   },
 ];
 

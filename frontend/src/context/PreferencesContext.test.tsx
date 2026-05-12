@@ -262,4 +262,47 @@ describe("PreferencesContext - usePrefs", () => {
     expect(result.current.prefs).toEqual(defaults);
     expect(result.current.prefsFetched).toBe(false);
   });
+
+  it("rolls back optimistic update on PATCH error", async () => {
+    setupDefaultMocks();
+    mockApi.patch.mockRejectedValueOnce(new Error("patch failed"));
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prefsFetched).toBe(true);
+    });
+
+    const originalTheme = result.current.prefs.theme;
+
+    act(() => {
+      result.current.update({ theme: "dark" });
+    });
+
+    // Optimistic update applies immediately
+    expect(result.current.prefs.theme).toBe("dark");
+
+    // After error, rolls back
+    await waitFor(() => {
+      expect(result.current.prefs.theme).toBe(originalTheme);
+    });
+  });
+
+  it("throws when GET preferences fails with non-404 error", async () => {
+    mockApi.get.mockImplementation((url: string) => {
+      if (url === "/preferences") {
+        return Promise.reject(new Error("Server down"));
+      }
+      if (url === "/api-keys") return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`Unexpected GET: ${url}`));
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prefsFetched).toBe(false);
+    });
+  });
 });
