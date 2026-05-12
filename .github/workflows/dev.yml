@@ -41,7 +41,7 @@ jobs:
         working-directory: backend
 
       - name: Run backend tests
-        run: pytest
+        run: pytest --cov=. --cov-report=xml
         working-directory: backend
 
       - name: SonarQube Scan
@@ -49,3 +49,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: Checkout code 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0

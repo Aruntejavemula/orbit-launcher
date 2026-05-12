@@ -62,3 +62,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Checkout code 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
