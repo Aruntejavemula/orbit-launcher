@@ -32,7 +32,7 @@ jobs:
         working-directory: frontend
 
       - name: Run Frontend tests
-        run: npm vitest run -- --coverage
+        run: npm run test -- --coverage
         working-directory: frontend
 
       - name: Setup Python
