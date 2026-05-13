@@ -59,7 +59,12 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        secure=_IS_PROD or _CROSS_DOMAIN,
+        samesite="none" if _CROSS_DOMAIN else "strict",
+    )
 
 
 @router.post("/register", status_code=201)
