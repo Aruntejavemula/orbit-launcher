@@ -30,7 +30,7 @@ const STEPS = [
   },
   {
     title: "You're all set!",
-    body: "Your app appears on the dashboard with reminders. Explore Insights, Calendar, and Usage pages to stay on top of everything.",
+    body: "Your app appears on the dashboard with reminders. Explore Insights, Calendar, and Activity pages to stay on top of everything.",
     visual: "done",
   },
 ];

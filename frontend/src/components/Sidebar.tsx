@@ -45,7 +45,7 @@ interface Props {
 const NAV: { id: PageId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "home",     label: "All Apps",  icon: LayoutGrid  },
   { id: "insights", label: "Insights",  icon: BarChart3   },
-  { id: "usage",    label: "Usage",     icon: Timer       },
+  { id: "activity", label: "Activity",  icon: Timer       },
   { id: "calendar", label: "Calendar",  icon: CalendarIcon },
   { id: "settings", label: "Settings",  icon: Settings    },
   { id: "api-keys", label: "API Keys",  icon: Key         },

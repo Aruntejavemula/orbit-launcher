@@ -76,7 +76,7 @@ export interface Reminder {
 export type PageId =
   | "home"
   | "insights"
-  | "usage"
+  | "activity"
   | "calendar"
   | "settings"
   | "api-keys";

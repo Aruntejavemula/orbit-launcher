@@ -95,7 +95,7 @@ describe("Sidebar", () => {
 
   it("renders all 6 nav items", () => {
     render(<Sidebar page="home" onNavigate={onNavigate} />);
-    expect(screen.getByText("Usage")).toBeInTheDocument();
+    expect(screen.getByText("Activity")).toBeInTheDocument();
     expect(screen.getByText("Calendar")).toBeInTheDocument();
   });
 
@@ -103,7 +103,7 @@ describe("Sidebar", () => {
     render(<Sidebar page="home" onNavigate={onNavigate} />);
     const pages = [
       { label: "Insights", id: "insights" },
-      { label: "Usage", id: "usage" },
+      { label: "Activity", id: "activity" },
       { label: "Calendar", id: "calendar" },
       { label: "API Keys", id: "api-keys" },
     ] as const;

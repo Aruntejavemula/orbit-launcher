@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -34,7 +34,7 @@ if _SENTRY_DSN:
         send_default_pii=False,
     )
 
-from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push
+from routers import auth, apps, catalog, launches, activity, insights, reminders, preferences, api_keys, subscriptions, push
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -226,7 +226,7 @@ class UserIdMiddleware(BaseHTTPMiddleware):
                 claims = decode_token(token)
                 request.state.user_id = claims["user_id"]
                 request.state.token_version = claims["token_version"]
-        except JWTError:
+        except (JWTError, HTTPException):
             pass
         return await call_next(request)
 
@@ -330,7 +330,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(apps.router, prefix="/api/apps", tags=["apps"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(launches.router, prefix="/api/launches", tags=["launches"])
-app.include_router(usage.router, prefix="/api/usage", tags=["usage"])
+app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
 app.include_router(insights.router, prefix="/api/insights", tags=["insights"])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"])
 app.include_router(preferences.router, prefix="/api/preferences", tags=["preferences"])
