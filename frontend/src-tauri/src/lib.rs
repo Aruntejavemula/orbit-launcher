@@ -10,26 +10,22 @@ use tauri_plugin_autostart::MacosLauncher;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(if cfg!(debug_assertions) { log::LevelFilter::Debug } else { log::LevelFilter::Warn })
+                .build(),
+        )
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
-
             // System tray setup
             let show = MenuItemBuilder::with_id("show", "Open Remio").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit Remio").build(app)?;
             let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
 
-            let icon = Image::from_path("icons/icon.png")
-                .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")).expect("failed to load tray icon"));
+            let icon = app.default_window_icon().cloned()
+                .unwrap_or_else(|| Image::from_bytes(include_bytes!("../icons/icon.png")).expect("failed to load tray icon"));
 
             TrayIconBuilder::new()
                 .icon(icon)
