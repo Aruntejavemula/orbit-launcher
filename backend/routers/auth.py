@@ -28,7 +28,7 @@ load_dotenv()
 router = APIRouter()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-_IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
+_IS_PROD = os.getenv("APP_ENV", "dev") == "prod"
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
 
 
