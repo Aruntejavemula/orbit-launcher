@@ -130,6 +130,9 @@ export const handlers = [
   ),
   http.delete(`${BASE}/api-keys/:id`, () => new HttpResponse(null, { status: 204 })),
 
+  // Activity
+  http.get(`${BASE}/activity`, () => HttpResponse.json([])),
+
   // Insights
   http.get(`${BASE}/insights/spending`, () => HttpResponse.json([])),
   http.get(`${BASE}/insights/usage`, () => HttpResponse.json([])),

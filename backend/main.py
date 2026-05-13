@@ -34,7 +34,7 @@ if _SENTRY_DSN:
         send_default_pii=False,
     )
 
-from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push
+from routers import auth, apps, catalog, launches, activity, insights, reminders, preferences, api_keys, subscriptions, push
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -330,7 +330,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(apps.router, prefix="/api/apps", tags=["apps"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(launches.router, prefix="/api/launches", tags=["launches"])
-app.include_router(usage.router, prefix="/api/usage", tags=["usage"])
+app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
 app.include_router(insights.router, prefix="/api/insights", tags=["insights"])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"])
 app.include_router(preferences.router, prefix="/api/preferences", tags=["preferences"])
