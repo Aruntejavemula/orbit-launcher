@@ -33,11 +33,14 @@ async def resolve_api_key(
         if not verify_password(raw_key, key.secret_hash):
             return None
 
-        await session.execute(
+        update_result = await session.execute(
             update(ApiKey)
             .where(ApiKey.id == key.id)
             .values(last_used_at=datetime.now(timezone.utc))
         )
+        if update_result.rowcount != 1:
+            await session.rollback()
+            return None
         await session.commit()
 
         return key.user_id

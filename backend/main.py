@@ -216,14 +216,12 @@ class UserIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         from auth.jwt import COOKIE_NAME, decode_token
         from jose import JWTError
+        auth_header = request.headers.get("Authorization", "")
         bearer_raw: str | None = None
+        if auth_header.startswith("Bearer "):
+            bearer_raw = auth_header[7:].strip()
         try:
-            token = request.cookies.get(COOKIE_NAME)
-            if not token:
-                auth_header = request.headers.get("Authorization", "")
-                if auth_header.startswith("Bearer "):
-                    bearer_raw = auth_header[7:].strip()
-                    token = bearer_raw
+            token = request.cookies.get(COOKIE_NAME) or bearer_raw
             if token:
                 claims = decode_token(token)
                 request.state.user_id = claims["user_id"]
