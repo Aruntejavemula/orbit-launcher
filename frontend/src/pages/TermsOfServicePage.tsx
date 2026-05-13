@@ -115,8 +115,8 @@ export default function TermsOfServicePage({ onBack }: { onBack: () => void }) {
           <h2>13. Contact Us</h2>
           <p>
             If you have any questions about these Terms of Service, please contact us at:{" "}
-            <a href="mailto:support@remio.com" className="text-sage-ink underline hover:no-underline">
-              support@remio.com
+            <a href="mailto:support@remiolauncher.com" className="text-sage-ink underline hover:no-underline">
+              support@remiolauncher.com
             </a>
           </p>
         </div>
