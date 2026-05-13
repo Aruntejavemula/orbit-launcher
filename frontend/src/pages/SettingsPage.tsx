@@ -193,6 +193,23 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      <Card title="Legal">
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/privacy"
+            className="text-sm text-ink-muted underline transition hover:text-ink"
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="/terms"
+            className="text-sm text-ink-muted underline transition hover:text-ink"
+          >
+            Terms of Service
+          </a>
+        </div>
+      </Card>
+
       <ConfirmModal
         open={confirmSignOut}
         title="Sign out?"

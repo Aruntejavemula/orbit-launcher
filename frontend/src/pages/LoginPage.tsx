@@ -232,6 +232,13 @@ export default function LoginPage() {
           <GoogleIcon />
           Continue with Google
         </button>
+
+        <p className="mt-6 text-center text-xs text-ink-muted">
+          By continuing, you agree to our{" "}
+          <a href="/terms" className="underline hover:text-ink transition-colors">Terms of Service</a>
+          {" "}and{" "}
+          <a href="/privacy" className="underline hover:text-ink transition-colors">Privacy Policy</a>.
+        </p>
       </div>
 
       <ForgotPasswordModal open={showForgot} onClose={() => setShowForgot(false)} />

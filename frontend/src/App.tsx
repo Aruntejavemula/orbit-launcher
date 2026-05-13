@@ -12,6 +12,8 @@ import AppDetailModal from "./components/AppDetailModal";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
@@ -23,7 +25,7 @@ const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
 
-const KNOWN_PATHS = new Set(["/", "/auth/callback"]);
+const KNOWN_PATHS = new Set(["/", "/auth/callback", "/privacy", "/terms"]);
 
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
@@ -66,6 +68,14 @@ export default function App() {
   // Splash screen on first load
   if (!splashDone) {
     return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  // Public legal pages — accessible without authentication
+  if (window.location.pathname === "/privacy") {
+    return <PrivacyPolicyPage onBack={() => { window.history.back(); }} />;
+  }
+  if (window.location.pathname === "/terms") {
+    return <TermsOfServicePage onBack={() => { window.history.back(); }} />;
   }
 
   // Unknown path + confirmed logged in → 404
