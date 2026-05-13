@@ -16,7 +16,7 @@ interface ActivityEntry {
   status: "green" | "yellow" | "red";
   message: string;
   last_opened_at: string | null;
-  days_inactive: number;
+  days_inactive: number | null;
 }
 
 const STATUS_CONFIG = {

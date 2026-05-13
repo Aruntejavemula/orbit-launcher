@@ -3,7 +3,7 @@ Daily inactivity check — sends push notifications for apps not used in 7+ or 1
 """
 import logging
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, and_, delete as sa_delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import engine as async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -11,11 +11,13 @@ from models.app_item import AppItem
 from models.preferences import Preferences
 from models.push_subscription import PushSubscription
 from tasks.send_push import send_push_notification
-from routers.activity import YELLOW_THRESHOLD_DAYS, RED_THRESHOLD_DAYS
 
 logger = logging.getLogger("orbit.inactivity_cron")
 
 _SessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
+
+YELLOW_THRESHOLD_DAYS = 7
+RED_THRESHOLD_DAYS = 15
 
 
 async def run_inactivity_cron(ctx: dict) -> None:
@@ -30,7 +32,6 @@ async def run_inactivity_cron(ctx: dict) -> None:
 
 async def _check_inactivity(db: AsyncSession, now: datetime):
     yellow_cutoff = now - timedelta(days=YELLOW_THRESHOLD_DAYS)
-    red_cutoff = now - timedelta(days=RED_THRESHOLD_DAYS)
 
     result = await db.execute(
         select(AppItem).where(
@@ -86,7 +87,7 @@ async def _notify_inactive_user(db: AsyncSession, user_id: str, app_levels: list
             names += f" and {len(red_apps) - 3} more"
         title = "Apps you haven't used in 15+ days"
         body = f"{names} — consider unsubscribing?"
-        _send_to_devices(subscriptions, title, body, db)
+        _send_to_devices(subscriptions, title, body)
 
     if yellow_apps:
         names = ", ".join(a.name for a in yellow_apps[:3])
@@ -94,10 +95,10 @@ async def _notify_inactive_user(db: AsyncSession, user_id: str, app_levels: list
             names += f" and {len(yellow_apps) - 3} more"
         title = "Apps you haven't used in a week"
         body = names
-        _send_to_devices(subscriptions, title, body, db)
+        _send_to_devices(subscriptions, title, body)
 
 
-def _send_to_devices(subscriptions, title: str, body: str, db: AsyncSession):
+def _send_to_devices(subscriptions, title: str, body: str):
     payload = {
         "title": title,
         "body": body,

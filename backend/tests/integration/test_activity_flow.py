@@ -61,6 +61,7 @@ class TestActivityList:
         data = resp.json()
         assert len(data) == 1
         assert data[0]["status"] == "red"
+        assert data[0]["days_inactive"] is None
 
     async def test_excludes_deleted_apps(self, int_client, db_session):
         user = await seed_user(db_session)
@@ -93,6 +94,18 @@ class TestActivityList:
         assert statuses["green-app"] == "green"
         assert statuses["yellow-app"] == "yellow"
         assert statuses["red-app"] == "red"
+
+    async def test_naive_datetime_treated_as_utc(self, int_client, db_session):
+        user = await seed_user(db_session)
+        app = await seed_app(db_session, user.id, slug="naive-app")
+        app.last_opened_at = datetime.now() - timedelta(days=10)
+        await db_session.commit()
+
+        resp = await int_client.get("/api/activity", cookies=make_auth_cookie(user.id))
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["status"] == "yellow"
+        assert data[0]["days_inactive"] == 10
 
     async def test_unauthorized_returns_401(self, int_client, db_session):
         resp = await int_client.get("/api/activity")
