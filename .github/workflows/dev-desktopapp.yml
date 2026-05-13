@@ -109,3 +109,22 @@ jobs:
             frontend/src-tauri/target/release/bundle/**/*.AppImage
             frontend/src-tauri/target/release/bundle/**/*.deb
           if-no-files-found: ignore
+
+      - name: Build Microsoft Store variant (offline WebView2)
+        if: matrix.target == 'windows'
+        run: |
+          npx tauri build --no-bundle
+          npx tauri bundle --config src-tauri/tauri.microsoftstore.conf.json
+        working-directory: frontend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Microsoft Store artifact
+        if: matrix.target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: remio-desktop-windows-store
+          path: |
+            frontend/src-tauri/target/release/bundle/**/*.msi
+            frontend/src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: ignore
