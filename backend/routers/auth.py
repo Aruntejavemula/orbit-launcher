@@ -28,7 +28,8 @@ load_dotenv()
 router = APIRouter()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-_IS_PROD = os.getenv("APP_ENV", "dev") == "prod"
+_IS_PROD = os.getenv("APP_ENV", "dev") in ("prod", "production")
+_CROSS_DOMAIN = _IS_PROD and "localhost" not in FRONTEND_URL
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
 
 
@@ -50,8 +51,8 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=_IS_PROD,
-        samesite="strict",
+        secure=_IS_PROD or _CROSS_DOMAIN,
+        samesite="none" if _CROSS_DOMAIN else "strict",
         max_age=max_age,
         path="/",
     )
