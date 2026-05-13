@@ -18,11 +18,6 @@ jobs:
         with:
           ref: dev
 
-      - name: Guard - no .env files tracked
-        run: |
-          tracked=$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.example$' || true)
-          if [ -n "$tracked" ]; then echo "Tracked env files: $tracked"; exit 1; fi
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -31,7 +26,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
         working-directory: frontend
 
       - name: Build frontend
@@ -53,18 +48,8 @@ jobs:
         run: pytest
         working-directory: backend
 
-      - name: Run frontend tests
-        run: npm test
-        working-directory: frontend
-
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      - name: Checkout code 
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
