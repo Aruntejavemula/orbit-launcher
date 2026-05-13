@@ -1,7 +1,12 @@
 import axios from "axios";
 import { toast } from "./components/Toast";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
+
+// In Tauri desktop mode, there's no Vercel proxy — call the production API directly.
+// In web mode, use the relative /api path (Vercel proxy handles it).
+export const API_BASE_URL = import.meta.env.VITE_API_URL
+  ?? (isTauri ? "https://www.remiolauncher.com/api" : "/api");
 
 const api = axios.create({
   baseURL: API_BASE_URL,

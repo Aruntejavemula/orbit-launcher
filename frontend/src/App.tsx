@@ -9,6 +9,7 @@ import BottomNav from "./components/BottomNav";
 import FloatingAddButton from "./components/FloatingAddButton";
 import AddAppModal from "./components/AddAppModal";
 import AppDetailModal from "./components/AppDetailModal";
+import TitleBar from "./components/TitleBar";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -17,6 +18,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
+import { isTauri, requestNotificationPermission, checkForUpdates, downloadAndInstallUpdate } from "./tauri";
 import type { PageId } from "./types";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
@@ -39,6 +41,20 @@ export default function App() {
   const prevUserId = useRef<string | null>(null);
   const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+
+  // Tauri: request notification permission and check for updates on mount
+  useEffect(() => {
+    if (!isTauri) return;
+    requestNotificationPermission();
+    checkForUpdates().then((info) => {
+      if (info.available) {
+        const msg = `Remio ${info.version} is available. Update now?`;
+        if (window.confirm(msg)) {
+          downloadAndInstallUpdate();
+        }
+      }
+    });
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
@@ -67,15 +83,36 @@ export default function App() {
 
   // Splash screen on first load
   if (!splashDone) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <SplashScreen onComplete={handleSplashComplete} />
+        </div>
+      </>
+    );
   }
 
   // Public legal pages — accessible without authentication
   if (window.location.pathname === "/privacy") {
-    return <PrivacyPolicyPage onBack={() => { window.history.back(); }} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <PrivacyPolicyPage onBack={() => { window.history.back(); }} />
+        </div>
+      </>
+    );
   }
   if (window.location.pathname === "/terms") {
-    return <TermsOfServicePage onBack={() => { window.history.back(); }} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <TermsOfServicePage onBack={() => { window.history.back(); }} />
+        </div>
+      </>
+    );
   }
 
   // Unknown path + confirmed logged in → 404
@@ -91,17 +128,22 @@ export default function App() {
   // Auth resolved, no user → login
   if (!authLoading && !user) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="login"
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.97 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <LoginPage />
-        </motion.div>
-      </AnimatePresence>
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="login"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <LoginPage />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </>
     );
   }
 
@@ -123,9 +165,11 @@ export default function App() {
 
   // Confirmed user → render shell
   return (
+    <>
+    <TitleBar />
     <motion.div
       key="app"
-      className="flex min-h-screen bg-app"
+      className={`flex min-h-screen bg-app${isTauri ? " pt-8" : ""}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
@@ -171,5 +215,6 @@ export default function App() {
         )}
       </AnimatePresence>
     </motion.div>
+    </>
   );
 }
