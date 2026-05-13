@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
-import api from "../api";
+import api, { API_BASE_URL } from "../api";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
-    window.location.href = "/api/auth/google";
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   return (
