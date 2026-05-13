@@ -87,6 +87,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+_PRODUCTION_ORIGINS = ["https://remio-alpha.vercel.app"]
+for _origin in _PRODUCTION_ORIGINS:
+    if _origin not in _allowed_origins:
+        _allowed_origins.append(_origin)
 
 _cors_kwargs = dict(
     allow_origins=_allowed_origins,

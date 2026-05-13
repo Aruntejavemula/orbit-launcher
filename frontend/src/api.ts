@@ -1,8 +1,14 @@
 import axios from "axios";
 import { toast } from "./components/Toast";
 
+const resolveBaseURL = (): string => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.PROD) return "https://orbit-launcher-production.up.railway.app/api";
+  return "/api";
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "/api",
+  baseURL: resolveBaseURL(),
   withCredentials: true,
   timeout: 10000,
 });
