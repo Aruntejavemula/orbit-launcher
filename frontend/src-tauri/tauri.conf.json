@@ -55,9 +55,5 @@
     "copyright": "Copyright 2026 Remio",
     "publisher": "Remio"
   },
-  "plugins": {
-    "notification": {
-      "registerOnInit": false
-    }
-  }
+  "plugins": {}
 }
