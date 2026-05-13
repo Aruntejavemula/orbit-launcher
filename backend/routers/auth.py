@@ -105,7 +105,7 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
     await db.commit()
     await db.refresh(user)
     token = create_access_token(str(user.id), token_version=user.token_version)
-    response = JSONResponse(content={"ok": True})
+    response = JSONResponse(content={"ok": True, "token": token})
     _set_auth_cookie(response, token)
     return response
 
@@ -119,7 +119,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else None
     token = create_access_token(str(user.id), token_version=user.token_version, expire_minutes=expire)
-    response = JSONResponse(content={"ok": True})
+    response = JSONResponse(content={"ok": True, "token": token})
     _set_auth_cookie(response, token, remember=body.remember_me)
     return response
 

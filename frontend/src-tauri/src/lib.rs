@@ -19,10 +19,11 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            // Ensure main window is visible
+            // Ensure main window is visible and open devtools for debugging
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
+                window.open_devtools();
             }
 
             // System tray setup — non-fatal so app still opens if tray fails

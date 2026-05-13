@@ -18,6 +18,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="error-log" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#1a1a2e;color:#ff6b6b;font-family:monospace;font-size:12px;padding:12px;z-index:99999;white-space:pre-wrap;"></div>
+    <script>
+      // Global error catcher — logs all JS errors to a visible panel
+      var errorLog = document.getElementById('error-log');
+      function logError(msg) {
+        errorLog.style.display = 'block';
+        errorLog.textContent += new Date().toISOString() + ': ' + msg + '\n\n';
+      }
+      window.onerror = function(msg, src, line, col, err) {
+        logError('ERROR: ' + msg + ' at ' + src + ':' + line + ':' + col + (err && err.stack ? '\n' + err.stack : ''));
+      };
+      window.onunhandledrejection = function(e) {
+        var reason = e.reason;
+        logError('UNHANDLED PROMISE: ' + (reason && reason.stack ? reason.stack : String(reason)));
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
