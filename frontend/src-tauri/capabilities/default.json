@@ -5,10 +5,6 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "notification:default",
-    "notification:allow-request-permission",
-    "notification:allow-notify",
-    "notification:allow-is-permission-granted",
     "shell:allow-open",
     "process:allow-restart",
     "process:allow-exit",
@@ -20,9 +16,7 @@
     "core:window:allow-start-dragging",
     "core:window:allow-is-maximized",
     "core:window:allow-set-focus",
-    "core:tray:default",
-    "autostart:allow-enable",
-    "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "core:window:allow-show",
+    "core:window:allow-hide"
   ]
 }
