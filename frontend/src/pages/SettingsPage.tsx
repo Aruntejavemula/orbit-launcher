@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sun, Moon, PlayCircle, Globe } from "lucide-react";
 import { COUNTRIES } from "../utils/countryData";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +9,7 @@ import ChangePasswordModal from "../components/ChangePasswordModal";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import ConfirmModal from "../components/ConfirmModal";
 import api from "../api";
+import { isTauri, getDesktopNotificationsEnabled, setDesktopNotificationsEnabled, isAutoStartEnabled, enableAutoStart, disableAutoStart } from "../tauri";
 
 export default function SettingsPage() {
   const { user, signOut, refreshUser } = useAuth();
@@ -24,6 +25,14 @@ export default function SettingsPage() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [countrySaved, setCountrySaved] = useState(false);
+  const [desktopNotifs, setDesktopNotifs] = useState(true);
+  const [autoStart, setAutoStart] = useState(false);
+
+  useEffect(() => {
+    if (!isTauri) return;
+    setDesktopNotifs(getDesktopNotificationsEnabled());
+    isAutoStartEnabled().then(setAutoStart);
+  }, []);
 
   const hasPassword = !!user;
 
@@ -137,6 +146,29 @@ export default function SettingsPage() {
           <Toggle label="Compact cards" description="Smaller padding and icon size on the home grid." value={prefs.compactCards} onChange={(v) => update({ compactCards: v })} />
           <Toggle label="Show last opened time" description="Display the relative timestamp on each card." value={prefs.showLastOpened} onChange={(v) => update({ showLastOpened: v })} />
           <Toggle label="Notify before subscriptions expire" description="Banner reminder 7 days before any renewal." value={prefs.notifyExpirations} onChange={(v) => update({ notifyExpirations: v })} />
+          {isTauri && (
+            <>
+              <Toggle
+                label="Desktop Notifications"
+                description="Receive native OS notifications for subscription reminders and inactivity alerts."
+                value={desktopNotifs}
+                onChange={(v) => {
+                  setDesktopNotificationsEnabled(v);
+                  setDesktopNotifs(v);
+                }}
+              />
+              <Toggle
+                label="Open on startup"
+                description="Launch Remio automatically when you log in to your computer."
+                value={autoStart}
+                onChange={(v) => {
+                  setAutoStart(v);
+                  if (v) enableAutoStart();
+                  else disableAutoStart();
+                }}
+              />
+            </>
+          )}
         </div>
       </Card>
 
@@ -208,6 +240,9 @@ export default function SettingsPage() {
             Terms of Service
           </a>
         </div>
+        <p className="mt-4 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          All third-party product names, logos, and brands mentioned in Remio are the property of their respective owners. Use of these names and logos does not imply endorsement or affiliation. Remio is an independent subscription management tool.
+        </p>
       </Card>
 
       <ConfirmModal

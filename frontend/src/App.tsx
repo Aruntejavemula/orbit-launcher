@@ -9,6 +9,7 @@ import BottomNav from "./components/BottomNav";
 import FloatingAddButton from "./components/FloatingAddButton";
 import AddAppModal from "./components/AddAppModal";
 import AppDetailModal from "./components/AppDetailModal";
+import TitleBar from "./components/TitleBar";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -17,7 +18,10 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
+import { isTauri, checkForUpdates, downloadAndInstallUpdate } from "./tauri";
 import type { PageId } from "./types";
+import type { UpdateInfo } from "./tauri";
+import FirstLoginPermissionsDialog from "./components/FirstLoginPermissionsDialog";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
@@ -36,9 +40,28 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
   const [splashDone, setSplashDone] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const prevUserId = useRef<string | null>(null);
   const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+
+  // Tauri: check for updates on mount (notification permission moved to AddAppModal)
+  useEffect(() => {
+    if (!isTauri) return;
+    checkForUpdates().then((info) => {
+      if (info.available) setUpdateInfo(info);
+    });
+  }, []);
+
+  // Show first-login permissions dialog (one time only)
+  useEffect(() => {
+    if (!isTauri || !user || !prefsFetched) return;
+    const shown = localStorage.getItem("remio_permissions_dialog_shown");
+    if (!shown) {
+      setShowPermissionsDialog(true);
+    }
+  }, [user, prefsFetched]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
@@ -67,15 +90,36 @@ export default function App() {
 
   // Splash screen on first load
   if (!splashDone) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <SplashScreen onComplete={handleSplashComplete} />
+        </div>
+      </>
+    );
   }
 
   // Public legal pages — accessible without authentication
   if (window.location.pathname === "/privacy") {
-    return <PrivacyPolicyPage onBack={() => { window.history.back(); }} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <PrivacyPolicyPage onBack={() => { window.history.back(); }} />
+        </div>
+      </>
+    );
   }
   if (window.location.pathname === "/terms") {
-    return <TermsOfServicePage onBack={() => { window.history.back(); }} />;
+    return (
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <TermsOfServicePage onBack={() => { window.history.back(); }} />
+        </div>
+      </>
+    );
   }
 
   // Unknown path + confirmed logged in → 404
@@ -91,17 +135,22 @@ export default function App() {
   // Auth resolved, no user → login
   if (!authLoading && !user) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="login"
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.97 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <LoginPage />
-        </motion.div>
-      </AnimatePresence>
+      <>
+        <TitleBar />
+        <div className={isTauri ? "pt-8" : ""}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="login"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <LoginPage />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </>
     );
   }
 
@@ -123,9 +172,11 @@ export default function App() {
 
   // Confirmed user → render shell
   return (
+    <>
+    <TitleBar />
     <motion.div
       key="app"
-      className="flex min-h-screen bg-app"
+      className={`flex min-h-screen bg-app${isTauri ? " pt-8" : ""}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
@@ -170,6 +221,53 @@ export default function App() {
           <OnboardingOverlay onComplete={() => update({ onboardingCompleted: true })} />
         )}
       </AnimatePresence>
+      {updateInfo && (
+        <UpdateModal
+          version={updateInfo.version ?? ""}
+          onConfirm={() => {
+            downloadAndInstallUpdate();
+            setUpdateInfo(null);
+          }}
+          onCancel={() => setUpdateInfo(null)}
+        />
+      )}
+      {showPermissionsDialog && (
+        <FirstLoginPermissionsDialog
+          onClose={() => {
+            localStorage.setItem("remio_permissions_dialog_shown", "true");
+            setShowPermissionsDialog(false);
+          }}
+        />
+      )}
     </motion.div>
+    </>
+  );
+}
+
+function UpdateModal({ version, onConfirm, onCancel }: { version: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-sm rounded-2xl p-6 shadow-xl" style={{ background: "var(--surface)" }}>
+        <h3 className="mb-2 font-display text-lg font-semibold">Update Available</h3>
+        <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+          Remio {version} is available. Would you like to update now?
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="rounded-xl px-4 py-2 text-sm font-medium"
+            style={{ background: "var(--bg-deep)", color: "var(--text-muted)", border: "1px solid var(--line)" }}
+          >
+            Later
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-xl bg-sage px-4 py-2 text-sm font-medium text-white"
+          >
+            Update Now
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
