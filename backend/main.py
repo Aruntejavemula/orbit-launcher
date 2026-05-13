@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -226,7 +226,7 @@ class UserIdMiddleware(BaseHTTPMiddleware):
                 claims = decode_token(token)
                 request.state.user_id = claims["user_id"]
                 request.state.token_version = claims["token_version"]
-        except JWTError:
+        except (JWTError, HTTPException):
             pass
         return await call_next(request)
 
