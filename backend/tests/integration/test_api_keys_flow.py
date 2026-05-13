@@ -1,13 +1,17 @@
 """
 Integration tests for the /api/api-keys router.
 
-Covers: create key, list keys, secret only on creation, revoke key.
+Covers: create key, list keys, secret only on creation, revoke key,
+and using API keys to authenticate requests.
 """
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from models import ApiKey
-from tests.integration.conftest import seed_user, seed_api_key, make_auth_cookie
+from auth.api_key_auth import resolve_api_key
+from auth.password import hash_password
+from tests.integration.conftest import seed_user, seed_app, seed_api_key, make_auth_cookie, int_client_apikey
 
 
 class TestListKeys:
@@ -172,3 +176,131 @@ class TestRevokeKey:
             cookies=make_auth_cookie(user2.id),
         )
         assert resp.status_code == 404
+
+
+class TestResolveApiKey:
+    """Unit-level tests for the resolve_api_key function using the test DB."""
+
+    async def test_valid_key_returns_user_id(self, engine, db_session):
+        user = await seed_user(db_session)
+        key, raw = await seed_api_key(db_session, user.id)
+        await db_session.commit()
+
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        result = await resolve_api_key(raw, session_factory=factory)
+        assert str(result) == str(user.id)
+
+    async def test_invalid_key_returns_none(self, engine, db_session):
+        user = await seed_user(db_session)
+        await seed_api_key(db_session, user.id)
+        await db_session.commit()
+
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        result = await resolve_api_key("completely-wrong-key-that-is-long-enough", session_factory=factory)
+        assert result is None
+
+    async def test_short_key_returns_none(self, engine, db_session):
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        result = await resolve_api_key("short", session_factory=factory)
+        assert result is None
+
+    async def test_correct_prefix_wrong_secret_returns_none(self, engine, db_session):
+        user = await seed_user(db_session)
+        key, raw = await seed_api_key(db_session, user.id)
+        await db_session.commit()
+
+        wrong_key = raw[:8] + "Z" * (len(raw) - 8)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        result = await resolve_api_key(wrong_key, session_factory=factory)
+        assert result is None
+
+    async def test_updates_last_used_at(self, engine, db_session):
+        user = await seed_user(db_session)
+        key, raw = await seed_api_key(db_session, user.id)
+        await db_session.commit()
+        assert key.last_used_at is None
+
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        await resolve_api_key(raw, session_factory=factory)
+
+        await db_session.refresh(key)
+        assert key.last_used_at is not None
+
+
+class TestApiKeyAuth:
+    """Test that API keys can authenticate regular endpoints."""
+
+    async def test_list_apps_with_api_key(self, int_client_apikey, db_session):
+        user = await seed_user(db_session)
+        await seed_app(db_session, user.id, name="Claude", slug="claude")
+        await db_session.commit()
+
+        # Create a key via the API (using cookie auth)
+        create_resp = await int_client_apikey.post(
+            "/api/api-keys",
+            json={"name": "Test Key"},
+            cookies=make_auth_cookie(user.id),
+        )
+        secret = create_resp.json()["secret"]
+
+        # Use the API key to list apps
+        resp = await int_client_apikey.get(
+            "/api/apps",
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+        assert resp.json()[0]["name"] == "Claude"
+
+    async def test_revoked_key_returns_401(self, int_client_apikey, db_session):
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        create_resp = await int_client_apikey.post(
+            "/api/api-keys",
+            json={"name": "Revokable"},
+            cookies=make_auth_cookie(user.id),
+        )
+        data = create_resp.json()
+        secret = data["secret"]
+
+        # Revoke
+        await int_client_apikey.delete(
+            f"/api/api-keys/{data['id']}",
+            cookies=make_auth_cookie(user.id),
+        )
+
+        # Try using revoked key
+        resp = await int_client_apikey.get(
+            "/api/apps",
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        assert resp.status_code == 401
+
+    async def test_add_app_with_api_key(self, int_client_apikey, db_session):
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        # Create a key
+        create_resp = await int_client_apikey.post(
+            "/api/api-keys",
+            json={"name": "Automation Key"},
+            cookies=make_auth_cookie(user.id),
+        )
+        secret = create_resp.json()["secret"]
+
+        # Add an app using the API key
+        resp = await int_client_apikey.post(
+            "/api/apps",
+            json={
+                "name": "Claude",
+                "slug": "claude",
+                "color": "FF5733",
+                "url": "https://claude.ai",
+                "category": "ai",
+                "plan": "paid",
+            },
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["name"] == "Claude"
