@@ -25,9 +25,8 @@ export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Pr
 
   return (
     <section
-      className="relative overflow-hidden rounded-3xl px-8 py-9"
+      className="relative overflow-hidden rounded-3xl px-5 py-5 md:px-8 md:py-9"
       style={{
-        minHeight: 240,
         background: night
           ? "linear-gradient(135deg, #1A2332 0%, #2B3A4D 100%)"
           : isSunrise
@@ -39,14 +38,14 @@ export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Pr
     >
       <HeroIllustration hour={hour} />
       <div className="relative max-w-[560px]">
-        <h1 className="font-display font-semibold tracking-tight" style={{ color: night ? "#ffffff" : isSunrise ? "#7A3B1E" : "#1a2e1a", fontSize: "3rem", lineHeight: 1.25, minHeight: "7.5rem" }}>
+        <h1 className="font-display text-2xl md:text-[3rem] font-semibold tracking-tight leading-tight md:leading-[1.25]" style={{ color: night ? "#ffffff" : isSunrise ? "#7A3B1E" : "#1a2e1a" }}>
           {greeting(tz)}, {firstName}
         </h1>
-        <p className="mt-3 text-base" style={{ color: night ? "#d0d0c0" : isSunrise ? "#9A5230" : "#3a5a3a" }}>
+        <p className="mt-2 text-sm md:mt-3 md:text-base" style={{ color: night ? "#d0d0c0" : isSunrise ? "#9A5230" : "#3a5a3a" }}>
           Your ecosystem is optimized.
         </p>
 
-        <div className="mt-5 flex items-center gap-3">
+        <div className="mt-3 md:mt-5 flex items-center gap-3">
           <div className="relative flex-1">
             <Search
               size={16}
@@ -63,7 +62,7 @@ export default function HeroCard({ query, onQuery, totalApps, activeTrials }: Pr
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-3 md:mt-5 flex flex-wrap gap-3">
           <Stat label="Total apps" value={totalApps} />
           <Stat label="Active trials" value={activeTrials} />
         </div>
