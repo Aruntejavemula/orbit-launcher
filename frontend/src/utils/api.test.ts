@@ -43,18 +43,79 @@ describe("api module", () => {
       }
     }
 
-    it("redirects to /login on 401", async () => {
+    it("redirects to / on 401 for non-auth requests when not already at /", async () => {
       Object.defineProperty(window, "location", {
-        value: { href: "" },
+        value: { href: "", pathname: "/some/page" },
         writable: true,
       });
 
       await runInterceptor({
         response: { status: 401 },
+        config: { url: "/apps" },
         isAxiosError: true,
       });
 
-      expect(window.location.href).toBe("/login");
+      expect(window.location.href).toBe("/");
+    });
+
+    it("does not redirect on 401 from /auth/login (caller handles error)", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "", pathname: "/" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        response: { status: 401 },
+        config: { url: "/auth/login" },
+        isAxiosError: true,
+      });
+
+      expect(window.location.href).toBe("");
+    });
+
+    it("does not redirect on 401 from /auth/register", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "", pathname: "/" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        response: { status: 401 },
+        config: { url: "/auth/register" },
+        isAxiosError: true,
+      });
+
+      expect(window.location.href).toBe("");
+    });
+
+    it("does not redirect on 401 from /auth/me", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "", pathname: "/" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        response: { status: 401 },
+        config: { url: "/auth/me" },
+        isAxiosError: true,
+      });
+
+      expect(window.location.href).toBe("");
+    });
+
+    it("does not redirect on 401 when already at /", async () => {
+      Object.defineProperty(window, "location", {
+        value: { href: "", pathname: "/" },
+        writable: true,
+      });
+
+      await runInterceptor({
+        response: { status: 401 },
+        config: { url: "/apps" },
+        isAxiosError: true,
+      });
+
+      expect(window.location.href).toBe("");
     });
 
     it("shows timeout toast on ECONNABORTED", async () => {

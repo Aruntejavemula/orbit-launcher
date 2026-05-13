@@ -93,6 +93,7 @@ export function usePrefs() {
   });
 
   const updateMutation = useMutation({
+    scope: { id: "preferences-update" },
     mutationFn: (patch: Partial<Preferences>) => {
       const body: Record<string, unknown> = {};
       if (patch.theme !== undefined) body.theme = patch.theme;
@@ -107,16 +108,14 @@ export function usePrefs() {
       if (patch.country !== undefined) body.country = patch.country;
       return api.patch("/preferences", body).then((r) => toPrefs(r.data));
     },
-    onMutate: (patch) => {
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ["preferences"] });
       const prev = qc.getQueryData<Preferences>(["preferences"]);
       qc.setQueryData<Preferences>(["preferences"], (old = DEFAULTS) => ({ ...old, ...patch }));
       return { prev };
     },
     onError: (_err, _patch, ctx) => {
       if (ctx?.prev) qc.setQueryData(["preferences"], ctx.prev);
-    },
-    onSuccess: (updated) => {
-      qc.setQueryData(["preferences"], updated);
     },
   });
 
