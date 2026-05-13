@@ -4,7 +4,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from limiter import limiter, user_limiter
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,7 +82,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Orbit Launcher API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.state.user_limiter = user_limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many attempts. Please wait a moment and try again."},
+    )
+
+app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
