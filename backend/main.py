@@ -212,23 +212,33 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class UserIdMiddleware(BaseHTTPMiddleware):
-    """Populate request.state.user_id from JWT so user_limiter can key by it."""
+    """Populate request.state.user_id from JWT or API key so user_limiter can key by it."""
     async def dispatch(self, request: Request, call_next):
         from auth.jwt import COOKIE_NAME, decode_token
         from jose import JWTError
+        auth_header = request.headers.get("Authorization", "")
+        bearer_raw: str | None = None
+        if auth_header.startswith("Bearer "):
+            bearer_raw = auth_header[7:].strip()
         try:
-            token = request.cookies.get(COOKIE_NAME)
-            if not token:
-                auth_header = request.headers.get("Authorization", "")
-                if auth_header.startswith("Bearer "):
-                    token = auth_header[7:].strip()
+            token = request.cookies.get(COOKIE_NAME) or bearer_raw
             if token:
                 claims = decode_token(token)
                 request.state.user_id = claims["user_id"]
                 request.state.token_version = claims["token_version"]
         except (JWTError, HTTPException):
-            pass
+            if bearer_raw:
+                await self._try_api_key(request, bearer_raw)
         return await call_next(request)
+
+    @staticmethod
+    async def _try_api_key(request: Request, raw_key: str) -> None:
+        from auth.api_key_auth import resolve_api_key
+        user_id = await resolve_api_key(raw_key)
+        if user_id:
+            request.state.user_id = str(user_id)
+            request.state.token_version = 0
+            request.state.via_api_key = True
 
 
 access_logger = logging.getLogger("orbit.access")
