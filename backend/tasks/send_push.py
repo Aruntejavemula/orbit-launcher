@@ -6,7 +6,7 @@ from pywebpush import webpush, WebPushException
 logger = logging.getLogger("orbit.push")
 
 _VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
-_VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:support@remio.app")
+_VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:support@remiolauncher.com")
 _VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
 
 

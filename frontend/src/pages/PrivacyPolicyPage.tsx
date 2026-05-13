@@ -130,8 +130,8 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
           <h2>11. Contact Us</h2>
           <p>
             If you have any questions about this Privacy Policy or our data practices, please contact us at:{" "}
-            <a href="mailto:support@remio.com" className="text-sage-ink underline hover:no-underline">
-              support@remio.com
+            <a href="mailto:privacy@remiolauncher.com" className="text-sage-ink underline hover:no-underline">
+              privacy@remiolauncher.com
             </a>
           </p>
         </div>
