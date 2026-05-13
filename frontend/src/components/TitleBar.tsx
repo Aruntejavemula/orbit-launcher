@@ -19,18 +19,25 @@ export default function TitleBar() {
     if (!isTauri) return;
 
     let unlisten: (() => void) | undefined;
+    let disposed = false;
 
     (async () => {
       const mod = await loadTauriWindow();
-      if (!mod) return;
+      if (!mod || disposed) return;
       const win = mod.getCurrentWindow();
       setMaximized(await win.isMaximized());
-      unlisten = await win.onResized(async () => {
-        setMaximized(await win.isMaximized());
+      const off = await win.onResized(async () => {
+        if (!disposed) setMaximized(await win.isMaximized());
       });
+      if (disposed) {
+        off();
+        return;
+      }
+      unlisten = off;
     })();
 
     return () => {
+      disposed = true;
       unlisten?.();
     };
   }, []);

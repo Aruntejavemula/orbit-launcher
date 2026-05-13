@@ -40,10 +40,14 @@ export async function downloadAndInstallUpdate(): Promise<void> {
   const mod = await loadUpdaterPlugin();
   if (!mod) return;
 
-  const update = await mod.check();
-  if (update) {
+  try {
+    const update = await mod.check();
+    if (!update) return;
+
     await update.downloadAndInstall();
-    const processPlugin = await import("@tauri-apps/plugin-process");
-    await processPlugin.relaunch();
+    const { relaunch } = await import("@tauri-apps/plugin-process");
+    await relaunch();
+  } catch (err) {
+    console.warn("Update install failed:", err);
   }
 }

@@ -1,5 +1,17 @@
 const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
 
+const NOTIF_PREF_KEY = "remio_desktop_notifications";
+
+export function getDesktopNotificationsEnabled(): boolean {
+  if (!isTauri) return false;
+  const val = localStorage.getItem(NOTIF_PREF_KEY);
+  return val === null ? true : val === "true";
+}
+
+export function setDesktopNotificationsEnabled(enabled: boolean): void {
+  localStorage.setItem(NOTIF_PREF_KEY, String(enabled));
+}
+
 type NotificationPlugin = typeof import("@tauri-apps/plugin-notification");
 let notifModule: NotificationPlugin | null = null;
 
@@ -15,25 +27,36 @@ export async function requestNotificationPermission(): Promise<boolean> {
   const mod = await loadNotificationPlugin();
   if (!mod) return false;
 
-  let granted = await mod.isPermissionGranted();
-  if (!granted) {
-    const result = await mod.requestPermission();
-    granted = result === "granted";
+  try {
+    let granted = await mod.isPermissionGranted();
+    if (!granted) {
+      const result = await mod.requestPermission();
+      granted = result === "granted";
+    }
+    return granted;
+  } catch (err) {
+    console.warn("Notification permission check failed:", err);
+    return false;
   }
-  return granted;
 }
 
 export async function sendDesktopNotification(
   title: string,
   body: string
 ): Promise<void> {
+  if (!getDesktopNotificationsEnabled()) return;
+
   const mod = await loadNotificationPlugin();
   if (!mod) return;
 
-  const granted = await requestNotificationPermission();
-  if (!granted) return;
+  try {
+    const granted = await requestNotificationPermission();
+    if (!granted) return;
 
-  await mod.sendNotification({ title, body });
+    await mod.sendNotification({ title, body });
+  } catch (err) {
+    console.warn("Failed to send notification:", err);
+  }
 }
 
 export async function notifySubscriptionReminder(

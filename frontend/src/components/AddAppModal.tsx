@@ -16,6 +16,7 @@ import { hexToRgb } from "../utils/color";
 import { resolveAppUrl, currencySymbol } from "../utils/countryData";
 import { toast } from "./Toast";
 import type { CategoryId, BillingFrequency } from "../types";
+import { isTauri, requestNotificationPermission } from "../tauri";
 
 interface Props {
   open: boolean;
@@ -119,6 +120,7 @@ export default function AddAppModal({ open, onClose }: Props) {
       monthlyCost: plan === "paid" ? monthlyCost : null,
     });
     toast(`${app.name} added!`, "success");
+    if (isTauri) requestNotificationPermission();
     close();
   };
 

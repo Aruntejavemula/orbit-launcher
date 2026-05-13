@@ -4,6 +4,7 @@ use tauri::{
     tray::TrayIconBuilder,
     Manager, WindowEvent,
 };
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -12,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
