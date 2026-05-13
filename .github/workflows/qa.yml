@@ -1,14 +1,10 @@
-name: Production Pipeline
+name: QA Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       reason:
-        description: "Reason for running production pipeline"
-        required: true
-        type: string
-      confirmation:
-        description: "Type DEPLOY to confirm"
+        description: "Reason for running QA pipeline"
         required: true
         type: string
 
@@ -17,16 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Verify deployment confirmation
-        if: ${{ github.event.inputs.confirmation != 'DEPLOY' }}
-        run: |
-          echo "ERROR: Confirmation must be exactly 'DEPLOY'. Got: '${{ github.event.inputs.confirmation }}'"
-          exit 1
-
-      - name: Checkout qa branch
+      - name: Checkout dev branch
         uses: actions/checkout@v4
         with:
-          ref: qa
+          ref: dev
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,7 +26,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
         working-directory: frontend
 
       - name: Build frontend
@@ -63,8 +53,3 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      - name: Checkout code 
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
