@@ -1,7 +1,11 @@
 import axios from "axios";
+import { Capacitor } from "@capacitor/core";
 import { toast } from "./components/Toast";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const PRODUCTION_API = "https://www.remiolauncher.com/api";
+export const API_BASE_URL = Capacitor.isNativePlatform()
+  ? PRODUCTION_API
+  : (import.meta.env.VITE_API_URL ?? "/api");
 
 const api = axios.create({
   baseURL: API_BASE_URL,

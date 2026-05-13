@@ -92,6 +92,11 @@ app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+# Capacitor mobile apps use capacitor://localhost (iOS) and https://localhost (Android)
+_mobile_origins = ["capacitor://localhost", "https://localhost", "http://localhost"]
+for origin in _mobile_origins:
+    if origin not in _allowed_origins:
+        _allowed_origins.append(origin)
 
 _cors_kwargs = dict(
     allow_origins=_allowed_origins,
