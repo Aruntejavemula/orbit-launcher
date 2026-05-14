@@ -102,10 +102,17 @@ export default function AddAppModal({ open, onClose }: Props) {
     frequency: BillingFrequency | undefined,
     monthlyCost: number | null,
   ) => {
-    const expiresAt =
-      plan === "free"
-        ? null
-        : new Date(startDate).getTime() + months * 30 * 24 * 60 * 60 * 1000;
+    const calcExpiry = (): number | null => {
+      if (plan === "free") return null;
+      const d = new Date(startDate);
+      if (plan === "trial") {
+        d.setDate(d.getDate() + Math.max(1, Math.round(months * 30)));
+      } else {
+        d.setMonth(d.getMonth() + months);
+      }
+      return d.getTime();
+    };
+    const expiresAt = calcExpiry();
     addApp({
       name: app.name,
       slug: app.slug,

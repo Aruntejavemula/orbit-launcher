@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import api, { API_BASE_URL } from "../api";
@@ -49,6 +50,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showRememberPrompt, setShowRememberPrompt] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
@@ -182,14 +184,25 @@ export default function LoginPage() {
             />
           </Field>
           <Field label="Password">
-            <input
-              className="field"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
-              required
-            />
+            <div className="relative">
+              <input
+                className="field pr-10"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-lg transition-colors hover:bg-black/5"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} className="text-ink-muted" /> : <Eye size={16} className="text-ink-muted" />}
+              </button>
+            </div>
           </Field>
           {mode === "login" && (
             <div className="flex justify-end">

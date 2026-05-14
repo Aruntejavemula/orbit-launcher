@@ -1,4 +1,4 @@
-import { Home, BarChart3, Plus, Calendar, Settings } from "lucide-react";
+import { Home, BarChart3, Plus, Calendar, Settings, Activity } from "lucide-react";
 import type { PageId } from "../types";
 
 interface Props {
@@ -16,6 +16,7 @@ export default function BottomNav({ page, onNavigate, onAdd }: Props) {
       <div className="relative mx-auto flex max-w-md items-center justify-around px-4 py-2">
         <Item icon={Home} label="Home" active={page === "home"} onClick={() => onNavigate("home")} />
         <Item icon={BarChart3} label="Insights" active={page === "insights"} onClick={() => onNavigate("insights")} />
+        <Item icon={Activity} label="Usage" active={page === "activity"} onClick={() => onNavigate("activity")} />
         <button
           onClick={onAdd}
           aria-label="Add"
@@ -23,7 +24,6 @@ export default function BottomNav({ page, onNavigate, onAdd }: Props) {
         >
           <Plus size={22} strokeWidth={2.5} />
         </button>
-        <span className="w-12" aria-hidden />
         <Item icon={Calendar} label="Calendar" active={page === "calendar"} onClick={() => onNavigate("calendar")} />
         <Item icon={Settings} label="Settings" active={page === "settings"} onClick={() => onNavigate("settings")} />
       </div>

@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       open: true,
       proxy: {
         "/api": {
-          target: env.BACKEND_URL ?? "http://localhost:8000",
+          target: env.BACKEND_URL ?? "https://orbit-launcher-production.up.railway.app",
           changeOrigin: true,
         },
       },
