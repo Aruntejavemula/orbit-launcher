@@ -4,20 +4,25 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const isTauri = !!process.env.TAURI_ENV_PLATFORM;
   return {
     plugins: [
       react(),
-      VitePWA({
-        strategies: "injectManifest",
-        srcDir: "src",
-        filename: "sw.ts",
-        registerType: "autoUpdate",
-        manifest: false,
-        injectManifest: {
-          globPatterns: ["**/*.{js,css,html,ico,woff2}"],
-          maximumFileSizeToCacheInBytes: 200_000,
-        },
-      }),
+      ...(!isTauri
+        ? [
+            VitePWA({
+              strategies: "injectManifest",
+              srcDir: "src",
+              filename: "sw.ts",
+              registerType: "autoUpdate",
+              manifest: false,
+              injectManifest: {
+                globPatterns: ["**/*.{js,css,html,ico,woff2}"],
+                maximumFileSizeToCacheInBytes: 200_000,
+              },
+            }),
+          ]
+        : []),
     ],
     build: {
       rollupOptions: {

@@ -92,6 +92,8 @@ app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+# Tauri desktop app origins (Windows WebView2 + macOS WKWebView)
+_allowed_origins.extend(["https://tauri.localhost", "tauri://localhost"])
 
 _cors_kwargs = dict(
     allow_origins=_allowed_origins,
