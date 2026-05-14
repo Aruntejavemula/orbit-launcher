@@ -127,7 +127,23 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
             Remio after changes are posted constitutes acceptance of the updated policy.
           </p>
 
-          <h2>11. Contact Us</h2>
+          <h2>11. Intellectual Property &amp; Third-Party Trademarks</h2>
+          <p>
+            All third-party product names, logos, and brands displayed within Remio (including but not limited to
+            Netflix, YouTube, Spotify, Figma, Slack, and others) are the property of their respective owners. Use
+            of these names, logos, and brands does not imply endorsement by or affiliation with Remio. These marks
+            are used solely for identification purposes within the subscription management context of this
+            application.
+          </p>
+          <p>
+            App icons are sourced from the{" "}
+            <a href="https://simpleicons.org" className="text-sage-ink underline hover:no-underline" target="_blank" rel="noopener noreferrer">
+              Simple Icons
+            </a>{" "}
+            project, which are released under the Creative Commons Zero (CC0) license.
+          </p>
+
+          <h2>12. Contact Us</h2>
           <p>
             If you have any questions about this Privacy Policy or our data practices, please contact us at:{" "}
             <a href="mailto:privacy@remiolauncher.com" className="text-sage-ink underline hover:no-underline">

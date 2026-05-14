@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import BrandIcon from "../components/BrandIcon";
 import { Activity, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { hexToRgb } from "../utils/color";
 import api from "../api";
+import { isTauri, notifyInactivity } from "../tauri";
 
 interface ActivityEntry {
   app_id: string;
@@ -30,11 +31,26 @@ export default function ActivityPage() {
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const notifiedRef = useRef(false);
+
   useEffect(() => {
     if (!user) return;
     api.get("/activity").then((r) => {
       setEntries(r.data);
       setLoading(false);
+
+      // Send desktop notifications for inactive/dormant apps (once per session)
+      if (isTauri && !notifiedRef.current) {
+        notifiedRef.current = true;
+        const inactive: ActivityEntry[] = r.data.filter((e: ActivityEntry) => e.status === "yellow" || e.status === "red");
+        inactive.slice(0, 3).forEach((entry: ActivityEntry) => {
+          notifyInactivity(
+            entry.app_name,
+            entry.days_inactive ?? 0,
+            entry.status === "red" ? "critical" : "warning"
+          );
+        });
+      }
     }).catch(() => setLoading(false));
   }, [user]);
 

@@ -6,7 +6,7 @@ description: Test the Remio subscription management app end-to-end. Use when ver
 # Testing Remio
 
 ## Devin Secrets Needed
-- `REMIO_TEST_EMAIL` — Test account email (currently sunnyarunteja@gmail.com)
+- `REMIO_TEST_EMAIL` — Test account email
 - `REMIO_TEST_PASSWORD` — Test account password
 
 ## Local Dev Setup
