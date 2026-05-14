@@ -6,13 +6,14 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  errorMessage: string;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, errorMessage: "" };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, errorMessage: error?.message ?? String(error) };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -29,6 +30,11 @@ export default class ErrorBoundary extends Component<Props, State> {
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             An unexpected error occurred. Please refresh the page.
           </p>
+          {this.state.errorMessage && (
+            <pre className="mt-2 max-w-lg overflow-auto rounded bg-gray-100 p-3 text-left text-xs text-red-600 dark:bg-gray-800 dark:text-red-400">
+              {this.state.errorMessage}
+            </pre>
+          )}
           <button
             onClick={() => window.location.reload()}
             className="mt-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white"
