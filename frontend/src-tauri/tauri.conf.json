@@ -49,6 +49,9 @@
         "headerImage": "icons/icon.ico"
       }
     },
+    "macOS": {
+      "signingIdentity": null
+    },
     "category": "Utility",
     "shortDescription": "Track, manage, and launch all your subscriptions and tools in one place.",
     "longDescription": "Remio helps you organize your digital subscriptions and app ecosystem. Track renewal dates, monitor activity, and launch your tools — all from one beautiful dashboard.",
