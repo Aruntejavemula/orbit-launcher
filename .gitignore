@@ -21,3 +21,10 @@ coverage/
 frontend/coverage/
 test-results/
 *.tsbuildinfo
+
+# Capacitor native build artifacts
+frontend/ios/App/Pods/
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties
