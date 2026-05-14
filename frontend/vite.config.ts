@@ -10,17 +10,18 @@ export default defineConfig(({ mode }) => {
       react(),
       ...(!isTauri
         ? [
-            VitePWA({
-              strategies: "injectManifest",
-              srcDir: "src",
-              filename: "sw.ts",
-              registerType: "autoUpdate",
-              manifest: false,
-              injectManifest: {
-                globPatterns: ["**/*.{js,css,html,ico,woff2}"],
-                maximumFileSizeToCacheInBytes: 200_000,
-              },
-            }),
+      VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
+        registerType: "autoUpdate",
+        manifest: false,
+        injectRegister: false,
+        injectManifest: {
+          globPatterns: ["**/*.{js,css,html,ico,woff2}"],
+          maximumFileSizeToCacheInBytes: 200_000,
+        },
+      }),
           ]
         : []),
     ],
