@@ -60,9 +60,6 @@
     "publisher": "Remio"
   },
   "plugins": {
-    "notification": {
-      "registerOnInit": true
-    },
     "updater": {
       "endpoints": [
         "https://github.com/Aruntejavemula/orbit-launcher/releases/latest/download/latest.json"
