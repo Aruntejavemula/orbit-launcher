@@ -29,16 +29,29 @@ const KNOWN_PATHS = new Set(["/", "/auth/callback", "/privacy", "/terms"]);
 
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
-  const { user, loading: authLoading, offline } = useAuth();
+  const { user, loading: authLoading, offline, signIn } = useAuth();
   const { apps } = useApps();
   const { prefs, prefsFetched, update } = usePrefs();
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
-  const [splashDone, setSplashDone] = useState(false);
+  const isAuthCallback = window.location.pathname === "/auth/callback";
+  const hasGoogleError = new URLSearchParams(window.location.search).get("google_error") === "1";
+  const [splashDone, setSplashDone] = useState(isAuthCallback || hasGoogleError);
+  const oauthCallbackStarted = useRef(false);
   const prevUserId = useRef<string | null>(null);
   const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+
+  // Finish Google OAuth before splash — LoginPage is not mounted during splash.
+  useEffect(() => {
+    if (!isAuthCallback || oauthCallbackStarted.current) return;
+    oauthCallbackStarted.current = true;
+    window.history.replaceState({}, "", "/");
+    signIn().catch(() => {
+      window.location.replace("/?google_error=1");
+    });
+  }, [isAuthCallback, signIn]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");

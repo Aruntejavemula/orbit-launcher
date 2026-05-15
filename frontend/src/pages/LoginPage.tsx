@@ -3,7 +3,9 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import PasswordInput from "../components/PasswordInput";
-import api, { API_BASE_URL } from "../api";
+import api from "../api";
+import { isDesktopApp } from "../utils/isDesktop";
+import { googleAuthStartUrl } from "../utils/googleAuth";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -52,17 +54,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showRememberPrompt, setShowRememberPrompt] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
 
   // Google OAuth redirects to /auth/callback with a session cookie already set.
   // We only need to fetch the user — no token in URL.
   useEffect(() => {
-    if (window.location.pathname === "/auth/callback") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_error") === "1") {
+      setError("Google sign-in failed. Please try again.");
       window.history.replaceState({}, "", "/");
-      signIn().catch(() => setError("Google sign-in failed."));
     }
-  }, [signIn]);
+  }, []);
 
   function switchMode(next: Mode) {
     if (next === mode) return;
@@ -123,7 +127,16 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    setError(null);
+    if (isDesktopApp()) {
+      setGooglePending(true);
+      if (window.remioDesktop?.startGoogleSignIn) {
+        void window.remioDesktop.startGoogleSignIn();
+        return;
+      }
+    }
+    // Full-page navigation to API (never use client-side routing).
+    window.location.assign(googleAuthStartUrl(isDesktopApp()));
   };
 
   return (
@@ -222,6 +235,12 @@ export default function LoginPage() {
           <span className="text-xs text-ink-muted">or</span>
           <div className="h-px flex-1 bg-line" />
         </div>
+
+        {googlePending && (
+          <p className="mb-3 rounded-lg border border-sage/30 bg-sage/10 px-3 py-2 text-sm text-sage-ink">
+            Finish sign-in in your browser, then return to Remio.
+          </p>
+        )}
 
         <button
           type="button"
