@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import Modal from "./Modal";
+import PasswordInput from "./PasswordInput";
 import PasswordStrength from "./PasswordStrength";
 import { useAuth } from "../context/AuthContext";
 import { validatePassword } from "../utils/passwordPolicy";
@@ -16,8 +16,6 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNext, setShowNext] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -71,27 +69,24 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <PasswordField
+          <LabeledPassword
             label="Current password"
             value={current}
             onChange={setCurrent}
-            show={showCurrent}
-            onToggle={() => setShowCurrent((v) => !v)}
+            autoComplete="current-password"
           />
-          <PasswordField
+          <LabeledPassword
             label="New password"
             value={next}
             onChange={setNext}
-            show={showNext}
-            onToggle={() => setShowNext((v) => !v)}
+            autoComplete="new-password"
             hint={policyError ?? undefined}
           />
-          <PasswordField
+          <LabeledPassword
             label="Re-enter new password"
             value={confirm}
             onChange={setConfirm}
-            show={showNext}
-            onToggle={() => setShowNext((v) => !v)}
+            autoComplete="new-password"
             hint={matchError ?? undefined}
           />
 
@@ -119,40 +114,33 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
   );
 }
 
-function PasswordField({
-  label, value, onChange, show, onToggle, hint,
+function LabeledPassword({
+  label,
+  value,
+  onChange,
+  hint,
+  autoComplete,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  show: boolean;
-  onToggle: () => void;
   hint?: string;
+  autoComplete?: string;
 }) {
   return (
     <div>
       <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
         {label}
       </label>
-      <div className="relative mt-1.5">
-        <input
-          type={show ? "text" : "password"}
+      <div className="mt-1.5">
+        <PasswordInput
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`field pr-10 ${hint ? "border-red-400 focus:ring-red-300" : ""}`}
-          autoComplete="current-password"
+          onChange={onChange}
+          className={hint ? "border-red-400 focus:ring-red-300" : ""}
+          autoComplete={autoComplete}
         />
-        <button
-          type="button"
-          onClick={onToggle}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
-          tabIndex={-1}
-        >
-          {show ? <EyeOff size={15} /> : <Eye size={15} />}
-        </button>
       </div>
       {hint && <p className="mt-1 text-xs text-red-600">{hint}</p>}
     </div>
   );
 }
-

@@ -1,10 +1,17 @@
 import { useCallback } from "react";
+import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
 import { smartLaunch } from "../utils/launch";
 import api from "../api";
 import { useAuth } from "./AuthContext";
 import { toast } from "../components/Toast";
+import {
+  readAppsCache,
+  writeAppsCache,
+  readLaunchesCache,
+  writeLaunchesCache,
+} from "../utils/offlineDataCache";
 
 export interface OpenEvent {
   appId: string;
@@ -66,16 +73,48 @@ export function useApps() {
   const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
 
+  const fetchApps = useCallback(async (): Promise<AppItem[]> => {
+    try {
+      const r = await api.get("/apps");
+      const items = r.data.map(toAppItem) as AppItem[];
+      writeAppsCache(items);
+      return items;
+    } catch (err) {
+      if (axios.isAxiosError(err) && !err.response) {
+        const cached = readAppsCache();
+        if (cached) return cached;
+      }
+      throw err;
+    }
+  }, []);
+
+  const fetchLaunches = useCallback(async (): Promise<OpenEvent[]> => {
+    try {
+      const r = await api.get("/launches");
+      const items = r.data.map(toOpenEvent) as OpenEvent[];
+      writeLaunchesCache(items);
+      return items;
+    } catch (err) {
+      if (axios.isAxiosError(err) && !err.response) {
+        const cached = readLaunchesCache();
+        if (cached) return cached;
+      }
+      throw err;
+    }
+  }, []);
+
   const { data: apps = [], isLoading: appsLoading } = useQuery({
     queryKey: ["apps"],
-    queryFn: () => api.get("/apps").then((r) => r.data.map(toAppItem) as AppItem[]),
+    queryFn: fetchApps,
     enabled: !!user,
+    placeholderData: () => readAppsCache() ?? undefined,
   });
 
   const { data: history = [], isLoading: historyLoading } = useQuery({
     queryKey: ["launches"],
-    queryFn: () => api.get("/launches").then((r) => r.data.map(toOpenEvent) as OpenEvent[]),
+    queryFn: fetchLaunches,
     enabled: !!user,
+    placeholderData: () => readLaunchesCache() ?? undefined,
   });
 
   // loading = true while auth resolving OR while queries are fetching

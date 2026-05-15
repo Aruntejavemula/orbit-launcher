@@ -110,9 +110,24 @@ class TestLogin:
         resp = await int_client.post("/api/auth/login", json={
             "email": TEST_EMAIL,
             "password": TEST_PASSWORD,
-            "remember": True,
+            "remember_me": True,
         })
         assert resp.status_code == 200
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "Max-Age=7776000" in set_cookie or "max-age=7776000" in set_cookie.lower()
+
+    async def test_login_no_remember_7_day_cookie(self, int_client, db_session):
+        await seed_user(db_session)
+        await db_session.commit()
+
+        resp = await int_client.post("/api/auth/login", json={
+            "email": TEST_EMAIL,
+            "password": TEST_PASSWORD,
+            "remember_me": False,
+        })
+        assert resp.status_code == 200
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "Max-Age=604800" in set_cookie or "max-age=604800" in set_cookie.lower()
 
 
 class TestMe:
