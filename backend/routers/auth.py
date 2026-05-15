@@ -11,7 +11,7 @@ from schemas.auth import RegisterRequest, LoginRequest, UserResponse, UserUpdate
 from auth.password import hash_password, verify_password
 from auth.password_policy import validate_password
 from auth.jwt import COOKIE_NAME, EXPIRE_MINUTES, SECRET as _JWT_SECRET, ALGORITHM as _JWT_ALGO, create_access_token, get_current_user_id
-from auth.google import get_google_auth_url, exchange_code_for_user
+from auth.google import get_google_auth_url, exchange_code_for_user, google_oauth_configured
 from auth.email_otp import generate_otp, send_otp_email
 from job_queue import enqueue_send_otp
 from limiter import limiter
@@ -51,14 +51,20 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
         value=token,
         httponly=True,
         secure=_IS_PROD,
-        samesite="strict",
+        # lax: required for Google OAuth (top-level redirect back from accounts.google.com)
+        samesite="lax",
         max_age=max_age,
         path="/",
     )
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        secure=_IS_PROD,
+        samesite="lax",
+    )
 
 
 @router.post("/register", status_code=201)
@@ -107,6 +113,11 @@ async def logout(request: Request, response: Response, user_id: str = Depends(ge
 
 @router.get("/google")
 def google_login():
+    if not google_oauth_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server.",
+        )
     state = secrets.token_urlsafe(16)
     redirect = RedirectResponse(get_google_auth_url(state))
     redirect.set_cookie(
@@ -116,7 +127,7 @@ def google_login():
         secure=_IS_PROD,
         samesite="lax",
         max_age=300,
-        path="/api/auth/google",
+        path="/api/auth",
     )
     return redirect
 
@@ -155,7 +166,7 @@ async def google_callback(request: Request, code: str, state: str | None = None,
 
     token = create_access_token(str(user.id), token_version=user.token_version)
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
-    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth/google")
+    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth", secure=_IS_PROD, samesite="lax")
     _set_auth_cookie(redirect, token)
     return redirect
 

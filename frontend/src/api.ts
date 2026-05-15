@@ -16,7 +16,8 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       const url: string = err.config?.url ?? "";
       const isAuthCall = AUTH_ENDPOINTS.some((p) => url.includes(p));
-      if (!isAuthCall && window.location.pathname !== "/") {
+      const path = window.location.pathname;
+      if (!isAuthCall && path !== "/" && path !== "/auth/callback") {
         window.location.href = "/";
       }
     }

@@ -38,14 +38,12 @@ export default function LoginPage() {
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
 
-  // Google OAuth redirects to /auth/callback with a session cookie already set.
-  // We only need to fetch the user — no token in URL.
   useEffect(() => {
-    if (window.location.pathname === "/auth/callback") {
+    if (new URLSearchParams(window.location.search).get("google_error") === "1") {
+      setError("Google sign-in failed. Please try again.");
       window.history.replaceState({}, "", "/");
-      signIn().catch(() => setError("Google sign-in failed."));
     }
-  }, [signIn]);
+  }, []);
 
   function switchMode(next: Mode) {
     if (next === mode) return;
