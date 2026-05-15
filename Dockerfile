@@ -14,8 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ .
 
+RUN chmod +x start.sh
+
 USER appuser
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["./start.sh"]

@@ -66,16 +66,9 @@ logger = logging.getLogger("orbit")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
-    from db_migrate import run_migrations
     from job_queue import get_queue_pool, close_queue_pool
     import job_queue as jq
     import time
-    try:
-        await asyncio.to_thread(run_migrations)
-    except Exception as exc:
-        logger.exception("Database migration failed: %s", exc)
-        raise
     try:
         await get_queue_pool()
         logger.info("Redis queue pool connected")
@@ -364,10 +357,12 @@ async def health(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    healthy = db_reachable
-    status_code = 200 if healthy else 503
-    return JSONResponse(status_code=status_code, content={
-        "status": "ok" if healthy else "degraded",
-        "db": "reachable" if db_reachable else "unreachable",
-        "redis": "reachable" if redis_reachable else "unreachable",
-    })
+    # Railway liveness: return 200 when the process is up (DB status is in the body).
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "ok" if db_reachable else "degraded",
+            "db": "reachable" if db_reachable else "unreachable",
+            "redis": "reachable" if redis_reachable else "unreachable",
+        },
+    )
