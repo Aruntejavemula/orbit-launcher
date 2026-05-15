@@ -66,9 +66,16 @@ logger = logging.getLogger("orbit")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+    from db_migrate import run_migrations
     from job_queue import get_queue_pool, close_queue_pool
     import job_queue as jq
     import time
+    try:
+        await asyncio.to_thread(run_migrations)
+    except Exception as exc:
+        logger.exception("Database migration failed: %s", exc)
+        raise
     try:
         await get_queue_pool()
         logger.info("Redis queue pool connected")

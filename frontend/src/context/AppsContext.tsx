@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
 import { smartLaunch } from "../utils/launch";
@@ -66,20 +66,29 @@ export function useApps() {
   const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
 
-  const { data: apps = [], isLoading: appsLoading } = useQuery({
+  const { data: apps = [], isLoading: appsLoading, isError: appsError } = useQuery({
     queryKey: ["apps"],
     queryFn: () => api.get("/apps").then((r) => r.data.map(toAppItem) as AppItem[]),
     enabled: !!user,
   });
 
-  const { data: history = [], isLoading: historyLoading } = useQuery({
+  const { data: history = [] } = useQuery({
     queryKey: ["launches"],
     queryFn: () => api.get("/launches").then((r) => r.data.map(toOpenEvent) as OpenEvent[]),
     enabled: !!user,
   });
 
-  // loading = true while auth resolving OR while queries are fetching
-  const loading = authLoading || appsLoading || historyLoading;
+  const appsErrorToasted = useRef(false);
+  useEffect(() => {
+    if (appsError && !appsErrorToasted.current) {
+      appsErrorToasted.current = true;
+      toast("Could not load your apps. Try refreshing the page.", "error");
+    }
+    if (!appsError) appsErrorToasted.current = false;
+  }, [appsError]);
+
+  // Home grid only needs apps; don't block on launch history (insights/usage use that separately).
+  const loading = authLoading || appsLoading;
 
   const addMutation = useMutation({
     mutationFn: (data: Omit<AppItem, "id" | "createdAt" | "lastOpened">) =>
@@ -187,6 +196,7 @@ export function useApps() {
     apps,
     history,
     loading,
+    appsLoading,
     addApp: addMutation.mutateAsync,
     removeApp: removeMutation.mutateAsync,
     updateApp: (id: string, patch: Partial<AppItem>) =>

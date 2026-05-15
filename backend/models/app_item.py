@@ -23,6 +23,9 @@ class CategoryEnum(str, enum.Enum):
     productivity = "productivity"
     finance = "finance"
     music = "music"
+    ott = "ott"
+    gaming = "gaming"
+    sports = "sports"
 
 
 class AppItem(Base):

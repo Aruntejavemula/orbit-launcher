@@ -14,8 +14,6 @@ __pycache__
 .env
 .env.*
 !.env.example
-backend/alembic/versions/*.py
-!backend/alembic/versions/.gitkeep
 backend/backups/
 .coverage
 coverage/
