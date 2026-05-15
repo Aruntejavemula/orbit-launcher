@@ -24,7 +24,7 @@ export default function BottomNav({ page, onNavigate, onAdd }: Props) {
           <Plus size={22} strokeWidth={2.5} />
         </button>
         <span className="w-12" aria-hidden />
-        <Item icon={Timer} label="Usage" active={page === "usage"} onClick={() => onNavigate("usage")} />
+        <Item icon={Timer} label="Activity" active={page === "activity"} onClick={() => onNavigate("activity")} />
         <Item icon={Settings} label="Settings" active={page === "settings"} onClick={() => onNavigate("settings")} />
       </div>
     </nav>

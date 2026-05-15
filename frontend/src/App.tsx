@@ -18,7 +18,7 @@ import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
-const UsagePage = lazy(() => import("./pages/UsagePage"));
+const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
@@ -104,7 +104,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "insights": return <InsightsPage />;
-      case "usage":    return <UsagePage />;
+      case "activity": return <ActivityPage />;
       case "calendar": return <CalendarPage />;
       case "settings": return <SettingsPage />;
       case "api-keys": return <ApiKeysPage />;
