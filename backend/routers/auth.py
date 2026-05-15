@@ -19,6 +19,9 @@ from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
 import asyncio
+import hmac
+import hashlib
+import time
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -28,8 +31,28 @@ load_dotenv()
 router = APIRouter()
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-_IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
+_IS_PROD = os.getenv("APP_ENV", "dev") in ("prod", "production")
+_CROSS_DOMAIN = _IS_PROD and "localhost" not in FRONTEND_URL
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
+
+
+def _create_oauth_state() -> str:
+    """Create an HMAC-signed OAuth state token (works through reverse proxies)."""
+    ts = str(int(time.time()))
+    sig = hmac.new(_JWT_SECRET.encode(), ts.encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{ts}.{sig}"
+
+
+def _verify_oauth_state(state: str, max_age: int = 300) -> bool:
+    """Verify an OAuth state token is valid and not expired."""
+    try:
+        ts, sig = state.rsplit(".", 1)
+        expected = hmac.new(_JWT_SECRET.encode(), ts.encode(), hashlib.sha256).hexdigest()[:16]
+        if not hmac.compare_digest(sig, expected):
+            return False
+        return (int(time.time()) - int(ts)) <= max_age
+    except Exception:
+        return False
 
 
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
@@ -51,16 +74,21 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
-        httponly=True,
-        secure=_IS_PROD,
-        samesite="lax",
+   
+        secure=_IS_PROD or _CROSS_DOMAIN,
+        samesite="none" if _CROSS_DOMAIN else "strict",
         max_age=max_age,
         path="/",
     )
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        secure=_IS_PROD or _CROSS_DOMAIN,
+        samesite="none" if _CROSS_DOMAIN else "strict",
+    )
 
 
 @router.post("/register", status_code=201)
@@ -113,23 +141,13 @@ async def logout(request: Request, response: Response, user_id: str = Depends(ge
 
 @router.get("/google")
 def google_login():
-    state = secrets.token_urlsafe(16)
-    redirect = RedirectResponse(get_google_auth_url(state))
-    redirect.set_cookie(
-        key=_GOOGLE_STATE_COOKIE,
-        value=state,
-        httponly=True,
-        secure=_IS_PROD,
-        samesite="lax",
-        max_age=300,
-        path="/api/auth/google",
-    )
-    return redirect
+    state = _create_oauth_state()
+    return RedirectResponse(get_google_auth_url(state))
 
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str, state: str | None = None, db: AsyncSession = Depends(get_db)):
-    if not state or state != request.cookies.get(_GOOGLE_STATE_COOKIE):
+    if not state or not _verify_oauth_state(state):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state.")
 
     try:
@@ -165,8 +183,7 @@ async def google_callback(request: Request, code: str, state: str | None = None,
         expire_minutes=_SESSION_EXPIRE_MINUTES,
     )
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
-    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth/google")
-    _set_auth_cookie(redirect, token, remember=False)
+    _set_auth_cookie(redirect, token)
     return redirect
 
 

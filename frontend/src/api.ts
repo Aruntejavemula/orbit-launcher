@@ -1,9 +1,10 @@
 import axios from "axios";
 import { toast } from "./components/Toast";
 
-// Public bundle: only VITE_* env vars are embedded. Secrets and DB config live in backend/.env only.
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "/api",
+  baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
 });
