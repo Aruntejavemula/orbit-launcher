@@ -15,7 +15,7 @@ describe("BottomNav", () => {
     render(<BottomNav page="home" onNavigate={onNavigate} onAdd={onAdd} />);
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Insights")).toBeInTheDocument();
-    expect(screen.getByText("Calendar")).toBeInTheDocument();
+    expect(screen.getByText("Activity")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
@@ -36,10 +36,10 @@ describe("BottomNav", () => {
     expect(onNavigate).toHaveBeenCalledWith("insights");
   });
 
-  it("calls onNavigate with 'calendar' when Calendar clicked", () => {
+  it("calls onNavigate with 'activity' when Activity clicked", () => {
     render(<BottomNav page="home" onNavigate={onNavigate} onAdd={onAdd} />);
-    fireEvent.click(screen.getByText("Calendar"));
-    expect(onNavigate).toHaveBeenCalledWith("calendar");
+    fireEvent.click(screen.getByText("Activity"));
+    expect(onNavigate).toHaveBeenCalledWith("activity");
   });
 
   it("calls onNavigate with 'settings' when Settings clicked", () => {
@@ -55,13 +55,13 @@ describe("BottomNav", () => {
   });
 
   it("highlights active page", () => {
-    render(<BottomNav page="calendar" onNavigate={onNavigate} onAdd={onAdd} />);
-    const calBtn = screen.getByText("Calendar").closest("button")!;
-    expect(calBtn.className).toContain("text-sage");
+    render(<BottomNav page="activity" onNavigate={onNavigate} onAdd={onAdd} />);
+    const activityBtn = screen.getByText("Activity").closest("button")!;
+    expect(activityBtn.className).toContain("text-sage");
   });
 
   it("non-active pages are muted", () => {
-    render(<BottomNav page="calendar" onNavigate={onNavigate} onAdd={onAdd} />);
+    render(<BottomNav page="activity" onNavigate={onNavigate} onAdd={onAdd} />);
     const homeBtn = screen.getByText("Home").closest("button")!;
     expect(homeBtn.className).toContain("text-ink-muted");
   });

@@ -1,0 +1,31 @@
+---
+description: Frontend must not expose DB credentials, secrets, or server-only APIs to the public bundle
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend security (public bundle)
+
+The `frontend/` app is shipped to browsers. Treat everything under `src/` as **public**.
+
+## Never in frontend
+
+- Database URLs, ORM models, migrations, or direct DB queries
+- `JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, OAuth client secrets, Resend/S3 keys, or any server API key
+- Env vars without understanding that only `VITE_*` are embedded in the client build (and must be non-secret)
+- Caching auth tokens, passwords, or full API key secrets in `localStorage`, `sessionStorage`, or service-worker caches
+
+## Required patterns
+
+- All data and auth go through the backend HTTP API (`/api/...`) via `src/api.ts` with `withCredentials: true` (httpOnly session cookie on the server)
+- Secrets are created and validated only in `backend/`; the client may receive a **one-time** secret (e.g. new API key) in memory for display, never as a default in lists or offline caches
+- Offline/PWA: cache only static assets in the service worker; use explicit client storage helpers for non-sensitive user data (profile, apps list)
+- Do not register service-worker routes that cache `/api/*` responses
+
+## Allowed in frontend
+
+- `VITE_API_URL` — public API base path (e.g. `/api`), not a secret
+- VAPID **public** key from `GET /push/vapid-key` for Web Push
+- User profile fields returned from `GET /auth/me` (no password hash)
+
+When adding features, if it needs a secret or DB access, implement it in `backend/` only.

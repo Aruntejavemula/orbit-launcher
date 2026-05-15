@@ -16,6 +16,7 @@ import { hexToRgb } from "../utils/color";
 import { resolveAppUrl, currencySymbol } from "../utils/countryData";
 import { toast } from "./Toast";
 import type { CategoryId, BillingFrequency } from "../types";
+import { computeSubscriptionExpiryMs } from "../utils/billingDates";
 
 interface Props {
   open: boolean;
@@ -97,14 +98,15 @@ export default function AddAppModal({ open, onClose }: Props) {
     app: DraftApp,
     plan: PlanType,
     startDate: string,
-    months: number,
     frequency: BillingFrequency | undefined,
     monthlyCost: number | null,
+    trialDays?: number,
   ) => {
-    const expiresAt =
-      plan === "free"
-        ? null
-        : new Date(startDate).getTime() + months * 30 * 24 * 60 * 60 * 1000;
+    const planKind = plan === "free" ? "free" : plan === "trial" ? "trial" : "paid";
+    const expiresAt = computeSubscriptionExpiryMs(planKind, startDate, {
+      frequency: plan === "paid" ? frequency : undefined,
+      trialDays: plan === "trial" ? trialDays : undefined,
+    });
     addApp({
       name: app.name,
       slug: app.slug,
@@ -128,8 +130,8 @@ export default function AddAppModal({ open, onClose }: Props) {
         <SubscriptionPicker
           app={pending}
           onBack={() => setPending(null)}
-          onConfirm={(plan, start, months, frequency, monthlyCost) =>
-            finalizeQuick(pending, plan, start, months, frequency, monthlyCost)
+          onConfirm={(plan, start, frequency, monthlyCost, trialDays) =>
+            finalizeQuick(pending, plan, start, frequency, monthlyCost, trialDays)
           }
         />
       ) : (
@@ -300,16 +302,15 @@ function ManualForm({ onAdd }: { onAdd: () => void }) {
   const [urlError, setUrlError] = useState<string | null>(null);
 
   const expiryDate = useMemo(() => {
-    if (plan === "free") return null;
-    const d = new Date(startDate);
-    if (plan === "trial") {
-      const days = Math.max(1, parseInt(trialDays || "14", 10));
-      d.setDate(d.getDate() + days);
-    } else {
-      const fm = FREQUENCIES.find((f) => f.id === frequency)?.months ?? 1;
-      d.setMonth(d.getMonth() + fm);
-    }
-    return d;
+    const ms = computeSubscriptionExpiryMs(
+      plan === "free" ? "free" : plan === "trial" ? "trial" : "paid",
+      startDate,
+      {
+        frequency: plan === "paid" ? frequency : undefined,
+        trialDays: plan === "trial" ? Math.max(1, parseInt(trialDays || "14", 10)) : undefined,
+      },
+    );
+    return ms == null ? null : new Date(ms);
   }, [plan, startDate, trialDays, frequency]);
 
   const submit = (e: React.FormEvent) => {
@@ -582,9 +583,9 @@ function SubscriptionPicker({
   onConfirm: (
     plan: PlanType,
     startDate: string,
-    months: number,
     frequency: BillingFrequency | undefined,
     monthlyCost: number | null,
+    trialDays?: number,
   ) => void;
 }) {
   const { prefs } = usePrefs();
@@ -597,31 +598,25 @@ function SubscriptionPicker({
   const [trialDays, setTrialDays] = useState<string>("14");
   const [monthlyCost, setMonthlyCost] = useState<string>("");
 
-  const months =
-    plan === "trial"
-      ? Math.max(1, parseInt(trialDays || "14", 10)) / 30
-      : FREQUENCIES.find((f) => f.id === frequency)?.months ?? 1;
-
   const expiryDate = useMemo(() => {
-    if (plan === "free") return null;
-    const d = new Date(startDate);
-    if (plan === "trial") {
-      const days = Math.max(1, parseInt(trialDays || "14", 10));
-      d.setDate(d.getDate() + days);
-    } else {
-      const fm = FREQUENCIES.find((f) => f.id === frequency)?.months ?? 1;
-      d.setMonth(d.getMonth() + fm);
-    }
-    return d;
+    const ms = computeSubscriptionExpiryMs(
+      plan === "free" ? "free" : plan === "trial" ? "trial" : "paid",
+      startDate,
+      {
+        frequency: plan === "paid" ? frequency : undefined,
+        trialDays: plan === "trial" ? Math.max(1, parseInt(trialDays || "14", 10)) : undefined,
+      },
+    );
+    return ms == null ? null : new Date(ms);
   }, [plan, startDate, trialDays, frequency]);
 
   const handleConfirm = () => {
     onConfirm(
       plan,
       startDate,
-      Math.max(1, months),
       plan === "paid" ? frequency : undefined,
       plan === "paid" && monthlyCost !== "" ? parseFloat(monthlyCost) : null,
+      plan === "trial" ? Math.max(1, parseInt(trialDays || "14", 10)) : undefined,
     );
   };
 
