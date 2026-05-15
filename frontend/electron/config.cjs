@@ -1,7 +1,11 @@
 const path = require("path");
 
-/** Public app origin only — no secrets. */
-const APP_URL = process.env.REMIO_APP_URL || "http://localhost:5173";
+/** Public origins only — no secrets. */
+const APP_URL =
+  process.env.REMIO_APP_URL ||
+  (process.env.REMIO_ENV === "production"
+    ? "https://www.remiolauncher.com"
+    : "http://localhost:5173");
 
 module.exports = {
   APP_URL,

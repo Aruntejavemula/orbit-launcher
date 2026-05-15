@@ -12,7 +12,41 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "electron:dev": "electron .",
-    "electron:dev:debug": "electron . --devtools"
+    "electron:dev:debug": "electron . --devtools",
+    "electron:build:ui": "cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode electron",
+    "electron:build": "npm run electron:build:ui && cross-env REMIO_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --publish never",
+    "electron:pack": "npm run electron:build:ui && cross-env REMIO_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --publish never"
+  },
+  "build": {
+    "appId": "com.remio.launcher",
+    "productName": "Remio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "forceCodeSigning": false,
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.9",
@@ -36,7 +70,9 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "electron": "^35.7.5",
+    "electron-builder": "^25.1.8",
     "jsdom": "^29.1.1",
     "msw": "^2.14.5",
     "postcss": "^8.4.49",

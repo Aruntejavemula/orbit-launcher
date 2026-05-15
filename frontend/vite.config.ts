@@ -4,7 +4,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const electronBuild = mode === "electron";
   return {
+    base: electronBuild ? "./" : "/",
     plugins: [
       react(),
       VitePWA({
