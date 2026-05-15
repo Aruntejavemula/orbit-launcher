@@ -1,13 +1,17 @@
 import httpx
+import logging
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
+logger = logging.getLogger("orbit.google")
+
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
+_default_frontend = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", f"{_default_frontend}/api/auth/google/callback")
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -41,7 +45,15 @@ async def exchange_code_for_user(code: str) -> dict:
             "redirect_uri": GOOGLE_REDIRECT_URI,
             "grant_type": "authorization_code",
         })
-        token_resp.raise_for_status()
+        try:
+            token_resp.raise_for_status()
+        except httpx.HTTPStatusError:
+            logger.warning(
+                "Google token exchange failed (redirect_uri must match Google Console and auth request): %s — %s",
+                GOOGLE_REDIRECT_URI,
+                token_resp.text[:500],
+            )
+            raise
         access_token = token_resp.json()["access_token"]
 
         user_resp = await client.get(
