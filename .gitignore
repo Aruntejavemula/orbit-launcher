@@ -2,6 +2,7 @@ node_modules
 dist
 dist-ssr
 frontend/release/
+frontend/electron/store.appx.json
 *.local
 .DS_Store
 .vscode/*

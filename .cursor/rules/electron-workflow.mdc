@@ -19,6 +19,13 @@ alwaysApply: true
 - Google OAuth: **system browser** + backend callback; secrets stay on Railway only.
 - Desktop `electron/config.cjs`: **public URLs only** (e.g. `APP_URL`), no API keys.
 
+## Microsoft Store only
+
+- Ship **MSIX (appx)** via Partner Center — **no** NSIS/exe sideload, no Mac/Linux store targets.
+- **Do not** buy/use external code-signing certs; Microsoft signs on Store submission.
+- Local test: `npm run electron:pack` → `release/win-unpacked/Remio.exe` (unsigned, dev only).
+- Store upload: `npm run electron:build:store` → `.appx` in `release/` (fill `electron/store.appx.json` from Partner Center).
+
 ## Code size
 
 - Follow `minimal-changes.mdc`: wrapper stays thin; reuse existing React app and API.

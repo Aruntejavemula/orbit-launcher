@@ -14,8 +14,8 @@
     "electron:dev": "electron .",
     "electron:dev:debug": "electron . --devtools",
     "electron:build:ui": "cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode electron",
-    "electron:build": "npm run electron:build:ui && cross-env REMIO_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --publish never",
-    "electron:pack": "npm run electron:build:ui && cross-env REMIO_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir --publish never"
+    "electron:build:store": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --config electron-builder.config.cjs --publish never",
+    "electron:pack": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --dir --publish never"
   },
   "build": {
     "appId": "com.remio.launcher",
@@ -33,18 +33,7 @@
     "win": {
       "signAndEditExecutable": false,
       "target": [
-        "nsis"
-      ]
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.productivity"
-    },
-    "linux": {
-      "target": [
-        "AppImage"
+        { "target": "dir", "arch": ["x64"] }
       ]
     }
   },
