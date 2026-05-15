@@ -33,6 +33,8 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 _IS_PROD = os.getenv("APP_ENV", "dev") in ("prod", "production")
 _CROSS_DOMAIN = _IS_PROD and "localhost" not in FRONTEND_URL
+# Share session cookie across www and apex in production.
+_COOKIE_DOMAIN = ".remiolauncher.com" if _IS_PROD and "remiolauncher.com" in FRONTEND_URL else None
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
 
 
@@ -99,17 +101,29 @@ _SESSION_EXPIRE_MINUTES = 7 * 24 * 60  # "No thanks" — stay signed in 7 days
 _REMEMBER_EXPIRE_MINUTES = 90 * 24 * 60  # "Yes, remember" — 90 days
 
 
+def _oauth_return_url(request: Request) -> str:
+    """Return URL after Google OAuth — same host as the API request (fixes www vs apex)."""
+    forwarded = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    proto = request.headers.get("x-forwarded-proto") or str(request.url.scheme) or "https"
+    if forwarded:
+        host = forwarded.split(",")[0].strip()
+        if "remiolauncher.com" in host:
+            return f"{proto}://{host}/auth/callback"
+    return f"{FRONTEND_URL.rstrip('/')}/auth/callback"
+
+
 def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> None:
     minutes = _REMEMBER_EXPIRE_MINUTES if remember else _SESSION_EXPIRE_MINUTES
     max_age = minutes * 60
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
-   
+        httponly=True,
         secure=_IS_PROD or _CROSS_DOMAIN,
         samesite="none" if _CROSS_DOMAIN else "strict",
         max_age=max_age,
         path="/",
+        domain=_COOKIE_DOMAIN,
     )
 
 
@@ -119,6 +133,7 @@ def _clear_auth_cookie(response: Response) -> None:
         path="/",
         secure=_IS_PROD or _CROSS_DOMAIN,
         samesite="none" if _CROSS_DOMAIN else "strict",
+        domain=_COOKIE_DOMAIN,
     )
 
 
@@ -214,7 +229,10 @@ async def google_callback(request: Request, code: str, state: str | None = None,
         token_version=user.token_version,
         expire_minutes=_SESSION_EXPIRE_MINUTES,
     )
-    redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
+    if is_desktop:
+        exchange = _create_desktop_exchange_code(str(user.id))
+        return RedirectResponse(f"remio://auth/callback?code={exchange}", status_code=302)
+    redirect = RedirectResponse(_oauth_return_url(request), status_code=302)
     _set_auth_cookie(redirect, token)
     return redirect
 
