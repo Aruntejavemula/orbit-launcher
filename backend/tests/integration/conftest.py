@@ -50,11 +50,57 @@ def _get_current_user_id_as_uuid(
     which fails for plain strings. uuid.UUID objects have .hex.
     Real JWT validation still happens inside _real_get_current_user_id.
     """
+    # Middleware may have already resolved the user via API key
+    if getattr(request.state, "via_api_key", False) and getattr(request.state, "user_id", None):
+        uid = request.state.user_id
+        try:
+            return uuid.UUID(uid) if not isinstance(uid, uuid.UUID) else uid
+        except (ValueError, AttributeError):
+            return uid
+
     str_id = _real_get_current_user_id(request, bearer)
     try:
         return uuid.UUID(str_id)
     except (ValueError, AttributeError):
         return str_id
+
+
+def _make_api_key_int_client_fixture():
+    """
+    Returns a fixture factory for an int_client that supports API key auth.
+    The middleware's _try_api_key is patched to use the test DB session factory.
+    """
+    @pytest_asyncio.fixture(scope="function")
+    async def int_client_apikey(engine, db_session: AsyncSession):
+        from unittest.mock import patch, AsyncMock
+        from main import app
+
+        app.state.limiter.enabled = False
+        app.state.user_limiter.enabled = False
+
+        test_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+        async def override_get_db():
+            yield db_session
+
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user_id] = _get_current_user_id_as_uuid
+
+        transport = ASGITransport(app=app)
+
+        with patch("auth.api_key_auth.AsyncSessionLocal", test_session_factory):
+            async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+                yield ac
+
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user_id, None)
+        app.state.limiter.enabled = True
+        app.state.user_limiter.enabled = True
+
+    return int_client_apikey
+
+
+int_client_apikey = _make_api_key_int_client_fixture()
 
 
 def _create_tables_sqlite_safe(conn):

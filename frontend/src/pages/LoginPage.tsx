@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
-import PasswordInput from "../components/PasswordInput";
-import api from "../api";
+import api, { API_BASE_URL } from "../api";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -18,12 +18,27 @@ const ERROR_MAP: Record<string, string> = {
 // Errors that must not leak internal detail to the user
 const OPAQUE_ERRORS = new Set(["Invalid credentials"]);
 
-function friendlyError(raw: string | undefined): string {
-  if (!raw) return "Something went wrong. Please try again.";
-  if (ERROR_MAP[raw]) return ERROR_MAP[raw];
-  if (OPAQUE_ERRORS.has(raw)) return "Something went wrong. Please try again.";
-  // Pass through backend validation messages (password policy, etc.)
-  return raw;
+function friendlyError(err: unknown): string {
+  const axiosErr = err as { response?: { data?: { detail?: string }; status?: number }; code?: string; message?: string };
+  const raw = axiosErr?.response?.data?.detail;
+
+  if (raw) {
+    if (ERROR_MAP[raw]) return ERROR_MAP[raw];
+    if (OPAQUE_ERRORS.has(raw)) return "Wrong email or password.";
+    return raw;
+  }
+
+  const status = axiosErr?.response?.status;
+  if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+  if (status === 503) return "Server is temporarily unavailable. Please try again in a moment.";
+  if (status && status >= 500) return "Server error. Please try again.";
+
+  if (axiosErr?.code === "ECONNABORTED" || axiosErr?.message?.includes("timeout")) {
+    return "Request timed out. Please check your connection and try again.";
+  }
+  if (!axiosErr?.response) return "Cannot reach the server. Check your connection.";
+
+  return "Something went wrong. Please try again.";
 }
 
 export default function LoginPage() {
@@ -89,17 +104,25 @@ export default function LoginPage() {
       } else {
         await api.post("/auth/login", { email, password, remember_me: remember });
       }
-      await signIn(mode === "login" ? remember : false);
+      // Session cookie is now set. Fetch user profile — retry once on
+      // transient failure (e.g. brief Railway redeploy) so the user isn't
+      // shown an error even though login itself succeeded.
+      try {
+        await signIn();
+      } catch {
+        await new Promise((r) => setTimeout(r, 1500));
+        await signIn();
+      }
     } catch (err: unknown) {
-      const raw = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(friendlyError(raw));
+      if (axios.isCancel(err)) return;
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
     }
   };
 
   const googleLogin = () => {
-    window.location.href = "/api/auth/google";
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   return (
@@ -207,6 +230,13 @@ export default function LoginPage() {
           <GoogleIcon />
           Continue with Google
         </button>
+
+        <p className="mt-6 text-center text-xs text-ink-muted">
+          By continuing, you agree to our{" "}
+          <a href="/terms" className="underline hover:text-ink transition-colors">Terms of Service</a>
+          {" "}and{" "}
+          <a href="/privacy" className="underline hover:text-ink transition-colors">Privacy Policy</a>.
+        </p>
       </div>
 
       <ForgotPasswordModal open={showForgot} onClose={() => setShowForgot(false)} />

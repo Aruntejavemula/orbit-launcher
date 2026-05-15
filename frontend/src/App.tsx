@@ -12,18 +12,20 @@ import AppDetailModal from "./components/AppDetailModal";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
-const UsagePage = lazy(() => import("./pages/UsagePage"));
+const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
 
-const KNOWN_PATHS = new Set(["/", "/auth/callback"]);
+const KNOWN_PATHS = new Set(["/", "/auth/callback", "/privacy", "/terms"]);
 
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
@@ -68,6 +70,14 @@ export default function App() {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
+  // Public legal pages — accessible without authentication
+  if (window.location.pathname === "/privacy") {
+    return <PrivacyPolicyPage onBack={() => { window.history.back(); }} />;
+  }
+  if (window.location.pathname === "/terms") {
+    return <TermsOfServicePage onBack={() => { window.history.back(); }} />;
+  }
+
   // Unknown path + confirmed logged in → 404
   if (isUnknownPath && !authLoading && user) {
     return <NotFoundPage />;
@@ -104,7 +114,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "insights": return <InsightsPage />;
-      case "usage":    return <UsagePage />;
+      case "activity": return <ActivityPage />;
       case "calendar": return <CalendarPage />;
       case "settings": return <SettingsPage />;
       case "api-keys": return <ApiKeysPage />;

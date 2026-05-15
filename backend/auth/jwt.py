@@ -38,6 +38,13 @@ def get_current_user_id(
     request: Request,
     bearer: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> str:
+    # Middleware may have already resolved the user via API key
+    via_api_key = getattr(request.state, "via_api_key", False)
+    if via_api_key is True:
+        uid = getattr(request.state, "user_id", None)
+        if uid is not None:
+            return uid
+
     token = request.cookies.get(COOKIE_NAME)
     if not token and bearer:
         token = bearer.credentials

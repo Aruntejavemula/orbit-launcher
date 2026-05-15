@@ -1,10 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from limiter import limiter, user_limiter
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +33,7 @@ if _SENTRY_DSN:
         send_default_pii=False,
     )
 
-from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push
+from routers import auth, apps, catalog, launches, activity, insights, reminders, preferences, api_keys, subscriptions, push
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -83,7 +82,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Orbit Launcher API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.state.user_limiter = user_limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many attempts. Please wait a moment and try again."},
+    )
+
+app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 _raw_origins = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
@@ -212,23 +217,33 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class UserIdMiddleware(BaseHTTPMiddleware):
-    """Populate request.state.user_id from JWT so user_limiter can key by it."""
+    """Populate request.state.user_id from JWT or API key so user_limiter can key by it."""
     async def dispatch(self, request: Request, call_next):
         from auth.jwt import COOKIE_NAME, decode_token
         from jose import JWTError
+        auth_header = request.headers.get("Authorization", "")
+        bearer_raw: str | None = None
+        if auth_header.startswith("Bearer "):
+            bearer_raw = auth_header[7:].strip()
         try:
-            token = request.cookies.get(COOKIE_NAME)
-            if not token:
-                auth_header = request.headers.get("Authorization", "")
-                if auth_header.startswith("Bearer "):
-                    token = auth_header[7:].strip()
+            token = request.cookies.get(COOKIE_NAME) or bearer_raw
             if token:
                 claims = decode_token(token)
                 request.state.user_id = claims["user_id"]
                 request.state.token_version = claims["token_version"]
-        except JWTError:
-            pass
+        except (JWTError, HTTPException):
+            if bearer_raw:
+                await self._try_api_key(request, bearer_raw)
         return await call_next(request)
+
+    @staticmethod
+    async def _try_api_key(request: Request, raw_key: str) -> None:
+        from auth.api_key_auth import resolve_api_key
+        user_id = await resolve_api_key(raw_key)
+        if user_id:
+            request.state.user_id = str(user_id)
+            request.state.token_version = 0
+            request.state.via_api_key = True
 
 
 access_logger = logging.getLogger("orbit.access")
@@ -330,7 +345,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(apps.router, prefix="/api/apps", tags=["apps"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(launches.router, prefix="/api/launches", tags=["launches"])
-app.include_router(usage.router, prefix="/api/usage", tags=["usage"])
+app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
 app.include_router(insights.router, prefix="/api/insights", tags=["insights"])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"])
 app.include_router(preferences.router, prefix="/api/preferences", tags=["preferences"])
