@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -44,16 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
+  /** Bumps when a newer auth request starts — ignores stale /auth/me responses (OAuth race). */
+  const authEpoch = useRef(0);
 
   useEffect(() => {
-    const cached = getCachedUser();
-    if (cached) {
-      setUser(cached.user);
-    }
+    const epoch = ++authEpoch.current;
 
     api
       .get<User>("/auth/me", { validateStatus: (s) => s < 500 })
       .then((r) => {
+        if (epoch !== authEpoch.current) return;
         if (r.status === 200) {
           applyUser(r.data, undefined, setUser, setOffline);
         } else if (r.status === 401) {
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch((err) => {
+        if (epoch !== authEpoch.current) return;
         if (axios.isAxiosError(err) && !err.response) {
           const session = getCachedUser();
           if (session) {
@@ -77,12 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setOffline(false);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (epoch === authEpoch.current) setLoading(false);
+      });
   }, []);
 
   const signIn = useCallback(async (remember?: boolean) => {
+    const epoch = ++authEpoch.current;
     const r = await api.get<User>("/auth/me");
+    if (epoch !== authEpoch.current) return;
     applyUser(r.data, remember, setUser, setOffline);
+    setLoading(false);
   }, []);
 
   const signOut = useCallback(() => {

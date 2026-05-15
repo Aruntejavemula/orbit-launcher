@@ -120,7 +120,8 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
         value=token,
         httponly=True,
         secure=_IS_PROD or _CROSS_DOMAIN,
-        samesite="none" if _CROSS_DOMAIN else "strict",
+        # lax (not strict) so Google OAuth top-level redirects can set the session cookie
+        samesite="none" if _CROSS_DOMAIN else "lax",
         max_age=max_age,
         path="/",
         domain=_COOKIE_DOMAIN,
@@ -132,7 +133,7 @@ def _clear_auth_cookie(response: Response) -> None:
         key=COOKIE_NAME,
         path="/",
         secure=_IS_PROD or _CROSS_DOMAIN,
-        samesite="none" if _CROSS_DOMAIN else "strict",
+        samesite="none" if _CROSS_DOMAIN else "lax",
         domain=_COOKIE_DOMAIN,
     )
 

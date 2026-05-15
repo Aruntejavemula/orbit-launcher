@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "./test/server";
-import { fakePrefs } from "./test/handlers";
+import { fakePrefs, fakeUser } from "./test/handlers";
+import { markSplashSeen } from "./utils/splashSession";
 import { createMockQueryClient } from "./test/helpers";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
@@ -32,6 +33,7 @@ function renderApp() {
 
 beforeEach(() => {
   window.history.replaceState({}, "", "/");
+  sessionStorage.clear();
 });
 
 describe("App routing and shell", () => {
@@ -120,6 +122,38 @@ describe("App routing and shell", () => {
     await waitFor(() => {
       expect(screen.getByText(/add a tool/i)).toBeInTheDocument();
     });
+  }, 20000);
+
+  it("completes Google OAuth on /auth/callback and shows home", async () => {
+    markSplashSeen();
+    window.history.replaceState({}, "", "/auth/callback");
+    renderApp();
+    await waitFor(
+      () => expect(screen.getAllByLabelText(/toggle theme/i).length).toBeGreaterThan(0),
+      { timeout: 8000 }
+    );
+    expect(window.location.pathname).toBe("/");
+    expect(screen.queryByText(/continue with google/i)).not.toBeInTheDocument();
+  }, 20000);
+
+  it("redirects to google_error when OAuth callback has no session", async () => {
+    markSplashSeen();
+    const replace = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      pathname: "/auth/callback",
+      search: "",
+      replace,
+    });
+    window.history.replaceState({}, "", "/auth/callback");
+    server.use(
+      http.get(`${BASE}/auth/me`, () => new HttpResponse(null, { status: 401 }))
+    );
+    renderApp();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/?google_error=1"), {
+      timeout: 8000,
+    });
+    vi.unstubAllGlobals();
   }, 20000);
 
   it("closes AddAppModal when onClose is triggered", async () => {

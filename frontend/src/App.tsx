@@ -17,6 +17,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
+import { hasSeenSplashThisSession, markSplashSeen } from "./utils/splashSession";
 import type { PageId } from "./types";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
@@ -27,31 +28,38 @@ const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
 
 const KNOWN_PATHS = new Set(["/", "/auth/callback", "/privacy", "/terms"]);
 
+function shouldSkipSplash(): boolean {
+  if (hasSeenSplashThisSession()) return true;
+  if (window.location.pathname === "/auth/callback") return true;
+  return new URLSearchParams(window.location.search).get("google_error") === "1";
+}
+
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
-  const { user, loading: authLoading, offline, signIn } = useAuth();
+  const { user, loading: authLoading, offline } = useAuth();
   const { apps } = useApps();
   const { prefs, prefsFetched, update } = usePrefs();
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
   const isAuthCallback = window.location.pathname === "/auth/callback";
-  const hasGoogleError = new URLSearchParams(window.location.search).get("google_error") === "1";
-  const [splashDone, setSplashDone] = useState(isAuthCallback || hasGoogleError);
-  const oauthCallbackStarted = useRef(false);
+  const [splashDone, setSplashDone] = useState(shouldSkipSplash);
   const prevUserId = useRef<string | null>(null);
   const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
-  const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+  const handleSplashComplete = useCallback(() => {
+    markSplashSeen();
+    setSplashDone(true);
+  }, []);
 
-  // Finish Google OAuth before splash — LoginPage is not mounted during splash.
+  // Google OAuth: backend sets session cookie, then redirects here. Wait for /auth/me.
   useEffect(() => {
-    if (!isAuthCallback || oauthCallbackStarted.current) return;
-    oauthCallbackStarted.current = true;
-    window.history.replaceState({}, "", "/");
-    signIn().catch(() => {
-      window.location.replace("/?google_error=1");
-    });
-  }, [isAuthCallback, signIn]);
+    if (!isAuthCallback || authLoading) return;
+    if (user) {
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+    window.location.replace("/?google_error=1");
+  }, [isAuthCallback, authLoading, user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
@@ -78,9 +86,14 @@ export default function App() {
     [apps, openAppId]
   );
 
-  // Splash screen on first load
+  // Splash screen on first load (once per tab session)
   if (!splashDone) {
     return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  // OAuth return — hold UI until session is confirmed or we redirect to login
+  if (isAuthCallback) {
+    return null;
   }
 
   // Public legal pages — accessible without authentication

@@ -18,7 +18,9 @@ api.interceptors.response.use(
     const url: string = err.config?.url ?? "";
     const isAuthCall = AUTH_ENDPOINTS.some((p) => url.includes(p));
     if (err.response?.status === 401) {
-      if (!isAuthCall && window.location.pathname !== "/") {
+      const path = window.location.pathname;
+      const onPublicEntry = path === "/" || path === "/auth/callback";
+      if (!isAuthCall && !onPublicEntry) {
         window.location.href = "/";
       }
     } else if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
