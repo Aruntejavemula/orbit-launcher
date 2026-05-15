@@ -95,15 +95,17 @@ async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
     await db.flush()
 
 
-_REMEMBER_EXPIRE_MINUTES = 90 * 24 * 60  # 90 days
+_SESSION_EXPIRE_MINUTES = 7 * 24 * 60  # "No thanks" — stay signed in 7 days
+_REMEMBER_EXPIRE_MINUTES = 90 * 24 * 60  # "Yes, remember" — 90 days
 
 
 def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> None:
-    max_age = _REMEMBER_EXPIRE_MINUTES * 60 if remember else EXPIRE_MINUTES * 60
+    minutes = _REMEMBER_EXPIRE_MINUTES if remember else _SESSION_EXPIRE_MINUTES
+    max_age = minutes * 60
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
-        httponly=True,
+   
         secure=_IS_PROD or _CROSS_DOMAIN,
         samesite="none" if _CROSS_DOMAIN else "strict",
         max_age=max_age,
@@ -135,9 +137,13 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
     await _create_default_prefs(db, user.id)
     await db.commit()
     await db.refresh(user)
-    token = create_access_token(str(user.id), token_version=user.token_version)
+    token = create_access_token(
+        str(user.id),
+        token_version=user.token_version,
+        expire_minutes=_SESSION_EXPIRE_MINUTES,
+    )
     response = JSONResponse(content={"ok": True})
-    _set_auth_cookie(response, token)
+    _set_auth_cookie(response, token, remember=False)
     return response
 
 
@@ -148,7 +154,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     user = result.scalar_one_or_none()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else None
+    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else _SESSION_EXPIRE_MINUTES
     token = create_access_token(str(user.id), token_version=user.token_version, expire_minutes=expire)
     response = JSONResponse(content={"ok": True})
     _set_auth_cookie(response, token, remember=body.remember_me)
@@ -203,10 +209,11 @@ async def google_callback(request: Request, code: str, state: str | None = None,
             await db.commit()
             await db.refresh(user)
 
-    token = create_access_token(str(user.id), token_version=user.token_version)
-    if is_desktop:
-        exchange = _create_desktop_exchange_code(str(user.id))
-        return RedirectResponse(f"remio://auth/callback?code={exchange}", status_code=302)
+    token = create_access_token(
+        str(user.id),
+        token_version=user.token_version,
+        expire_minutes=_SESSION_EXPIRE_MINUTES,
+    )
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
     _set_auth_cookie(redirect, token)
     return redirect
