@@ -5,10 +5,9 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const electronBuild = mode === "electron";
-  return {
-    base: electronBuild ? "./" : "/",
-    plugins: [
-      react(),
+  const plugins = [react()];
+  if (!electronBuild) {
+    plugins.push(
       VitePWA({
         strategies: "injectManifest",
         srcDir: "src",
@@ -19,8 +18,12 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,ico,woff2}"],
           maximumFileSizeToCacheInBytes: 200_000,
         },
-      }),
-    ],
+      })
+    );
+  }
+  return {
+    base: electronBuild ? "./" : "/",
+    plugins,
     build: {
       rollupOptions: {
         output: {

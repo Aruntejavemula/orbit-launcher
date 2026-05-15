@@ -19,6 +19,9 @@ from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
 import asyncio
+import hmac
+import hashlib
+import time
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -30,6 +33,65 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 _IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
+
+
+def _create_oauth_state(*, desktop: bool = False) -> str:
+    ts = str(int(time.time()))
+    mode = "d" if desktop else "w"
+    sig = hmac.new(_JWT_SECRET.encode(), f"{ts}:{mode}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{ts}.{sig}.{mode}"
+
+
+def _verify_oauth_state(state: str, max_age: int = 300) -> tuple[bool, bool]:
+    try:
+        parts = state.split(".")
+        if len(parts) == 2:
+            ts, sig = parts
+            expected = hmac.new(_JWT_SECRET.encode(), ts.encode(), hashlib.sha256).hexdigest()[:16]
+            if not hmac.compare_digest(sig, expected):
+                return False, False
+            return (int(time.time()) - int(ts)) <= max_age, False
+        if len(parts) == 3:
+            ts, sig, mode = parts
+            if mode not in ("w", "d"):
+                return False, False
+            expected = hmac.new(_JWT_SECRET.encode(), f"{ts}:{mode}".encode(), hashlib.sha256).hexdigest()[:16]
+            if not hmac.compare_digest(sig, expected):
+                return False, False
+            return (int(time.time()) - int(ts)) <= max_age, mode == "d"
+        return False, False
+    except Exception:
+        return False, False
+
+
+def _oauth_state_valid(request: Request, state: str | None) -> tuple[bool, bool]:
+    if state:
+        valid, is_desktop = _verify_oauth_state(state)
+        if valid:
+            return True, is_desktop
+    cookie = request.cookies.get(_GOOGLE_STATE_COOKIE)
+    if state and cookie and state == cookie:
+        return True, False
+    return False, False
+
+
+def _create_desktop_exchange_code(user_id: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(seconds=90)
+    return jwt.encode(
+        {"sub": user_id, "purpose": "desktop_oauth", "exp": expire},
+        _JWT_SECRET,
+        algorithm=_JWT_ALGO,
+    )
+
+
+def _consume_desktop_exchange_code(code: str) -> str:
+    try:
+        payload = jwt.decode(code, _JWT_SECRET, algorithms=[_JWT_ALGO])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired sign-in code.")
+    if payload.get("purpose") != "desktop_oauth":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired sign-in code.")
+    return str(payload["sub"])
 
 
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
@@ -112,29 +174,20 @@ async def logout(request: Request, response: Response, user_id: str = Depends(ge
 
 
 @router.get("/google")
-def google_login():
+def google_login(desktop: bool = False):
     if not google_oauth_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server.",
         )
-    state = secrets.token_urlsafe(16)
-    redirect = RedirectResponse(get_google_auth_url(state))
-    redirect.set_cookie(
-        key=_GOOGLE_STATE_COOKIE,
-        value=state,
-        httponly=True,
-        secure=_IS_PROD,
-        samesite="lax",
-        max_age=300,
-        path="/api/auth",
-    )
-    return redirect
+    state = _create_oauth_state(desktop=desktop)
+    return RedirectResponse(get_google_auth_url(state))
 
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str, state: str | None = None, db: AsyncSession = Depends(get_db)):
-    if not state or state != request.cookies.get(_GOOGLE_STATE_COOKIE):
+    valid, is_desktop = _oauth_state_valid(request, state)
+    if not valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state.")
 
     try:
@@ -165,10 +218,32 @@ async def google_callback(request: Request, code: str, state: str | None = None,
             await db.refresh(user)
 
     token = create_access_token(str(user.id), token_version=user.token_version)
-    redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
+    if is_desktop:
+        exchange = _create_desktop_exchange_code(str(user.id))
+        return RedirectResponse(f"remio://auth/callback?code={exchange}", status_code=302)
+
+    redirect = RedirectResponse(f"{FRONTEND_URL.rstrip('/')}/auth/callback", status_code=302)
     redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth", secure=_IS_PROD, samesite="lax")
     _set_auth_cookie(redirect, token)
     return redirect
+
+
+class DesktopSessionRequest(BaseModel):
+    code: str = Field(min_length=10, max_length=2048)
+
+
+@router.post("/desktop/session")
+async def desktop_session(body: DesktopSessionRequest, db: AsyncSession = Depends(get_db)):
+    user_id = _consume_desktop_exchange_code(body.code)
+    user = await get_or_404(
+        db,
+        select(User).where(User.id == user_id),
+        "Account not found. Please sign in again.",
+    )
+    token = create_access_token(str(user.id), token_version=user.token_version)
+    response = JSONResponse({"ok": True})
+    _set_auth_cookie(response, token)
+    return response
 
 
 @router.get("/me", response_model=UserResponse)

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import api from "../api";
+import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -96,6 +97,10 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
+    if (isRemioDesktop()) {
+      void getRemioDesktop()?.startGoogleSignIn();
+      return;
+    }
     window.location.href = "/api/auth/google";
   };
 

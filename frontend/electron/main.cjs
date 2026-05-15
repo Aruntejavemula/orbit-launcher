@@ -115,6 +115,7 @@ async function completeDesktopOAuth(rawUrl) {
       return;
     }
     await loadApp(win);
+    win.webContents.reload();
     win.focus();
   } catch (e) {
     console.error("[Remio] desktop OAuth session failed:", e);
