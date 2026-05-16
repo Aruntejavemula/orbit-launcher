@@ -18,6 +18,9 @@ from limiter import limiter
 from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
+import logging
+
+logger = logging.getLogger("orbit.auth")
 import asyncio
 import hmac
 import hashlib
@@ -192,8 +195,12 @@ async def google_callback(request: Request, code: str, state: str | None = None,
 
     try:
         guser = await exchange_code_for_user(code)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google sign-in failed. Please try again.")
+    except Exception as exc:
+        logger.warning("Google OAuth exchange failed: %s", exc)
+        detail = "Google sign-in failed. Please try again."
+        if not _IS_PROD and str(exc):
+            detail = f"Google sign-in failed: {exc}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
     google_id = guser.get("sub")
     email = guser.get("email")

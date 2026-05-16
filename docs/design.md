@@ -49,6 +49,7 @@ Helpers in `backend/routers/auth.py`: `_create_oauth_state`, `_verify_oauth_stat
 
 - `frontend/src/lib/desktop.ts` — `isRemioDesktop()`, `getRemioDesktop()`.
 - `LoginPage`: Google button calls **`remioDesktop.startGoogleSignIn()`** when in Electron (otherwise `location.href = /api/auth/google`).
+- **Electron Google sign-in** opens an in-app OAuth window (same `persist:remio` session as main) — same cookie flow as browser; `remio://` remains a fallback if the system browser is used.
 - Packaged build: **PWA / service worker disabled** in Vite when `mode === "electron"` (avoids `file://` SW issues).
 
 ---

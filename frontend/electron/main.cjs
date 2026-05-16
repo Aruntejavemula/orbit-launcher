@@ -12,6 +12,7 @@ const SESSION_PARTITION = "persist:remio";
 const PROTOCOL = "remio";
 
 let mainWindow = null;
+let authWindow = null;
 
 function isInAppHost(hostname) {
   return (
@@ -32,10 +33,78 @@ function isGoogleOAuthStartUrl(url) {
   }
 }
 
-function openGoogleOAuthInBrowser(url) {
-  const target = new URL(url);
-  target.searchParams.set("desktop", "1");
-  return shell.openExternal(target.toString());
+function isOAuthCallbackUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.searchParams.get("google_error") === "1") return true;
+    return u.pathname.replace(/\/$/, "") === "/auth/callback";
+  } catch {
+    return false;
+  }
+}
+
+/** Same session as main window — matches browser OAuth (cookie on /auth/callback). */
+function finishOAuthFromCallback(url) {
+  if (authWindow && !authWindow.isDestroyed()) authWindow.close();
+  authWindow = null;
+  const main = mainWindow ?? BrowserWindow.getAllWindows()[0];
+  if (!main) return;
+  if (url.includes("google_error=1")) {
+    loadApp(main, errorLoadUrl());
+  } else {
+    loadApp(main);
+    main.webContents.reload();
+  }
+  main.focus();
+}
+
+function handleAuthWindowUrl(event, url) {
+  if (url.startsWith(`${PROTOCOL}://`)) {
+    if (event) event.preventDefault();
+    completeDesktopOAuth(url);
+    return true;
+  }
+  if (isOAuthCallbackUrl(url)) {
+    if (event) event.preventDefault();
+    finishOAuthFromCallback(url);
+    return true;
+  }
+  return false;
+}
+
+function openGoogleOAuthWindow() {
+  if (authWindow && !authWindow.isDestroyed()) {
+    authWindow.focus();
+    return;
+  }
+  authWindow = new BrowserWindow({
+    width: 520,
+    height: 720,
+    parent: mainWindow ?? undefined,
+    modal: Boolean(mainWindow),
+    autoHideMenuBar: true,
+    title: "Sign in with Google",
+    webPreferences: {
+      partition: SESSION_PARTITION,
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+  const wc = authWindow.webContents;
+  wc.on("will-redirect", (event, url) => {
+    handleAuthWindowUrl(event, url);
+  });
+  wc.on("will-navigate", (event, url) => {
+    if (url.includes("accounts.google.com")) return;
+    handleAuthWindowUrl(event, url);
+  });
+  wc.on("did-navigate", (_event, url) => {
+    handleAuthWindowUrl(null, url);
+  });
+  authWindow.on("closed", () => {
+    authWindow = null;
+  });
+  authWindow.loadURL(`${API_ORIGIN}/api/auth/google`);
 }
 
 function navigationTarget(url) {
@@ -56,7 +125,7 @@ function handleWebContentsNavigation(event, url) {
   }
   if (isGoogleOAuthStartUrl(url)) {
     event.preventDefault();
-    openGoogleOAuthInBrowser(url);
+    openGoogleOAuthWindow();
     return;
   }
   if (navigationTarget(url) === "external") {
@@ -203,8 +272,7 @@ app.on("open-url", (event, url) => {
 });
 
 ipcMain.handle("google-sign-in", async () => {
-  const err = await shell.openExternal(`${API_ORIGIN}/api/auth/google?desktop=1`);
-  if (err) console.error("[Remio] openExternal failed:", err);
+  openGoogleOAuthWindow();
 });
 
 app.whenReady().then(() => {
