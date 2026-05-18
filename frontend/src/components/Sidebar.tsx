@@ -15,7 +15,6 @@ import { useAuth } from "../context/AuthContext";
 import { usePrefs } from "../context/PreferencesContext";
 import type { PageId } from "../types";
 import ProfileEditorModal from "./ProfileEditorModal";
-import AppLogo from "./AppLogo";
 
 function Initials({ name, avatarUrl, dark }: { name: string; avatarUrl?: string | null; dark: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);

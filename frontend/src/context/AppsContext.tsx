@@ -110,7 +110,7 @@ export function useApps() {
     placeholderData: () => readAppsCache() ?? undefined,
   });
 
-  const { data: history = [] } = useQuery({
+  const { data: history = [], isLoading: historyLoading } = useQuery({
     queryKey: ["launches"],
     queryFn: fetchLaunches,
     enabled: !!user,

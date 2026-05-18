@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { toast } from "./components/Toast";
+import { getRemioDesktop, isRemioDesktop } from "./lib/desktop";
 import { appPathname, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
 // Public bundle: only VITE_* env vars are embedded. Secrets and DB config live in backend/.env only.
