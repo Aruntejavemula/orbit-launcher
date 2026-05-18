@@ -5,6 +5,8 @@ import { usePrefs } from "../context/PreferencesContext";
 import type { AppItem } from "../types";
 
 const MS_PER_DAY = 86_400_000;
+/** Home banner: urgent renewals only (independent of Calendar reminder range). */
+const BANNER_HORIZON_DAYS = 3;
 
 function expiringApps(apps: AppItem[], withinDays: number): AppItem[] {
   const now = Date.now();
@@ -20,8 +22,8 @@ export default function ExpirationBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   const due = useMemo(
-    () => (prefs.notifyExpirations ? expiringApps(apps, prefs.reminderDays) : []),
-    [apps, prefs.notifyExpirations, prefs.reminderDays]
+    () => (prefs.notifyExpirations ? expiringApps(apps, BANNER_HORIZON_DAYS) : []),
+    [apps, prefs.notifyExpirations]
   );
 
   if (dismissed || due.length === 0) return null;
@@ -44,8 +46,7 @@ export default function ExpirationBanner() {
       <div className="min-w-0 flex-1 pr-6">
         <p className="text-sm font-semibold text-amber-900">{headline}</p>
         <p className="mt-0.5 text-xs text-amber-800/90">
-          Within the next {prefs.reminderDays} day{prefs.reminderDays === 1 ? "" : "s"} — check Calendar for
-          details.
+          Within the next {BANNER_HORIZON_DAYS} days — check Calendar for details.
         </p>
         <ul className="mt-2 space-y-0.5 text-xs text-amber-900/90">
           {due.slice(0, 3).map((a) => {

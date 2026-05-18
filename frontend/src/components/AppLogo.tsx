@@ -1,4 +1,4 @@
-import { APP_ICON_JPEG, APP_ICON_SVG } from "../lib/assets";
+import { APP_ICON_JPEG, APP_ICON_PNG } from "../lib/assets";
 
 interface Props {
   className?: string;
@@ -8,7 +8,7 @@ interface Props {
 export default function AppLogo({ className = "", alt = "Remio" }: Props) {
   return (
     <img
-      src={APP_ICON_SVG}
+      src={APP_ICON_PNG}
       alt={alt}
       className={className}
       onError={(e) => {
