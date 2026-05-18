@@ -16,6 +16,7 @@ import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
+import { appPathname, appSearch, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const UsagePage = lazy(() => import("./pages/UsagePage"));
@@ -24,6 +25,17 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
 
 const KNOWN_PATHS = new Set(["/", "/auth/callback"]);
+const SPLASH_SEEN_KEY = "remio_splash_seen";
+
+function shouldSkipSplash(): boolean {
+  try {
+    if (sessionStorage.getItem(SPLASH_SEEN_KEY) === "1") return true;
+  } catch {
+    /* private mode */
+  }
+  if (appPathname() === "/auth/callback") return true;
+  return new URLSearchParams(appSearch()).get("google_error") === "1";
+}
 
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
@@ -33,10 +45,28 @@ export default function App() {
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
-  const [splashDone, setSplashDone] = useState(false);
+  const isAuthCallback = !isPackagedFile() && appPathname() === "/auth/callback";
+  const [splashDone, setSplashDone] = useState(shouldSkipSplash);
   const prevUserId = useRef<string | null>(null);
-  const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
-  const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+  const isUnknownPath = !isPackagedFile() && !KNOWN_PATHS.has(appPathname());
+  const handleSplashComplete = useCallback(() => {
+    try {
+      sessionStorage.setItem(SPLASH_SEEN_KEY, "1");
+    } catch {
+      /* private mode */
+    }
+    setSplashDone(true);
+  }, []);
+
+  // Google redirects here with session cookie; wait for /auth/me, then go home or login.
+  useEffect(() => {
+    if (!isAuthCallback || authLoading) return;
+    if (user) {
+      navigateAppRoot();
+      return;
+    }
+    navigateAppRoot("?google_error=1");
+  }, [isAuthCallback, authLoading, user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
@@ -54,7 +84,7 @@ export default function App() {
   // Redirect unknown paths when auth resolves to logged-out
   useEffect(() => {
     if (isUnknownPath && !authLoading && !user) {
-      window.location.replace("/");
+      navigateAppRoot();
     }
   }, [isUnknownPath, authLoading, user]);
 
@@ -63,9 +93,14 @@ export default function App() {
     [apps, openAppId]
   );
 
-  // Splash screen on first load
+  // Splash screen on first visit (skip when returning from Google OAuth)
   if (!splashDone) {
     return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  // OAuth return — wait for session check (do not flash login)
+  if (isAuthCallback) {
+    return null;
   }
 
   // Unknown path + confirmed logged in → 404

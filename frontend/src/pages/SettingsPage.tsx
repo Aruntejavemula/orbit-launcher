@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sun, Moon, PlayCircle, Globe } from "lucide-react";
 import { COUNTRIES } from "../utils/countryData";
 import { useAuth } from "../context/AuthContext";
@@ -13,7 +13,7 @@ import api from "../api";
 export default function SettingsPage() {
   const { user, signOut, refreshUser } = useAuth();
   const { apps, history } = useApps();
-  const { prefs, update } = usePrefs();
+  const { prefs, prefsFetched, update } = usePrefs();
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [saved, setSaved] = useState(false);
@@ -24,8 +24,28 @@ export default function SettingsPage() {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [countrySaved, setCountrySaved] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false);
+  const [rememberSaving, setRememberSaving] = useState(false);
 
   const hasPassword = !!user;
+
+  useEffect(() => {
+    setRememberDevice(user?.remember_device ?? false);
+  }, [user?.remember_device]);
+
+  const setRemember = async (value: boolean) => {
+    if (rememberSaving) return;
+    setRememberDevice(value);
+    setRememberSaving(true);
+    try {
+      await api.post("/auth/remember-device", { remember_device: value });
+      await refreshUser();
+    } catch {
+      setRememberDevice(!value);
+    } finally {
+      setRememberSaving(false);
+    }
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,14 +153,25 @@ export default function SettingsPage() {
 
       <Card title="Preferences">
         <div className="space-y-1">
-          <Toggle label="Start week on Monday" description="Calendar will show Mon as the first day." value={prefs.startWeekOnMonday} onChange={(v) => update({ startWeekOnMonday: v })} />
-          <Toggle label="Compact cards" description="Smaller padding and icon size on the home grid." value={prefs.compactCards} onChange={(v) => update({ compactCards: v })} />
-          <Toggle label="Show last opened time" description="Display the relative timestamp on each card." value={prefs.showLastOpened} onChange={(v) => update({ showLastOpened: v })} />
-          <Toggle label="Notify before subscriptions expire" description="Banner reminder 7 days before any renewal." value={prefs.notifyExpirations} onChange={(v) => update({ notifyExpirations: v })} />
+          <Toggle label="Start week on Monday" description="Calendar will show Mon as the first day." value={prefs.startWeekOnMonday} disabled={!prefsFetched} onChange={(v) => update({ startWeekOnMonday: v })} />
+          <Toggle label="Compact cards" description="Smaller padding and icon size on the home grid." value={prefs.compactCards} disabled={!prefsFetched} onChange={(v) => update({ compactCards: v })} />
+          <Toggle label="Show last opened time" description="Display the relative timestamp on each card." value={prefs.showLastOpened} disabled={!prefsFetched} onChange={(v) => update({ showLastOpened: v })} />
+          <Toggle label="Notify before subscriptions expire" description="Banner reminder 7 days before any renewal." value={prefs.notifyExpirations} disabled={!prefsFetched} onChange={(v) => update({ notifyExpirations: v })} />
         </div>
       </Card>
 
       <Card title="Security">
+        <div className="space-y-1 border-b pb-3 mb-3" style={{ borderColor: "var(--line)" }}>
+          <Toggle
+            label="Remember this device"
+            description="Stay signed in on this computer for about 90 days. Turn off for a shorter session."
+            value={rememberDevice}
+            onChange={setRemember}
+          />
+          {rememberSaving && (
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>Updating session…</p>
+          )}
+        </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -246,7 +277,7 @@ function ThemeOption({ label, icon: Icon, active, onClick }: { label: string; ic
   );
 }
 
-function Toggle({ label, description, value, onChange }: { label: string; description?: string; value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ label, description, value, disabled, onChange }: { label: string; description?: string; value: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between border-b py-3 last:border-0" style={{ borderColor: "var(--line)" }}>
       <div className="pr-4">
@@ -257,9 +288,10 @@ function Toggle({ label, description, value, onChange }: { label: string; descri
         type="button"
         role="switch"
         aria-checked={value}
-        onClick={() => onChange(!value)}
-        onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); onChange(!value); } }}
-        className="relative h-6 w-11 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+        disabled={disabled}
+        onClick={() => !disabled && onChange(!value)}
+        onKeyDown={(e) => { if (!disabled && e.key === " ") { e.preventDefault(); onChange(!value); } }}
+        className="relative h-6 w-11 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sage disabled:cursor-not-allowed disabled:opacity-50"
         style={{
           background: value ? "#6B8F71" : "var(--bg-deep)",
           boxShadow: value ? "none" : "inset 0 0 0 1px var(--line)",

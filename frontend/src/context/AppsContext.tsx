@@ -233,6 +233,7 @@ export function useApps() {
     apps,
     history,
     loading,
+    appsLoading,
     addApp: addMutation.mutateAsync,
     removeApp: removeMutation.mutateAsync,
     updateApp: (id: string, patch: Partial<AppItem>) =>

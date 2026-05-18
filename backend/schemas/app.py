@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, field_validator, AnyHttpUrl
+from pydantic import BaseModel, Field, field_validator, field_serializer, AnyHttpUrl
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 import uuid
 import re
 from models.app_item import PlanEnum, BillingFrequencyEnum, CategoryEnum
@@ -90,6 +91,12 @@ class AppResponse(BaseModel):
     created_at: datetime
     last_opened_at: Optional[datetime] = None
     monthly_cost: Optional[float] = None
+
+    @field_serializer("monthly_cost")
+    def serialize_monthly_cost(self, value: Optional[float | Decimal]) -> Optional[float]:
+        if value is None:
+            return None
+        return float(value)
 
     class Config:
         from_attributes = True

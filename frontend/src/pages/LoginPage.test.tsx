@@ -73,6 +73,12 @@ describe("LoginPage", () => {
     expect(screen.getByText("Password is required.")).toBeInTheDocument();
   });
 
+  it("shows remember device prompt when Continue with Google is clicked (web only)", () => {
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Continue with Google"));
+    expect(screen.getByText("Remember this device?")).toBeInTheDocument();
+  });
+
   it("shows remember device prompt after valid login fields", async () => {
     render(<LoginPage />);
     fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "a@b.com" } });

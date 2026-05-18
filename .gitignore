@@ -1,6 +1,9 @@
 node_modules
 dist
 dist-ssr
+frontend/release/
+frontend/release-*/
+frontend/electron/store.appx.json
 *.local
 .DS_Store
 .vscode/*
@@ -14,8 +17,7 @@ __pycache__
 .env
 .env.*
 !.env.example
-backend/alembic/versions/*.py
-!backend/alembic/versions/.gitkeep
+!.env.electron.example
 backend/backups/
 .coverage
 coverage/

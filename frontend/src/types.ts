@@ -37,6 +37,7 @@ export interface User {
   name: string;
   email: string;
   avatar_url?: string;
+  remember_device?: boolean;
 }
 
 export interface ApiKey {

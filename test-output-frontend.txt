@@ -1,0 +1,522 @@
+
+> orbit-dashboard@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.6 D:/clone/orbit-launcher/frontend
+
+Not implemented: navigation to another Document
+couldn't load font "depends on user agent Not-Rotated 30px", falling back to "Sans Not-Rotated 30px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 30px", falling back to "Sans Not-Rotated 30px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 30px", falling back to "Sans Not-Rotated 30px", expect ugly output.couldn't load font "depends on user agent 30px", falling back to "Sans 30px", expect ugly output.couldn't load font "depends on user agent 30px", falling back to "Sans 30px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 48.34px", falling back to "Sans Not-Rotated 48.34px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 49.951px", falling back to "Sans Not-Rotated 49.951px", expect ugly output.couldn't load font "depends on user agent 30px", falling back to "Sans 30px", expect ugly output.couldn't load font "depends on user agent 48.34px", falling back to "Sans 48.34px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 53.847px", falling back to "Sans Not-Rotated 53.847px", expect ugly output.couldn't load font "depends on user agent 49.951px", falling back to "Sans 49.951px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 52.067px", falling back to "Sans Not-Rotated 52.067px", expect ugly output.couldn't load font "depends on user agent 53.847px", falling back to "Sans 53.847px", expect ugly output.couldn't load font "depends on user agent 52.067px", falling back to "Sans 52.067px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 54.275px", falling back to "Sans Not-Rotated 54.275px", expect ugly output.couldn't load font "depends on user agent 54.275px", falling back to "Sans 54.275px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 44.944px", falling back to "Sans Not-Rotated 44.944px", expect ugly output.couldn't load font "depends on user agent Not-Rotated 53.847px", falling back to "Sans Not-Rotated 53.847px", expect ugly output.couldn't load font "depends on user agent 53.847px", falling back to "Sans 53.847px", expect ugly output.couldn't load font "depends on user agent 44.944px", falling back to "Sans 44.944px", expect ugly output.Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+ ❯ src/pages/SettingsPage.unit.test.tsx (17 tests | 2 failed) 4444ms
+     × calls prefs update when toggle clicked 494ms
+     × toggle responds to Space key 147ms
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No apps yet' when totalApps=0
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at usePrefs (D:/clone/orbit-launcher/frontend/src/context/PreferencesContext.tsx:98:20)
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:20:21)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+stderr | src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No results' message with query
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No tools match' without query
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > empty states > shows clear search button when query present
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > pagination > shows first 24 apps
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > pagination > shows 'Show more' button when more apps available
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > pagination > does not show 'Show more' when all visible
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > pagination > loads more on button click
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > rendering apps > renders app cards
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > rendering apps > calls onOpenApp when app card is clicked
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/AppGrid.test.tsx > AppGrid > drag and drop > calls reorder when an item is dropped on another
+The above error occurred in the <AppGrid> component:
+
+    at AppGrid (D:/clone/orbit-launcher/frontend/src/components/AppGrid.tsx:16:20)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ ❯ src/components/AppGrid.test.tsx (11 tests | 11 failed) 201ms
+       × shows 'No apps yet' when totalApps=0 57ms
+       × shows 'No results' message with query 43ms
+       × shows 'No tools match' without query 11ms
+       × shows clear search button when query present 9ms
+       × shows first 24 apps 12ms
+       × shows 'Show more' button when more apps available 9ms
+       × does not show 'Show more' when all visible 8ms
+       × loads more on button click 5ms
+       × renders app cards 9ms
+       × calls onOpenApp when app card is clicked 9ms
+       × calls reorder when an item is dropped on another 7ms
+Error: useAuth must be used inside AuthProvider
+    at Module.useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at __vi_import_1__.renderHook.wrapper (D:/clone/orbit-launcher/frontend/src/context/AuthContext.test.tsx:183:24)
+    at TestComponent (D:\clone\orbit-launcher\frontend\node_modules\@testing-library\react\dist\pure.js:330:27)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: useAuth must be used inside AuthProvider
+    at Module.useAuth (D:/clone/orbit-launcher/frontend/src/context/AuthContext.tsx:62:17)
+    at __vi_import_1__.renderHook.wrapper (D:/clone/orbit-launcher/frontend/src/context/AuthContext.test.tsx:183:24)
+    at TestComponent (D:\clone\orbit-launcher\frontend\node_modules\@testing-library\react\dist\pure.js:330:27)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+Error: boom
+    at Boom (D:/clone/orbit-launcher/frontend/src/components/ErrorBoundary.test.tsx:6:9)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: boom
+    at Boom (D:/clone/orbit-launcher/frontend/src/components/ErrorBoundary.test.tsx:6:9)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: boom
+    at Boom (D:/clone/orbit-launcher/frontend/src/components/ErrorBoundary.test.tsx:6:9)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: boom
+    at Boom (D:/clone/orbit-launcher/frontend/src/components/ErrorBoundary.test.tsx:6:9)
+    at renderWithHooks (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\clone\orbit-launcher\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\clone\orbit-launcher\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+ ❯ src/utils/api.test.ts (12 tests | 1 failed) 75ms
+       × redirects to / on 401 for non-auth requests when not already at / 11ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No apps yet' when totalApps=0
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No results' message with query
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > empty states > shows 'No tools match' without query
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > empty states > shows clear search button when query present
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > pagination > shows first 24 apps
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > pagination > shows 'Show more' button when more apps available
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > pagination > does not show 'Show more' when all visible
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > pagination > loads more on button click
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > rendering apps > renders app cards
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > rendering apps > calls onOpenApp when app card is clicked
+ FAIL  src/components/AppGrid.test.tsx > AppGrid > drag and drop > calls reorder when an item is dropped on another
+Error: useAuth must be used inside AuthProvider
+ ❯ useAuth src/context/AuthContext.tsx:62:17
+     60| export function useAuth() {
+     61|   const v = useContext(Ctx);
+     62|   if (!v) throw new Error("useAuth must be used inside AuthProvider");
+       |                 ^
+     63|   return v;
+     64| }
+ ❯ usePrefs src/context/PreferencesContext.tsx:98:20
+ ❯ AppGrid src/components/AppGrid.tsx:20:21
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  src/utils/api.test.ts > api module > response interceptor > redirects to / on 401 for non-auth requests when not already at /
+AssertionError: expected '' to be '/' // Object.is equality
+
+- Expected
++ Received
+
+- /
+
+ ❯ src/utils/api.test.ts:58:36
+     56|       });
+     57|
+     58|       expect(window.location.href).toBe("/");
+       |                                    ^
+     59|     });
+     60|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  src/pages/SettingsPage.unit.test.tsx > SettingsPage unit > calls prefs update when toggle clicked
+AssertionError: expected "vi.fn()" to be called at least once
+ ❯ src/pages/SettingsPage.unit.test.tsx:95:24
+     93|     const toggles = screen.getAllByRole("switch");
+     94|     fireEvent.click(toggles[0]);
+     95|     expect(mockUpdate).toHaveBeenCalled();
+       |                        ^
+     96|   });
+     97|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  src/pages/SettingsPage.unit.test.tsx > SettingsPage unit > toggle responds to Space key
+AssertionError: expected "vi.fn()" to be called at least once
+ ❯ src/pages/SettingsPage.unit.test.tsx:102:24
+    100|     const toggles = screen.getAllByRole("switch");
+    101|     fireEvent.keyDown(toggles[0], { key: " " });
+    102|     expect(mockUpdate).toHaveBeenCalled();
+       |                        ^
+    103|   });
+    104|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+
+ Test Files  3 failed | 51 passed (54)
+      Tests  14 failed | 574 passed (588)
+   Start at  13:18:31
+   Duration  138.44s (transform 8.03s, setup 129.99s, import 176.71s, tests 160.27s, environment 418.20s)
+

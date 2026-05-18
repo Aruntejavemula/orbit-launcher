@@ -1,4 +1,4 @@
-# Build context must be the backend/ folder (docker compose, or Railway root directory = backend).
+# Monorepo build: use when Railway build context is the repository root (not backend/).
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,9 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+
+COPY backend/ .
 
 RUN chmod +x start.sh
 

@@ -8,6 +8,8 @@ import BrandIcon from "./BrandIcon";
 
 interface Props {
   app: AppItem;
+  compact?: boolean;
+  showLastOpened?: boolean;
   onOpen: (id: string) => void;
   isDragging: boolean;
   isDropTarget: boolean;
@@ -19,6 +21,8 @@ interface Props {
 
 export default memo(function AppCard({
   app,
+  compact = false,
+  showLastOpened = true,
   onOpen,
   isDragging,
   isDropTarget,
@@ -53,30 +57,43 @@ export default memo(function AppCard({
         e.preventDefault();
         onDrop(app.id);
       }}
-      className={`app-card group relative flex cursor-pointer flex-col rounded-2xl p-4 text-left ${
-        isDragging ? "dragging" : ""
-      } ${isDropTarget ? "drop-target" : ""}`}
+      className={`app-card group relative flex cursor-pointer flex-col text-left ${
+        compact ? "rounded-xl p-2.5" : "rounded-2xl p-4 max-sm:rounded-xl max-sm:p-2.5"
+      } ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}`}
       style={{
         background: cardBg,
         border: `1px solid ${cardBorder}`,
       }}
     >
       <span
-        className="grid h-9 w-9 place-items-center rounded-lg shadow-sm"
+        className={`grid place-items-center rounded-lg shadow-sm ${
+          compact ? "h-7 w-7" : "h-9 w-9 max-sm:h-7 max-sm:w-7"
+        }`}
         style={{ background: tileBg }}
       >
-        <BrandIcon slug={app.slug} color={app.color} size={20} iconKey={app.iconKey} />
+        <BrandIcon
+          slug={app.slug}
+          color={app.color}
+          size={compact ? 16 : 20}
+          iconKey={app.iconKey}
+        />
       </span>
 
-      <div className="mt-3 truncate text-[15px] font-semibold">
+      <div
+        className={`truncate font-semibold ${
+          compact ? "mt-2 text-sm" : "mt-3 text-[15px] max-sm:mt-2 max-sm:text-sm"
+        }`}
+      >
         {app.name}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className={`flex items-center justify-between gap-2 ${compact ? "mt-2" : "mt-3 max-sm:mt-2"}`}>
         <Badge plan={app.plan} />
-        <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-          {shortRelative(app.lastOpened)}
-        </span>
+        {showLastOpened && (
+          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+            {shortRelative(app.lastOpened)}
+          </span>
+        )}
       </div>
 
       <ExpiryLine app={app} />
@@ -97,7 +114,7 @@ function ExpiryLine({ app }: { app: AppItem }) {
   if (app.plan === "free") {
     return (
       <div
-        className="mt-2 flex items-center gap-1 text-[11px] font-medium"
+        className="mt-2 flex items-center gap-1 text-[10px] font-medium max-sm:mt-1.5 sm:text-[11px]"
         style={{ color: "var(--text-muted)" }}
       >
         <InfinityIcon size={11} />
@@ -105,7 +122,7 @@ function ExpiryLine({ app }: { app: AppItem }) {
       </div>
     );
   }
-  if (!app.expiresAt) return <div className="mt-2 h-[14px]" />;
+  if (!app.expiresAt) return <div className="mt-2 h-[14px] max-sm:mt-1.5 max-sm:h-[12px]" />;
   const days = Math.ceil((app.expiresAt - Date.now()) / 86_400_000);
   const expired = days < 0;
   const urgent = days <= 7;
@@ -124,7 +141,7 @@ function ExpiryLine({ app }: { app: AppItem }) {
     : `Renews in ${days}d · ${date}`;
   return (
     <div
-      className="mt-2 flex items-center gap-1 truncate text-[11px] font-semibold"
+      className="mt-2 flex items-center gap-1 truncate text-[10px] font-semibold max-sm:mt-1.5 sm:text-[11px]"
       style={{ color: urgent ? "#B5651D" : "var(--text-muted)" }}
     >
       {urgent ? <AlertTriangle size={11} /> : <RefreshCw size={11} />}

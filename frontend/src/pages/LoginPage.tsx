@@ -4,6 +4,7 @@ import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import AppLogo from "../components/AppLogo";
 import PasswordInput from "../components/PasswordInput";
 import api from "../api";
+import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -36,18 +37,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRememberPrompt, setShowRememberPrompt] = useState(false);
+  const [pendingGoogle, setPendingGoogle] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
 
-  // Google OAuth redirects to /auth/callback with a session cookie already set.
-  // We only need to fetch the user — no token in URL.
   useEffect(() => {
-    if (window.location.pathname === "/auth/callback") {
+    if (new URLSearchParams(window.location.search).get("google_error") === "1") {
+      setError("Google sign-in failed. Please try again.");
       window.history.replaceState({}, "", "/");
-      signIn().catch(() => setError("Google sign-in failed."));
     }
-  }, [signIn]);
+  }, []);
 
   function switchMode(next: Mode) {
     if (next === mode) return;
@@ -75,6 +75,7 @@ export default function LoginPage() {
       return;
     }
     if (mode === "login") {
+      setPendingGoogle(false);
       setShowRememberPrompt(true);
       return;
     }
@@ -100,7 +101,19 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
-    window.location.href = "/api/auth/google";
+    if (isRemioDesktop()) {
+      void getRemioDesktop()?.startGoogleSignIn();
+      return;
+    }
+    setPendingGoogle(true);
+    setShowRememberPrompt(true);
+  };
+
+  const doGoogleLogin = (remember: boolean) => {
+    setShowRememberPrompt(false);
+    setPendingGoogle(false);
+    const rememberQ = remember ? "?remember=1" : "";
+    window.location.href = `/api/auth/google${rememberQ}`;
   };
 
   return (
@@ -214,7 +227,11 @@ export default function LoginPage() {
 
       {/* Remember device popup */}
       {showRememberPrompt && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-sm fade-in">
+        <div
+          className="fixed inset-0 z-[200] grid place-items-center bg-black/40 backdrop-blur-sm fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 shadow-pop">
             <h3 className="text-lg font-semibold text-ink">Remember this device?</h3>
             <p className="mt-2 text-sm text-ink-muted">
@@ -223,14 +240,14 @@ export default function LoginPage() {
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
-                onClick={() => doLogin(false)}
+                onClick={() => (pendingGoogle ? doGoogleLogin(false) : doLogin(false))}
                 className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink-muted transition hover:bg-cream"
               >
                 No thanks
               </button>
               <button
                 type="button"
-                onClick={() => doLogin(true)}
+                onClick={() => (pendingGoogle ? doGoogleLogin(true) : doLogin(true))}
                 className="btn-primary flex-1 py-2.5 text-sm"
               >
                 Yes, remember

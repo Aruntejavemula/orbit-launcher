@@ -1,0 +1,8 @@
+# Backend API — build from repo root (paths in /Dockerfile use backend/).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300

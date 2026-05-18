@@ -127,7 +127,7 @@ class TestUpdatePreferences:
         assert data["theme"] == "dark"
         assert data["reminder_days"] == 7  # unchanged
 
-    async def test_returns_404_if_not_initialized(self, int_client, db_session):
+    async def test_patch_creates_preferences_if_not_initialized(self, int_client, db_session):
         user = await seed_user(db_session)
         await db_session.commit()
 
@@ -136,7 +136,8 @@ class TestUpdatePreferences:
             json={"theme": "dark"},
             cookies=make_auth_cookie(user.id),
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        assert resp.json()["theme"] == "dark"
 
     @pytest.mark.parametrize("days,expected", [
         (0, 422),

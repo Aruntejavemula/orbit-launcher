@@ -7,29 +7,123 @@ from jose import JWTError, jwt
 from database import get_db
 from models import User, Preferences
 from models.otp import PasswordResetOtp
-from schemas.auth import RegisterRequest, LoginRequest, UserResponse, UserUpdate
+from schemas.auth import RegisterRequest, LoginRequest, UserResponse, UserUpdate, RememberDeviceRequest
 from auth.password import hash_password, verify_password
 from auth.password_policy import validate_password
 from auth.jwt import COOKIE_NAME, EXPIRE_MINUTES, SECRET as _JWT_SECRET, ALGORITHM as _JWT_ALGO, create_access_token, get_current_user_id
-from auth.google import get_google_auth_url, exchange_code_for_user
+from auth.google import OAuthPlatform, get_google_auth_url, exchange_code_for_user, google_oauth_configured
 from auth.email_otp import generate_otp, send_otp_email
 from job_queue import enqueue_send_otp
 from limiter import limiter
 from utils import get_or_404, as_utc, apply_partial_update
 from dotenv import load_dotenv
 import os
+import logging
 import asyncio
+import hmac
+import hashlib
+import time
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
+logger = logging.getLogger("orbit.auth")
+
 router = APIRouter()
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = (os.getenv("FRONTEND_URL") or "http://localhost:5173").rstrip("/")
 
 _IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
 _GOOGLE_STATE_COOKIE = "orbit_google_state"
+
+
+def _create_oauth_state(*, desktop: bool = False, remio: bool = False, remember: bool = False) -> str:
+    ts = str(int(time.time()))
+    if remio:
+        mode = "r"
+    elif desktop:
+        mode = "d"
+    else:
+        mode = "w"
+    rem = "1" if remember else "0"
+    sig = hmac.new(_JWT_SECRET.encode(), f"{ts}:{mode}:{rem}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{ts}.{sig}.{mode}.{rem}"
+
+
+def _parse_oauth_state(state: str, max_age: int = 300) -> tuple[bool, bool, bool, bool]:
+    """Returns (valid, use_desktop_credentials, remio_handoff, remember_device)."""
+    try:
+        parts = state.split(".")
+        if len(parts) == 2:
+            ts, sig = parts
+            expected = hmac.new(_JWT_SECRET.encode(), ts.encode(), hashlib.sha256).hexdigest()[:16]
+            if not hmac.compare_digest(sig, expected):
+                return False, False, False, False
+            if (int(time.time()) - int(ts)) > max_age:
+                return False, False, False, False
+            return True, False, False, False
+        if len(parts) == 3:
+            ts, sig, mode = parts
+            if mode not in ("w", "d", "r"):
+                return False, False, False, False
+            expected = hmac.new(_JWT_SECRET.encode(), f"{ts}:{mode}".encode(), hashlib.sha256).hexdigest()[:16]
+            if not hmac.compare_digest(sig, expected):
+                return False, False, False, False
+            if (int(time.time()) - int(ts)) > max_age:
+                return False, False, False, False
+            return True, mode in ("d", "r"), mode == "r", False
+        if len(parts) == 4:
+            ts, sig, mode, rem = parts
+            if mode not in ("w", "d", "r") or rem not in ("0", "1"):
+                return False, False, False, False
+            expected = hmac.new(_JWT_SECRET.encode(), f"{ts}:{mode}:{rem}".encode(), hashlib.sha256).hexdigest()[:16]
+            if not hmac.compare_digest(sig, expected):
+                return False, False, False, False
+            if (int(time.time()) - int(ts)) > max_age:
+                return False, False, False, False
+            return True, mode in ("d", "r"), mode == "r", rem == "1"
+        return False, False, False, False
+    except Exception:
+        return False, False, False, False
+
+
+def _verify_oauth_state(state: str, max_age: int = 300) -> tuple[bool, bool]:
+    valid, desktop_creds, _remio, _remember = _parse_oauth_state(state, max_age)
+    return valid, desktop_creds
+
+
+def _oauth_state_valid(request: Request, state: str | None) -> tuple[bool, OAuthPlatform, bool, bool]:
+    if state:
+        valid, desktop_creds, remio, remember = _parse_oauth_state(state)
+        if valid:
+            cookie = request.cookies.get(_GOOGLE_STATE_COOKIE)
+            if not cookie or cookie == state:
+                platform: OAuthPlatform = "desktop" if desktop_creds else "web"
+                return True, platform, remio, remember
+    cookie = request.cookies.get(_GOOGLE_STATE_COOKIE)
+    if state and cookie and state == cookie:
+        return True, "web", False, False
+    return False, "web", False, False
+
+
+def _create_desktop_exchange_code(user_id: str, *, remember: bool = False) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(seconds=90)
+    return jwt.encode(
+        {"sub": user_id, "purpose": "desktop_oauth", "remember": remember, "exp": expire},
+        _JWT_SECRET,
+        algorithm=_JWT_ALGO,
+    )
+
+
+def _consume_desktop_exchange_code(code: str) -> tuple[str, bool]:
+    try:
+        payload = jwt.decode(code, _JWT_SECRET, algorithms=[_JWT_ALGO])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired sign-in code.")
+    if payload.get("purpose") != "desktop_oauth":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired sign-in code.")
+    return str(payload["sub"]), bool(payload.get("remember"))
 
 
 async def _create_default_prefs(db: AsyncSession, user_id: uuid.UUID):
@@ -60,7 +154,12 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        secure=_IS_PROD,
+        samesite="lax",
+    )
 
 
 @router.post("/register", status_code=201)
@@ -102,6 +201,27 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     return response
 
 
+@router.post("/remember-device")
+@limiter.limit("10/minute")
+async def set_remember_device(
+    request: Request,
+    body: RememberDeviceRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found.")
+    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_device else None
+    token = create_access_token(
+        str(user.id),
+        token_version=user.token_version,
+        expire_minutes=expire,
+        remember=body.remember_device,
+    )
+    response = JSONResponse({"remember_device": body.remember_device})
+    _set_auth_cookie(response, token, remember=body.remember_device)
+    return response
+
+
 @router.post("/logout", status_code=204)
 async def logout(request: Request, response: Response, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found.")
@@ -112,9 +232,20 @@ async def logout(request: Request, response: Response, user_id: str = Depends(ge
 
 
 @router.get("/google")
-def google_login():
-    state = secrets.token_urlsafe(16)
-    redirect = RedirectResponse(get_google_auth_url(state))
+def google_login(desktop: bool = False, platform: str | None = None, remember: bool = False):
+    use_desktop_creds = desktop or (platform or "").lower() == "desktop"
+    oauth_platform: OAuthPlatform = "desktop" if use_desktop_creds else "web"
+    if not google_oauth_configured(oauth_platform):
+        if oauth_platform == "desktop":
+            detail = (
+                "Desktop Google sign-in is not configured. "
+                "Set GOOGLE_CLIENT_ID_DESKTOP and GOOGLE_CLIENT_SECRET_DESKTOP on the server."
+            )
+        else:
+            detail = "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server."
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
+    state = _create_oauth_state(desktop=use_desktop_creds, remio=desktop, remember=remember)
+    redirect = RedirectResponse(get_google_auth_url(state, platform=oauth_platform))
     redirect.set_cookie(
         key=_GOOGLE_STATE_COOKIE,
         value=state,
@@ -122,20 +253,27 @@ def google_login():
         secure=_IS_PROD,
         samesite="lax",
         max_age=300,
-        path="/api/auth/google",
+        path="/api/auth",
     )
     return redirect
 
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str, state: str | None = None, db: AsyncSession = Depends(get_db)):
-    if not state or state != request.cookies.get(_GOOGLE_STATE_COOKIE):
+    valid, oauth_platform, remio_handoff, remember_device = _oauth_state_valid(request, state)
+    if not valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state.")
 
     try:
-        guser = await exchange_code_for_user(code)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google sign-in failed. Please try again.")
+        guser = await exchange_code_for_user(code, platform=oauth_platform)
+    except Exception as exc:
+        logger.warning("Google OAuth exchange failed: %s", exc)
+        if _IS_PROD:
+            return RedirectResponse(f"{FRONTEND_URL}/?google_error=1", status_code=302)
+        detail = "Google sign-in failed. Please try again."
+        if str(exc):
+            detail = f"Google sign-in failed: {exc}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
     google_id = guser.get("sub")
     email = guser.get("email")
@@ -170,13 +308,38 @@ async def google_callback(request: Request, code: str, state: str | None = None,
     return redirect
 
 
+class DesktopSessionRequest(BaseModel):
+    code: str = Field(min_length=10, max_length=2048)
+
+
+@router.post("/desktop/session")
+async def desktop_session(body: DesktopSessionRequest, db: AsyncSession = Depends(get_db)):
+    user_id, remember_device = _consume_desktop_exchange_code(body.code)
+    user = await get_or_404(
+        db,
+        select(User).where(User.id == user_id),
+        "Account not found. Please sign in again.",
+    )
+    expire = _REMEMBER_EXPIRE_MINUTES if remember_device else None
+    token = create_access_token(
+        str(user.id),
+        token_version=user.token_version,
+        expire_minutes=expire,
+        remember=remember_device,
+    )
+    response = JSONResponse({"ok": True})
+    _set_auth_cookie(response, token, remember=remember_device)
+    return response
+
+
 @router.get("/me", response_model=UserResponse)
 async def me(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found. Please sign in again.")
     token_tv = getattr(request.state, "token_version", 0)
     if user.token_version != token_tv:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Your session has expired. Please sign in again.")
-    return user
+    base = UserResponse.model_validate(user)
+    return base.model_copy(update={"remember_device": getattr(request.state, "remember_device", False)})
 
 
 @router.patch("/me", response_model=UserResponse)

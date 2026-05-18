@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function HomePage({ onOpenApp }: Props) {
-  const { apps, loading } = useApps();
+  const { apps, appsLoading } = useApps();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryId>("all");
 
@@ -33,7 +33,7 @@ export default function HomePage({ onOpenApp }: Props) {
   const activeTrials = apps.filter((a) => a.plan === "trial").length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 sm:gap-6">
       <HeroCard
         query={query}
         onQuery={setQuery}
@@ -42,7 +42,7 @@ export default function HomePage({ onOpenApp }: Props) {
       />
       <ExpirationBanner />
       <CategoryFilters active={category} onChange={setCategory} />
-      {loading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
+      {appsLoading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
     </div>
   );
 }

@@ -45,7 +45,7 @@ describe("api module", () => {
 
     it("redirects to / on 401 for non-auth requests when not already at /", async () => {
       Object.defineProperty(window, "location", {
-        value: { href: "", pathname: "/some/page" },
+        value: { href: "", pathname: "/some/page", protocol: "http:" },
         writable: true,
       });
 
