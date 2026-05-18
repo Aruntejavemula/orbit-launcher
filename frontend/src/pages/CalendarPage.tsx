@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,19 +25,12 @@ import { subscribeToPush, unsubscribeFromPush } from "../utils/pushSubscription"
 const REMINDER_PRESETS = [1, 3, 7, 14, 30];
 const DAYS_OPTIONS = [1, 3, 7, 14, 30];
 
-// ── Browser push notification helpers ────────────────────────────────────────
-
 async function requestPushPermission(): Promise<boolean> {
   if (!("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
   if (Notification.permission === "denied") return false;
   const result = await Notification.requestPermission();
   return result === "granted";
-}
-
-function firePushNotification(title: string, body: string) {
-  if (Notification.permission !== "granted") return;
-  new Notification(title, { body, icon: "/icon.png" });
 }
 
 export default function CalendarPage() {
@@ -53,30 +46,6 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState<Date | null>(new Date());
   const [addOpen, setAddOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  // Fire push notifications for due reminders on mount
-  useEffect(() => {
-    if (!prefs.reminderPush || Notification.permission !== "granted") return;
-    const now = Date.now();
-    reminders
-      .filter((r) => r.active && r.method === "push")
-      .forEach((r) => {
-        const app = apps.find((a) => a.id === r.app_id);
-        if (!app?.expiresAt) return;
-        const daysLeft = Math.ceil((app.expiresAt - now) / 86_400_000);
-        if (daysLeft >= 0 && daysLeft <= r.remind_days_before) {
-          const label = app.plan === "trial" ? "trial ends" : "renews";
-          firePushNotification(
-            `${app.name} reminder`,
-            daysLeft === 0
-              ? `${app.name} ${label} today!`
-              : `${app.name} ${label} in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`
-          );
-        }
-      });
-    // Only fire once on mount — no re-run on reminders change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const firstDayOffset = prefs.startWeekOnMonday ? 1 : 0;
   const grid = useMemo(() => buildMonth(cursor, firstDayOffset), [cursor, firstDayOffset]);
@@ -289,7 +258,7 @@ export default function CalendarPage() {
             <ReminderToggle
               icon={Smartphone}
               label="Push notifications"
-              description="Browser push notification when reminder fires"
+              description="Server push when a reminder is due (enable permission here)"
               active={prefs.reminderPush}
               onToggle={handlePushToggle}
             />

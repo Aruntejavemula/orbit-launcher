@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -107,10 +108,12 @@ describe("AuthContext", () => {
     expect(result.current.user).toBeNull();
   });
 
-  it("signOut clears user, queryClient, localStorage, and sessionStorage", async () => {
+  it("signOut clears user, auth cache, queryClient, and sessionStorage", async () => {
     mockApi.get.mockResolvedValueOnce({ status: 200, data: fakeUser });
     mockApi.post.mockResolvedValueOnce({ data: {} });
 
+    const { saveCachedUser } = await import("../utils/authSession");
+    saveCachedUser(fakeUser, false);
     localStorage.setItem("persist-key", "value");
     sessionStorage.setItem("session-key", "value");
 
@@ -127,8 +130,27 @@ describe("AuthContext", () => {
 
     expect(result.current.user).toBeNull();
     expect(mockQueryClientClear).toHaveBeenCalled();
-    expect(localStorage.getItem("persist-key")).toBeNull();
+    expect(localStorage.getItem("persist-key")).toBe("value");
     expect(sessionStorage.getItem("session-key")).toBeNull();
+    const { getCachedUser } = await import("../utils/authSession");
+    expect(getCachedUser()).toBeNull();
+  });
+
+  it("restores cached user when /auth/me fails offline", async () => {
+    const { saveCachedUser } = await import("../utils/authSession");
+    saveCachedUser(fakeUser, false);
+
+    mockApi.get.mockRejectedValueOnce(new axios.AxiosError("Network Error"));
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.user).toEqual(fakeUser);
+    expect(result.current.offline).toBe(true);
   });
 
   it("signIn fetches /auth/me and updates user", async () => {

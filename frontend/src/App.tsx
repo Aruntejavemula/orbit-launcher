@@ -39,7 +39,7 @@ function shouldSkipSplash(): boolean {
 
 export default function App() {
   // ALL hooks unconditionally at top — no hooks after conditional returns
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, offline } = useAuth();
   const { apps } = useApps();
   const { prefs, prefsFetched, update } = usePrefs();
   const [page, setPage] = useState<PageId>("home");
@@ -123,7 +123,13 @@ export default function App() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.97 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="relative"
         >
+          {offline && (
+            <p className="absolute left-0 right-0 top-4 z-20 mx-auto max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
+              You&apos;re offline. Sign in again when you&apos;re back online, or use a saved session from this device.
+            </p>
+          )}
           <LoginPage />
         </motion.div>
       </AnimatePresence>
@@ -169,15 +175,24 @@ export default function App() {
         </div>
         <div className="mx-auto max-w-[1240px] px-5 pb-32 pt-6 md:px-10 md:pt-10">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={page}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12, ease: "easeOut" }}
-            >
-              <Suspense fallback={null}>{renderPage()}</Suspense>
-            </motion.div>
+        {offline && (
+          <p
+            className="mb-4 rounded-xl border px-4 py-2 text-sm"
+            style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--text-muted)" }}
+            role="status"
+          >
+            Offline mode — showing your last saved data. Changes sync when you&apos;re back online.
+          </p>
+        )}
+        <motion.div
+          key={page}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
+        >
+          <Suspense fallback={null}>{renderPage()}</Suspense>
+        </motion.div>
           </AnimatePresence>
         </div>
         <FloatingAddButton onClick={() => setShowAdd(true)} />

@@ -334,6 +334,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
                 <PasswordInput
                   value={newPass}
                   onChange={setNewPass}
+                  className={policyError ? "border-red-400 focus:ring-red-300" : ""}
                   autoComplete="new-password"
                   autoFocus
                   className={policyError ? "border-red-400 focus:ring-red-300" : ""}
@@ -349,8 +350,8 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
                 <PasswordInput
                   value={confirm}
                   onChange={setConfirm}
-                  autoComplete="new-password"
                   className={matchError ? "border-red-400 focus:ring-red-300" : ""}
+                  autoComplete="new-password"
                 />
               </div>
               {matchError && <p className="mt-1 text-xs text-red-600">{matchError}</p>}

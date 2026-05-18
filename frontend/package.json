@@ -11,32 +11,15 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "electron:dev": "electron .",
-    "electron:dev:debug": "electron . --devtools",
     "electron:build:ui": "cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode electron",
-    "electron:build:store": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --config electron-builder.config.cjs --publish never",
-    "electron:build:store:clean": "node scripts/electron-store-build.cjs",
-    "electron:pack": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --dir --publish never"
+    "electron:pack:ci": "npm run electron:build:ui && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.ci.config.cjs --publish never"
   },
   "build": {
-    "appId": "com.remio.launcher",
+    "appId": "com.remiolauncher.app",
     "productName": "Remio",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "asar": true,
-    "forceCodeSigning": false,
-    "win": {
-      "signAndEditExecutable": false,
-      "target": [
-        { "target": "dir", "arch": ["x64"] }
-      ]
-    }
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "extraMetadata": { "main": "electron/main.cjs" }
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.9",

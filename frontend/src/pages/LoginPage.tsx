@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
-import AppLogo from "../components/AppLogo";
 import PasswordInput from "../components/PasswordInput";
 import api from "../api";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
@@ -91,7 +90,7 @@ export default function LoginPage() {
       } else {
         await api.post("/auth/login", { email, password, remember_me: remember });
       }
-      await signIn();
+      await signIn(mode === "login" ? remember : false);
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(friendlyError(raw));
@@ -178,7 +177,6 @@ export default function LoginPage() {
               onChange={setPassword}
               placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
               autoComplete={mode === "register" ? "new-password" : "current-password"}
-              required
             />
           </Field>
           {mode === "login" && (
@@ -236,7 +234,7 @@ export default function LoginPage() {
           <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 shadow-pop">
             <h3 className="text-lg font-semibold text-ink">Remember this device?</h3>
             <p className="mt-2 text-sm text-ink-muted">
-              Stay signed in so you don't have to log in every time you open Remio.
+              Stay signed in for up to 90 days. Choose &ldquo;No thanks&rdquo; to stay signed in for 7 days on this device.
             </p>
             <div className="mt-5 flex gap-3">
               <button

@@ -1,4 +1,4 @@
-import { Home, BarChart3, Plus, Calendar, Settings } from "lucide-react";
+import { Home, BarChart3, Plus, Timer, Settings } from "lucide-react";
 import type { PageId } from "../types";
 
 interface Props {
@@ -24,7 +24,7 @@ export default function BottomNav({ page, onNavigate, onAdd }: Props) {
           <Plus size={22} strokeWidth={2.5} />
         </button>
         <span className="w-12" aria-hidden />
-        <Item icon={Calendar} label="Calendar" active={page === "calendar"} onClick={() => onNavigate("calendar")} />
+        <Item icon={Timer} label="Usage" active={page === "usage"} onClick={() => onNavigate("usage")} />
         <Item icon={Settings} label="Settings" active={page === "settings"} onClick={() => onNavigate("settings")} />
       </div>
     </nav>

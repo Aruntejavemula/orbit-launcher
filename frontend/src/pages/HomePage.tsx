@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import HeroCard from "../components/HeroCard";
+import ExpirationBanner from "../components/ExpirationBanner";
 import CategoryFilters from "../components/CategoryFilters";
 import AppGrid from "../components/AppGrid";
 import ExpirationBanner from "../components/ExpirationBanner";
@@ -40,7 +41,7 @@ export default function HomePage({ onOpenApp }: Props) {
         totalApps={totalApps}
         activeTrials={activeTrials}
       />
-      <ExpirationBanner apps={apps} />
+      <ExpirationBanner />
       <CategoryFilters active={category} onChange={setCategory} />
       {appsLoading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
     </div>
