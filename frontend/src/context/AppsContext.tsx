@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
@@ -103,7 +103,7 @@ export function useApps() {
     }
   }, []);
 
-  const { data: apps = [], isLoading: appsLoading } = useQuery({
+  const { data: apps = [], isLoading: appsLoading, isError: appsError } = useQuery({
     queryKey: ["apps"],
     queryFn: fetchApps,
     enabled: !!user,
@@ -116,6 +116,13 @@ export function useApps() {
     enabled: !!user,
     placeholderData: () => readLaunchesCache() ?? undefined,
   });
+
+  const appsErrorShown = useRef(false);
+  useEffect(() => {
+    if (!appsError || appsErrorShown.current) return;
+    appsErrorShown.current = true;
+    toast("Could not load your apps. Try refreshing the page.", "error");
+  }, [appsError]);
 
   // loading = true while auth resolving OR while queries are fetching
   const loading = authLoading || appsLoading || historyLoading;

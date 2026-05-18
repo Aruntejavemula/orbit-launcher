@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
+import AppLogo from "../components/AppLogo";
 import PasswordInput from "../components/PasswordInput";
 import api from "../api";
 
@@ -108,7 +109,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-white/85 p-8 shadow-pop backdrop-blur-md fade-in">
         <div className="mb-6 flex items-center gap-3">
-          <img src="/app-hero-icon.jpeg" alt="Remio" className="h-11 w-11 rounded-2xl object-cover" />
+          <AppLogo className="h-11 w-11 rounded-2xl object-cover" />
           <div>
             <div className="text-2xl font-semibold text-ink">Remio</div>
             <div className="text-xs text-ink-muted">Your subscriptions, organized.</div>
