@@ -104,7 +104,7 @@ function openGoogleOAuthWindow() {
   authWindow.on("closed", () => {
     authWindow = null;
   });
-  authWindow.loadURL(`${API_ORIGIN}/api/auth/google`);
+  authWindow.loadURL(`${API_ORIGIN}/api/auth/google?platform=desktop`);
 }
 
 function navigationTarget(url) {

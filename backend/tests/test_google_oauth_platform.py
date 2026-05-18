@@ -1,0 +1,58 @@
+import pytest
+
+from auth.google import get_google_oauth_config, google_oauth_configured, get_google_auth_url
+from routers.auth import _create_oauth_state, _verify_oauth_state, _oauth_state_valid
+
+
+def test_oauth_state_web_roundtrip():
+    state = _create_oauth_state(desktop=False)
+    valid, is_desktop = _verify_oauth_state(state)
+    assert valid is True
+    assert is_desktop is False
+
+
+def test_oauth_state_desktop_roundtrip():
+    state = _create_oauth_state(desktop=True)
+    valid, is_desktop = _verify_oauth_state(state)
+    assert valid is True
+    assert is_desktop is True
+
+
+def test_oauth_state_valid_signed_with_cookie(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", "test-secret-min-32-chars-long!!")
+    from importlib import reload
+    import routers.auth as auth_mod
+
+    reload(auth_mod)
+    state = auth_mod._create_oauth_state(desktop=True)
+
+    class FakeRequest:
+        cookies = {auth_mod._GOOGLE_STATE_COOKIE: state}
+
+    valid, platform, remio = auth_mod._oauth_state_valid(FakeRequest(), state)
+    assert valid is True
+    assert platform == "desktop"
+    assert remio is False
+
+
+def test_web_and_desktop_configs(monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "web-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "web-secret")
+    monkeypatch.setenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/api/auth/google/callback")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID_DESKTOP", "desktop-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET_DESKTOP", "desktop-secret")
+    monkeypatch.setenv("GOOGLE_REDIRECT_URI_DESKTOP", "http://localhost:5173/api/auth/google/callback")
+
+    from importlib import reload
+    import auth.google as google_mod
+
+    reload(google_mod)
+
+    web = google_mod.get_google_oauth_config("web")
+    desktop = google_mod.get_google_oauth_config("desktop")
+    assert web.client_id == "web-id"
+    assert desktop.client_id == "desktop-id"
+    assert google_mod.google_oauth_configured("web")
+    assert google_mod.google_oauth_configured("desktop")
+    assert "client_id=web-id" in google_mod.get_google_auth_url("state123", platform="web")
+    assert "client_id=desktop-id" in google_mod.get_google_auth_url("state123", platform="desktop")
