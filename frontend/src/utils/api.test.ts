@@ -44,9 +44,8 @@ describe("api module", () => {
     }
 
     it("redirects to / on 401 for non-auth requests when not already at /", async () => {
-      const replace = vi.fn();
       Object.defineProperty(window, "location", {
-        value: { href: "http://localhost/some/page", pathname: "/some/page", replace, protocol: "http:" },
+        value: { href: "", pathname: "/some/page", protocol: "http:" },
         writable: true,
       });
 
@@ -56,7 +55,7 @@ describe("api module", () => {
         isAxiosError: true,
       });
 
-      expect(replace).toHaveBeenCalledWith("/");
+      expect(window.location.href).toBe("/");
     });
 
     it("does not redirect on 401 from /auth/login (caller handles error)", async () => {
