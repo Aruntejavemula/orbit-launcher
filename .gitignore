@@ -24,3 +24,13 @@ coverage/
 frontend/coverage/
 test-results/
 *.tsbuildinfo
+
+# Electron builds (local pack, CI, Store)
+frontend/release/
+frontend/release-ci/
+frontend/release-store/
+*.dll
+*.dat
+*.pak
+*.asar
+*.bin

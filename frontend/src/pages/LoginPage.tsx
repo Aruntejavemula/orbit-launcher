@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
-import AppLogo from "../components/AppLogo";
+import HeroLogo from "../components/HeroLogo";
 import PasswordInput from "../components/PasswordInput";
 import api from "../api";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
+import { appSearch, navigateAppRoot } from "../lib/navigation";
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -43,9 +44,9 @@ export default function LoginPage() {
   const [animKey, setAnimKey] = useState(0);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("google_error") === "1") {
+    if (new URLSearchParams(appSearch()).get("google_error") === "1") {
       setError("Google sign-in failed. Please try again.");
-      window.history.replaceState({}, "", "/");
+      navigateAppRoot();
     }
   }, []);
 
@@ -122,7 +123,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-white/85 p-8 shadow-pop backdrop-blur-md fade-in">
         <div className="mb-6 flex items-center gap-3">
-          <AppLogo className="h-11 w-11 rounded-2xl object-cover" />
+          <HeroLogo className="h-11 w-11 rounded-2xl object-cover" />
           <div>
             <div className="text-2xl font-semibold text-ink">Remio</div>
             <div className="text-xs text-ink-muted">Your subscriptions, organized.</div>

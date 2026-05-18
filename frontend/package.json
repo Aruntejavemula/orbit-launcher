@@ -12,11 +12,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "electron:build:ui": "cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode electron",
+    "electron:pack": "npm run electron:build:ui && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.pack.config.cjs --win --x64 --publish never",
     "electron:pack:ci": "npm run electron:build:ui && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.ci.config.cjs --publish never"
   },
   "build": {
     "appId": "com.remiolauncher.app",
     "productName": "Remio",
+    "icon": "public/icon-512x512.png",
     "directories": { "output": "release" },
     "files": ["dist/**/*", "electron/**/*", "package.json"],
     "extraMetadata": { "main": "electron/main.cjs" }

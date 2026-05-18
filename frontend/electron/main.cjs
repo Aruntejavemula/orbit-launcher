@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, session, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, session, ipcMain, nativeImage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { APP_URL, API_ORIGIN } = require("./config.cjs");
@@ -9,6 +9,20 @@ const openDevTools =
 
 const SESSION_PARTITION = "persist:remio";
 const PROTOCOL = "remio";
+
+function getAppIcon() {
+  const candidates = [
+    path.join(app.getAppPath(), "dist", "icon-512x512.png"),
+    path.join(__dirname, "..", "public", "icon-512x512.png"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      const image = nativeImage.createFromPath(p);
+      if (!image.isEmpty()) return image;
+    }
+  }
+  return undefined;
+}
 
 let mainWindow = null;
 let authWindow = null;
@@ -96,6 +110,7 @@ async function openGoogleOAuthWindow() {
     modal: Boolean(mainWindow),
     autoHideMenuBar: true,
     title: "Sign in with Google",
+    icon: getAppIcon(),
     webPreferences: {
       partition: SESSION_PARTITION,
       nodeIntegration: false,
@@ -235,6 +250,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     title: "Remio",
+    icon: getAppIcon(),
     webPreferences: {
       partition: SESSION_PARTITION,
       preload: path.join(__dirname, "preload.cjs"),

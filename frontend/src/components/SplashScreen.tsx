@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import AppLogo from "./AppLogo";
+import HeroLogo from "./HeroLogo";
 
 interface Props {
   onComplete: () => void;
@@ -39,7 +39,7 @@ export default function SplashScreen({ onComplete }: Props) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
           >
-            <AppLogo className="h-24 w-24 rounded-2xl shadow-2xl object-cover" />
+            <HeroLogo className="h-24 w-24 rounded-2xl shadow-2xl object-cover" />
           </motion.div>
           <motion.h1
             className="mt-5 text-3xl font-semibold tracking-tight text-white"
