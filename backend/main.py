@@ -24,7 +24,7 @@ _env_file = os.path.join(os.path.dirname(__file__), f".env.{_APP_ENV}")
 if os.path.isfile(_env_file):
     load_dotenv(_env_file, override=True)
 load_dotenv()
-
+#sentry for error tracking
 _SENTRY_DSN = os.getenv("SENTRY_DSN")
 if _SENTRY_DSN:
     sentry_sdk.init(
