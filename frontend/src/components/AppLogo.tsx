@@ -1,22 +1,19 @@
-import { useState } from "react";
 import { APP_ICON_JPEG, APP_ICON_SVG } from "../lib/assets";
 
 interface Props {
-  alt?: string;
   className?: string;
+  alt?: string;
 }
 
-/** Remio app mark — jpeg when present in public/, else bundled SVG. */
-export default function AppLogo({ alt = "Remio", className = "h-9 w-9 rounded-xl object-cover" }: Props) {
-  const [src, setSrc] = useState(APP_ICON_JPEG);
-
+export default function AppLogo({ className = "", alt = "Remio" }: Props) {
   return (
     <img
-      src={src}
+      src={APP_ICON_SVG}
       alt={alt}
       className={className}
-      onError={() => {
-        if (src !== APP_ICON_SVG) setSrc(APP_ICON_SVG);
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (img.src !== APP_ICON_JPEG) img.src = APP_ICON_JPEG;
       }}
     />
   );

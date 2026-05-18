@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { toast } from "./components/Toast";
-import { getRemioDesktop, isRemioDesktop } from "./lib/desktop";
+import { appPathname, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
 // Public bundle: only VITE_* env vars are embedded. Secrets and DB config live in backend/.env only.
 const api = axios.create({
@@ -64,8 +64,12 @@ api.interceptors.response.use(
     const url: string = err.config?.url ?? "";
     const isAuthCall = AUTH_ENDPOINTS.some((p) => url.includes(p));
     if (err.response?.status === 401) {
-      if (!isAuthCall && window.location.pathname !== "/") {
-        window.location.href = "/";
+      if (!isAuthCall && appPathname() !== "/") {
+        if (isPackagedFile()) {
+          navigateAppRoot();
+        } else {
+          window.location.href = "/";
+        }
       }
     } else if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
       if (!isAuthCall) {
