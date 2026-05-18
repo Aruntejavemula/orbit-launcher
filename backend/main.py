@@ -344,8 +344,8 @@ async def health(db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(text("SELECT 1"))
         db_reachable = True
-    except OperationalError:
-        logger.error("Health check: DB unreachable")
+    except Exception as exc:
+        logger.error("Health check: DB unreachable: %s", exc)
         db_reachable = False
 
     redis_reachable = False

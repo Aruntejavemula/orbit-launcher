@@ -1,18 +1,18 @@
 const { app, BrowserWindow, shell, session, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { APP_URL, API_ORIGIN, DIST_INDEX } = require("./config.cjs");
+const { APP_URL, API_ORIGIN } = require("./config.cjs");
 
 const isPackaged = app.isPackaged;
 const openDevTools =
-  !isPackaged &&
-  (process.env.REMIO_ELECTRON_DEBUG === "1" || process.argv.includes("--devtools"));
+  process.env.REMIO_ELECTRON_DEBUG === "1" || process.argv.includes("--devtools");
 
 const SESSION_PARTITION = "persist:remio";
 const PROTOCOL = "remio";
 
 let mainWindow = null;
 let authWindow = null;
+let desktopOAuthInFlight = false;
 
 function isInAppHost(hostname) {
   return (
@@ -33,46 +33,58 @@ function isGoogleOAuthStartUrl(url) {
   }
 }
 
-function isOAuthCallbackUrl(url) {
+function isOAuthErrorUrl(url) {
+  return url.includes("google_error=1");
+}
+
+/**
+ * URLs where the auth popup can close. Do NOT include /api/auth/google/callback —
+ * that request must finish so the server can set the session (or remio:// redirect).
+ */
+function isOAuthTerminalUrl(url) {
   try {
+    if (isOAuthErrorUrl(url)) return true;
     const u = new URL(url);
-    if (u.searchParams.get("google_error") === "1") return true;
-    return u.pathname.replace(/\/$/, "") === "/auth/callback";
+    if (!isInAppHost(u.hostname)) return false;
+    const p = u.pathname.replace(/\/$/, "") || "/";
+    return p === "/auth/callback";
   } catch {
     return false;
   }
 }
 
-/** Same session as main window — matches browser OAuth (cookie on /auth/callback). */
-function finishOAuthFromCallback(url) {
+async function finishOAuthFromCallback(url) {
   if (authWindow && !authWindow.isDestroyed()) authWindow.close();
   authWindow = null;
   const main = mainWindow ?? BrowserWindow.getAllWindows()[0];
   if (!main) return;
-  if (url.includes("google_error=1")) {
-    loadApp(main, errorLoadUrl());
-  } else {
-    loadApp(main);
-    main.webContents.reload();
+
+  if (isOAuthErrorUrl(url)) {
+    await loadApp(main, errorLoadUrl());
+    main.focus();
+    return;
   }
+
+  await loadApp(main);
+  main.webContents.reload();
   main.focus();
 }
 
 function handleAuthWindowUrl(event, url) {
   if (url.startsWith(`${PROTOCOL}://`)) {
     if (event) event.preventDefault();
-    completeDesktopOAuth(url);
+    void completeDesktopOAuth(url);
     return true;
   }
-  if (isOAuthCallbackUrl(url)) {
+  if (isOAuthTerminalUrl(url)) {
     if (event) event.preventDefault();
-    finishOAuthFromCallback(url);
+    void finishOAuthFromCallback(url);
     return true;
   }
   return false;
 }
 
-function openGoogleOAuthWindow() {
+async function openGoogleOAuthWindow() {
   if (authWindow && !authWindow.isDestroyed()) {
     authWindow.focus();
     return;
@@ -98,13 +110,10 @@ function openGoogleOAuthWindow() {
     if (url.includes("accounts.google.com")) return;
     handleAuthWindowUrl(event, url);
   });
-  wc.on("did-navigate", (_event, url) => {
-    handleAuthWindowUrl(null, url);
-  });
   authWindow.on("closed", () => {
     authWindow = null;
   });
-  authWindow.loadURL(`${API_ORIGIN}/api/auth/google?platform=desktop`);
+  await authWindow.loadURL(`${API_ORIGIN}/api/auth/google?platform=desktop&desktop=1`);
 }
 
 function navigationTarget(url) {
@@ -125,7 +134,7 @@ function handleWebContentsNavigation(event, url) {
   }
   if (isGoogleOAuthStartUrl(url)) {
     event.preventDefault();
-    openGoogleOAuthWindow();
+    void openGoogleOAuthWindow();
     return;
   }
   if (navigationTarget(url) === "external") {
@@ -151,6 +160,7 @@ function errorLoadUrl() {
 }
 
 async function completeDesktopOAuth(rawUrl) {
+  if (desktopOAuthInFlight) return;
   const win = mainWindow ?? BrowserWindow.getAllWindows()[0];
   if (!win) return;
 
@@ -170,6 +180,10 @@ async function completeDesktopOAuth(rawUrl) {
     return;
   }
 
+  desktopOAuthInFlight = true;
+  if (authWindow && !authWindow.isDestroyed()) authWindow.close();
+  authWindow = null;
+
   const ses = session.fromPartition(SESSION_PARTITION);
   try {
     const res = await ses.fetch(`${API_ORIGIN}/api/auth/desktop/session`, {
@@ -179,6 +193,7 @@ async function completeDesktopOAuth(rawUrl) {
       body: JSON.stringify({ code }),
     });
     if (!res.ok) {
+      console.error("[Remio] desktop/session failed:", res.status, await res.text().catch(() => ""));
       await loadApp(win, errorLoadUrl());
       win.focus();
       return;
@@ -190,23 +205,25 @@ async function completeDesktopOAuth(rawUrl) {
     console.error("[Remio] desktop OAuth session failed:", e);
     await loadApp(win, errorLoadUrl());
     win.focus();
+  } finally {
+    desktopOAuthInFlight = false;
   }
 }
 
 async function loadApp(win, overrideUrl) {
   if (overrideUrl) {
-    if (overrideUrl.startsWith("file:") || fs.existsSync(overrideUrl)) {
-      win.loadFile(overrideUrl);
+    if (overrideUrl.startsWith("file:") || (!overrideUrl.startsWith("http") && fs.existsSync(overrideUrl))) {
+      await win.loadFile(overrideUrl);
     } else {
-      win.loadURL(overrideUrl);
+      await win.loadURL(overrideUrl);
     }
     return;
   }
-  if (isPackaged && fs.existsSync(DIST_INDEX)) {
-    win.loadFile(DIST_INDEX);
+  if (isPackaged) {
+    await win.loadFile(path.join(app.getAppPath(), "dist", "index.html"));
     return;
   }
-  win.loadURL(APP_URL);
+  await win.loadURL(APP_URL);
 }
 
 function createWindow() {
@@ -229,6 +246,10 @@ function createWindow() {
 
   mainWindow = win;
   win.once("ready-to-show", () => win.show());
+  win.webContents.on("did-fail-load", (_event, code, desc, url) => {
+    console.error("[Remio] did-fail-load", code, desc, url);
+    if (!win.isVisible()) win.show();
+  });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (navigationTarget(url) === "external") shell.openExternal(url);
@@ -271,8 +292,31 @@ app.on("open-url", (event, url) => {
   completeDesktopOAuth(url);
 });
 
-ipcMain.handle("google-sign-in", async () => {
-  openGoogleOAuthWindow();
+ipcMain.handle("google-sign-in", () => openGoogleOAuthWindow());
+
+/** file:// UI cannot send cookies to https API — use the shared session partition. */
+ipcMain.handle("remio-session-fetch", async (_event, { path, method = "GET", body }) => {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  const url = p.startsWith("http") ? p : `${API_ORIGIN}/api${p}`;
+  const ses = session.fromPartition(SESSION_PARTITION);
+  const hasBody = body !== undefined && body !== null;
+  const payload = hasBody ? (typeof body === "string" ? body : JSON.stringify(body)) : undefined;
+  const res = await ses.fetch(url, {
+    method,
+    headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+    body: payload,
+    credentials: "include",
+  });
+  const text = await res.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+  return { status: res.status, statusText: res.statusText, data, ok: res.ok };
 });
 
 app.whenReady().then(() => {

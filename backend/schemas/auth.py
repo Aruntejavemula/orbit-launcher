@@ -38,6 +38,11 @@ class UserResponse(BaseModel):
     name: str
     email: str
     avatar_url: Optional[str] = None
+    remember_device: bool = False
 
     class Config:
         from_attributes = True
+
+
+class RememberDeviceRequest(BaseModel):
+    remember_device: bool = False

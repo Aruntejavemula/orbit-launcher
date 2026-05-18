@@ -1,7 +1,7 @@
 import pytest
 
 from auth.google import get_google_oauth_config, google_oauth_configured, get_google_auth_url
-from routers.auth import _create_oauth_state, _verify_oauth_state, _oauth_state_valid
+from routers.auth import _create_oauth_state, _verify_oauth_state, _oauth_state_valid, _parse_oauth_state
 
 
 def test_oauth_state_web_roundtrip():
@@ -29,10 +29,20 @@ def test_oauth_state_valid_signed_with_cookie(monkeypatch):
     class FakeRequest:
         cookies = {auth_mod._GOOGLE_STATE_COOKIE: state}
 
-    valid, platform, remio = auth_mod._oauth_state_valid(FakeRequest(), state)
+    valid, platform, remio, remember = auth_mod._oauth_state_valid(FakeRequest(), state)
     assert valid is True
     assert platform == "desktop"
     assert remio is False
+    assert remember is False
+
+
+def test_oauth_state_remember_roundtrip():
+    state = _create_oauth_state(desktop=False, remember=True)
+    valid, desktop_creds, remio, remember = _parse_oauth_state(state)
+    assert valid is True
+    assert desktop_creds is False
+    assert remio is False
+    assert remember is True
 
 
 def test_web_and_desktop_configs(monkeypatch):
@@ -54,5 +64,9 @@ def test_web_and_desktop_configs(monkeypatch):
     assert desktop.client_id == "desktop-id"
     assert google_mod.google_oauth_configured("web")
     assert google_mod.google_oauth_configured("desktop")
-    assert "client_id=web-id" in google_mod.get_google_auth_url("state123", platform="web")
-    assert "client_id=desktop-id" in google_mod.get_google_auth_url("state123", platform="desktop")
+    web_url = google_mod.get_google_auth_url("state123", platform="web")
+    desktop_url = google_mod.get_google_auth_url("state123", platform="desktop")
+    assert "client_id=web-id" in web_url
+    assert "prompt=select_account" not in web_url
+    assert "client_id=desktop-id" in desktop_url
+    assert "prompt=select_account" in desktop_url

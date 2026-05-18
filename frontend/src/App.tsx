@@ -16,6 +16,7 @@ import { useAuth } from "./context/AuthContext";
 import { useApps } from "./context/AppsContext";
 import { usePrefs } from "./context/PreferencesContext";
 import type { PageId } from "./types";
+import { appPathname, appSearch, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const UsagePage = lazy(() => import("./pages/UsagePage"));
@@ -32,8 +33,8 @@ function shouldSkipSplash(): boolean {
   } catch {
     /* private mode */
   }
-  if (window.location.pathname === "/auth/callback") return true;
-  return new URLSearchParams(window.location.search).get("google_error") === "1";
+  if (appPathname() === "/auth/callback") return true;
+  return new URLSearchParams(appSearch()).get("google_error") === "1";
 }
 
 export default function App() {
@@ -44,10 +45,10 @@ export default function App() {
   const [page, setPage] = useState<PageId>("home");
   const [showAdd, setShowAdd] = useState(false);
   const [openAppId, setOpenAppId] = useState<string | null>(null);
-  const isAuthCallback = window.location.pathname === "/auth/callback";
+  const isAuthCallback = !isPackagedFile() && appPathname() === "/auth/callback";
   const [splashDone, setSplashDone] = useState(shouldSkipSplash);
   const prevUserId = useRef<string | null>(null);
-  const isUnknownPath = !KNOWN_PATHS.has(window.location.pathname);
+  const isUnknownPath = !isPackagedFile() && !KNOWN_PATHS.has(appPathname());
   const handleSplashComplete = useCallback(() => {
     try {
       sessionStorage.setItem(SPLASH_SEEN_KEY, "1");
@@ -61,10 +62,10 @@ export default function App() {
   useEffect(() => {
     if (!isAuthCallback || authLoading) return;
     if (user) {
-      window.history.replaceState({}, "", "/");
+      navigateAppRoot();
       return;
     }
-    window.location.replace("/?google_error=1");
+    navigateAppRoot("?google_error=1");
   }, [isAuthCallback, authLoading, user]);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function App() {
   // Redirect unknown paths when auth resolves to logged-out
   useEffect(() => {
     if (isUnknownPath && !authLoading && !user) {
-      window.location.replace("/");
+      navigateAppRoot();
     }
   }, [isUnknownPath, authLoading, user]);
 

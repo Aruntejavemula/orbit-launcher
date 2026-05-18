@@ -72,6 +72,8 @@ def get_google_auth_url(state: str, platform: OAuthPlatform = "web") -> str:
         "access_type": "offline",
         "state": state,
     }
+    if platform == "desktop":
+        params["prompt"] = "select_account"
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 

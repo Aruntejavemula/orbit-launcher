@@ -14,6 +14,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePrefs } from "../context/PreferencesContext";
 import type { PageId } from "../types";
 import ProfileEditorModal from "./ProfileEditorModal";
+import AppLogo from "./AppLogo";
 
 function Initials({ name, avatarUrl, dark }: { name: string; avatarUrl?: string | null; dark: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -70,11 +71,7 @@ export default function Sidebar({ page, onNavigate }: Props) {
         onClick={() => onNavigate("home")}
         className="mb-6 flex items-center gap-2.5 px-2"
       >
-        <img
-          src="/app-hero-icon.jpeg"
-          alt="Remio"
-          className="h-9 w-9 rounded-xl object-cover"
-        />
+        <AppLogo />
         <span
           className="text-lg font-semibold tracking-tight"
           style={{ color: dark ? "#ffffff" : "var(--text)" }}

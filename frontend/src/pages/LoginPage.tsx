@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
+import AppLogo from "../components/AppLogo";
+import PasswordInput from "../components/PasswordInput";
 import api from "../api";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
 
@@ -35,6 +37,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRememberPrompt, setShowRememberPrompt] = useState(false);
+  const [pendingGoogle, setPendingGoogle] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   // bump this key to retrigger the slide animation when mode changes
   const [animKey, setAnimKey] = useState(0);
@@ -72,6 +75,7 @@ export default function LoginPage() {
       return;
     }
     if (mode === "login") {
+      setPendingGoogle(false);
       setShowRememberPrompt(true);
       return;
     }
@@ -101,7 +105,15 @@ export default function LoginPage() {
       void getRemioDesktop()?.startGoogleSignIn();
       return;
     }
-    window.location.href = "/api/auth/google";
+    setPendingGoogle(true);
+    setShowRememberPrompt(true);
+  };
+
+  const doGoogleLogin = (remember: boolean) => {
+    setShowRememberPrompt(false);
+    setPendingGoogle(false);
+    const rememberQ = remember ? "?remember=1" : "";
+    window.location.href = `/api/auth/google${rememberQ}`;
   };
 
   return (
@@ -110,7 +122,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-white/85 p-8 shadow-pop backdrop-blur-md fade-in">
         <div className="mb-6 flex items-center gap-3">
-          <img src="/app-hero-icon.jpeg" alt="Remio" className="h-11 w-11 rounded-2xl object-cover" />
+          <AppLogo className="h-11 w-11 rounded-2xl object-cover" />
           <div>
             <div className="text-2xl font-semibold text-ink">Remio</div>
             <div className="text-xs text-ink-muted">Your subscriptions, organized.</div>
@@ -161,12 +173,11 @@ export default function LoginPage() {
             />
           </Field>
           <Field label="Password">
-            <input
-              className="field"
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
               required
             />
           </Field>
@@ -217,7 +228,11 @@ export default function LoginPage() {
 
       {/* Remember device popup */}
       {showRememberPrompt && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-sm fade-in">
+        <div
+          className="fixed inset-0 z-[200] grid place-items-center bg-black/40 backdrop-blur-sm fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 shadow-pop">
             <h3 className="text-lg font-semibold text-ink">Remember this device?</h3>
             <p className="mt-2 text-sm text-ink-muted">
@@ -226,14 +241,14 @@ export default function LoginPage() {
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
-                onClick={() => doLogin(false)}
+                onClick={() => (pendingGoogle ? doGoogleLogin(false) : doLogin(false))}
                 className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink-muted transition hover:bg-cream"
               >
                 No thanks
               </button>
               <button
                 type="button"
-                onClick={() => doLogin(true)}
+                onClick={() => (pendingGoogle ? doGoogleLogin(true) : doLogin(true))}
                 className="btn-primary flex-1 py-2.5 text-sm"
               >
                 Yes, remember

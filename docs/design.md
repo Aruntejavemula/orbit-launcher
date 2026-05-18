@@ -36,10 +36,11 @@ Use this when picking up work so you don’t re-explain the full story. **Author
 
 ## Backend: desktop Google OAuth
 
-- **`GET /api/auth/google?desktop=1`** — state encodes desktop mode (`HMAC + JWT_SECRET`).
-- **`GET /api/auth/google/callback`** — validates state; if desktop, **no** session cookie on redirect; returns **`302` → `remio://auth/callback?code=<exchange_jwt>`**.
-- **`POST /api/auth/desktop/session`** — body `{ "code": "<exchange_jwt>" }`; sets **httpOnly** session cookie; Electron calls this after the deep link.
-- **Web** flow unchanged: cookie set on redirect to `/auth/callback`.
+- **`GET /api/auth/google`** — web/PWA credentials (`GOOGLE_CLIENT_ID` / `SECRET`).
+- **`GET /api/auth/google?platform=desktop`** (or `?desktop=1`) — desktop credentials (`GOOGLE_CLIENT_ID_DESKTOP` / `SECRET_DESKTOP`).
+- **`GET /api/auth/google/callback`** — uses matching client from signed `state`; normally cookie → `/auth/callback`.
+- **`?desktop=1` only** — callback may **`302` → `remio://auth/callback?code=...`** + **`POST /api/auth/desktop/session`** (legacy deep-link path).
+- **Electron default:** in-app OAuth window with `?platform=desktop` (cookie flow, same session partition).
 
 Helpers in `backend/routers/auth.py`: `_create_oauth_state`, `_verify_oauth_state`, `_create_desktop_exchange_code`, `_consume_desktop_exchange_code`. Legacy: state can still match `orbit_google_state` cookie if present.
 
@@ -68,6 +69,62 @@ Helpers in `backend/routers/auth.py`: `_create_oauth_state`, `_verify_oauth_stat
 - Ship **MSIX** only (no sideload NSIS as product path — local `electron:pack` is dev smoke).
 - No purchased code-signing cert: **Partner Center** signs the submission.
 - Fill **`electron/store.appx.json`** from Partner Center before `electron:build:store`.
+- Build MSIX: `npm run electron:build:store:clean` (fresh `release-msix-<timestamp>/` avoids locked `app.asar`).
+
+---
+
+## Before Microsoft Store submission — turn off / revert / verify
+
+Use this checklist so local testing settings are not mistaken for production Store config.
+
+### On your PC (dev only — not in the app package)
+
+| What you turned on for local testing | Before / after Store submit |
+|--------------------------------------|-----------------------------|
+| **Docker Desktop** + `docker compose up postgres` | **Stop** for daily use; not needed for installed Store app. Only for local API + local DB dev. |
+| **Developer Mode** (Settings → For developers) | Used to sideload test `.appx`. **Turn off** after sideload testing if you want (optional). |
+| **PowerShell as Administrator** for MSIX build | Dev machine only; not required for end users. |
+| Running **`release\win-unpacked\Remio.exe`** or **`release-msix-*\Remio.exe`** while building | **Don’t** — locks `app.asar`. Close Remio before `electron:build:store:clean`. |
+| **Local `backend/.env`** with `localhost:5173` | Never deployed; Store app uses **production API** only. |
+
+### Build / signing (keep vs change)
+
+| Item | Local testing | Store submission |
+|------|---------------|------------------|
+| **`forceCodeSigning: false`** in `electron-builder.config.cjs` | Yes — no local cert | **Keep** — Microsoft signs in Partner Center |
+| **`CSC_IDENTITY_AUTO_DISCOVERY=false`** in `scripts/electron-store-build.cjs` | Skips broken local winCodeSign | **Keep** for CI/build machines without a cert |
+| **`signAndEditExecutable: false`** | Yes | **Keep** |
+| **Purchased code-signing cert / NSIS installer** | Do **not** add | **Do not** — Store policy |
+| **Submit `electron:pack` / `win-unpacked` folder** | Dev smoke only | **No** — upload **`.appx`** from `electron:build:store:clean` |
+
+### Must configure for production (not “turn off” — must be correct)
+
+| Item | Production value |
+|------|------------------|
+| **Railway `FRONTEND_URL`** | `https://www.remiolauncher.com` |
+| **Railway `GOOGLE_REDIRECT_URI`** (web) | `https://www.remiolauncher.com/api/auth/google/callback` |
+| **Railway `GOOGLE_CLIENT_ID` / `SECRET`** (web / PWA) | Web OAuth client |
+| **Railway `GOOGLE_CLIENT_ID_DESKTOP` / `SECRET_DESKTOP`** | Desktop OAuth client |
+| **`GOOGLE_REDIRECT_URI_DESKTOP`** | Same prod callback URL (unless you use a dedicated desktop redirect) |
+| **Google Cloud Console** (both clients) | Prod redirect URI registered; localhost only for dev |
+| **`electron/store.appx.json`** | Real Partner Center identity (not `store.appx.example.json` placeholders) |
+| **`VITE_API_URL` at build** | `https://www.remiolauncher.com/api` (`electron:build:ui` already sets this) |
+| **App icon** | Add `build/icon.ico` + `package.json` `build.icon` — replace default Electron icon |
+| **`package.json` `author` / `description`** | Fill for Store metadata (warnings today) |
+
+### Do not ship / do not rely on in production
+
+- `http://localhost:5173` or `127.0.0.1:8000` anywhere in **built** Store package (dev Electron shell only).
+- Local Postgres data — Store users hit **Railway** DB; same email only syncs if same production account.
+- Test Google OAuth secrets from chat — rotate if exposed; use Railway env only.
+- Placeholder **`store.appx.example.json`** values (`YourCompany.RemioLauncher`, fake publisher CN).
+
+### Quick “ready for Partner Center?” test
+
+1. `npm run electron:build:store:clean` → `.appx` in `release-msix-*`.
+2. Install via Partner Center **flight** / internal test (preferred) or sideload with Developer Mode.
+3. Sign in with Google → same apps as **remiolauncher.com** (proves prod API + desktop OAuth).
+4. Uninstall test build; submit `.appx` from Partner Center upload (Microsoft signs).
 
 ---
 
@@ -109,4 +166,4 @@ cd frontend && npm run electron:pack && ./release/win-unpacked/Remio.exe
 
 ---
 
-*Last aligned with `electron` work: Electron shell, desktop OAuth, Google redirect default, MSIX-oriented builder config, Vite electron mode (no PWA sw).*
+*Last aligned with `electron` work: dual Google OAuth (web/desktop), in-app OAuth window, MSIX build script, pre-Store checklist.*

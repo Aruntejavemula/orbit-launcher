@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import Modal from "./Modal";
+import PasswordInput from "./PasswordInput";
 import PasswordStrength from "./PasswordStrength";
 import { validatePassword } from "../utils/passwordPolicy";
 import api from "../api";
@@ -32,7 +32,6 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [resetToken, setResetToken] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -331,18 +330,14 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
               <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
                 New password
               </label>
-              <div className="relative mt-1.5">
-                <input
-                  type={showPass ? "text" : "password"}
+              <div className="mt-1.5">
+                <PasswordInput
                   value={newPass}
-                  onChange={(e) => setNewPass(e.target.value)}
-                  className={`field pr-10 ${policyError ? "border-red-400 focus:ring-red-300" : ""}`}
+                  onChange={setNewPass}
+                  autoComplete="new-password"
                   autoFocus
+                  className={policyError ? "border-red-400 focus:ring-red-300" : ""}
                 />
-                <button type="button" onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink" tabIndex={-1}>
-                  {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
               </div>
               {policyError && <p className="mt-1 text-xs text-red-600">{policyError}</p>}
             </div>
@@ -350,12 +345,14 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
               <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
                 Re-enter password
               </label>
-              <input
-                type={showPass ? "text" : "password"}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className={`field mt-1.5 ${matchError ? "border-red-400 focus:ring-red-300" : ""}`}
-              />
+              <div className="mt-1.5">
+                <PasswordInput
+                  value={confirm}
+                  onChange={setConfirm}
+                  autoComplete="new-password"
+                  className={matchError ? "border-red-400 focus:ring-red-300" : ""}
+                />
+              </div>
               {matchError && <p className="mt-1 text-xs text-red-600">{matchError}</p>}
             </div>
             <PasswordStrength password={newPass} />

@@ -10,11 +10,17 @@ const appx = JSON.parse(
 /** Microsoft Store MSIX — signing happens in Partner Center, not locally. */
 module.exports = {
   ...build,
+  forceCodeSigning: false,
   win: {
     target: [{ target: "appx", arch: ["x64"] }],
     signAndEditExecutable: false,
+    signDlls: false,
+    verifyUpdateCodeSignature: false,
   },
-  appx,
+  appx: {
+    ...appx,
+    publish: null,
+  },
   mac: undefined,
   linux: undefined,
 };

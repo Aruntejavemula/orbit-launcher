@@ -15,6 +15,7 @@
     "electron:dev:debug": "electron . --devtools",
     "electron:build:ui": "cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode electron",
     "electron:build:store": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --config electron-builder.config.cjs --publish never",
+    "electron:build:store:clean": "node scripts/electron-store-build.cjs",
     "electron:pack": "npm run electron:build:ui && cross-env REMIO_ENV=production electron-builder --dir --publish never"
   },
   "build": {

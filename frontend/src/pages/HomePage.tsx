@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import HeroCard from "../components/HeroCard";
 import CategoryFilters from "../components/CategoryFilters";
 import AppGrid from "../components/AppGrid";
+import ExpirationBanner from "../components/ExpirationBanner";
 import { SkeletonGrid } from "../components/SkeletonCard";
 import { useApps } from "../context/AppsContext";
 import type { CategoryId } from "../types";
@@ -32,13 +33,14 @@ export default function HomePage({ onOpenApp }: Props) {
   const activeTrials = apps.filter((a) => a.plan === "trial").length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 sm:gap-6">
       <HeroCard
         query={query}
         onQuery={setQuery}
         totalApps={totalApps}
         activeTrials={activeTrials}
       />
+      <ExpirationBanner apps={apps} />
       <CategoryFilters active={category} onChange={setCategory} />
       {appsLoading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
     </div>

@@ -136,14 +136,30 @@ class TestUpdatePreferences:
         assert resp.status_code == 200
         mock_db.commit.assert_awaited()
 
-    async def test_returns_404_if_not_initialized(self, client, mock_db):
-        """Updating non-existent preferences returns 404."""
+    async def test_creates_preferences_if_not_initialized(self, client, mock_db):
+        """PATCH creates default preferences when none exist yet."""
         result_mock = MagicMock()
         result_mock.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = result_mock
 
+        async def populate_on_refresh(obj):
+            obj.theme = "dark"
+            obj.start_week_on_monday = False
+            obj.compact_cards = False
+            obj.show_last_opened = True
+            obj.notify_expirations = True
+            obj.reminder_days = 7
+            obj.reminder_email = True
+            obj.reminder_push = False
+            obj.onboarding_completed = False
+            obj.country = ""
+
+        mock_db.refresh = AsyncMock(side_effect=populate_on_refresh)
+
         resp = await client.patch("/api/preferences", json={"theme": "dark"})
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_awaited()
 
     @pytest.mark.parametrize("reminder_days,expected_status", [
         (0, 422),       # Below minimum (ge=1)

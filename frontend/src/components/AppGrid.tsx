@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { AppItem } from "../types";
 import AppCard from "./AppCard";
 import { useApps } from "../context/AppsContext";
+import { usePrefs } from "../context/PreferencesContext";
 
 const PAGE_SIZE = 24;
 
@@ -16,6 +17,7 @@ interface Props {
 
 export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSearch }: Props) {
   const { reorder } = useApps();
+  const { prefs } = usePrefs();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -65,7 +67,11 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div
+        className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${
+          prefs.compactCards ? "gap-2 max-sm:gap-1.5" : "gap-2 sm:gap-3"
+        }`}
+      >
         <AnimatePresence mode="popLayout">
           {page.map((a) => (
             <motion.div
@@ -77,6 +83,8 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
             >
               <AppCard
                 app={a}
+                compact={prefs.compactCards}
+                showLastOpened={prefs.showLastOpened}
                 onOpen={onOpenApp}
                 isDragging={draggingId === a.id}
                 isDropTarget={overId === a.id && draggingId !== a.id}

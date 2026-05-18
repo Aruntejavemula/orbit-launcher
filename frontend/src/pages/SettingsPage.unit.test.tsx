@@ -19,7 +19,7 @@ const mockApi = vi.hoisted(() => ({
 vi.mock("../api", () => ({ default: mockApi }));
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({
-    user: { id: "u-1", name: "Test User", email: "test@example.com" },
+    user: { id: "u-1", name: "Test User", email: "test@example.com", remember_device: false },
     signOut: mockSignOut,
     refreshUser: mockRefreshUser,
   }),
@@ -36,6 +36,7 @@ vi.mock("../context/PreferencesContext", () => ({
       showLastOpened: true,
       notifyExpirations: true,
     },
+    prefsFetched: true,
     update: mockUpdate,
   }),
 }));

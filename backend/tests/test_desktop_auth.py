@@ -27,8 +27,16 @@ def test_oauth_state_desktop_roundtrip():
 
 def test_desktop_exchange_code_roundtrip():
     code = _create_desktop_exchange_code("00000000-0000-4000-8000-000000000001")
-    user_id = _consume_desktop_exchange_code(code)
+    user_id, remember = _consume_desktop_exchange_code(code)
     assert user_id == "00000000-0000-4000-8000-000000000001"
+    assert remember is False
+
+
+def test_desktop_exchange_code_remember_flag():
+    code = _create_desktop_exchange_code("00000000-0000-4000-8000-000000000001", remember=True)
+    user_id, remember = _consume_desktop_exchange_code(code)
+    assert user_id == "00000000-0000-4000-8000-000000000001"
+    assert remember is True
 
 
 def test_desktop_exchange_code_rejects_wrong_purpose():
