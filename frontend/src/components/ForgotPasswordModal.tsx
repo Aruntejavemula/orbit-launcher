@@ -337,7 +337,6 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
                   className={policyError ? "border-red-400 focus:ring-red-300" : ""}
                   autoComplete="new-password"
                   autoFocus
-                  className={policyError ? "border-red-400 focus:ring-red-300" : ""}
                 />
               </div>
               {policyError && <p className="mt-1 text-xs text-red-600">{policyError}</p>}

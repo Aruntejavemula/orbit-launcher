@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
+import AppLogo from "../components/AppLogo";
 import PasswordInput from "../components/PasswordInput";
 import api from "../api";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";

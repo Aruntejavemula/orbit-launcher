@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
@@ -103,7 +103,7 @@ export function useApps() {
     }
   }, []);
 
-  const { data: apps = [], isLoading: appsLoading } = useQuery({
+  const { data: apps = [], isLoading: appsLoading, isError: appsError } = useQuery({
     queryKey: ["apps"],
     queryFn: fetchApps,
     enabled: !!user,

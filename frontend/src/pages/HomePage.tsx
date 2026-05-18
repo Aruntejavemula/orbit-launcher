@@ -3,7 +3,6 @@ import HeroCard from "../components/HeroCard";
 import ExpirationBanner from "../components/ExpirationBanner";
 import CategoryFilters from "../components/CategoryFilters";
 import AppGrid from "../components/AppGrid";
-import ExpirationBanner from "../components/ExpirationBanner";
 import { SkeletonGrid } from "../components/SkeletonCard";
 import { useApps } from "../context/AppsContext";
 import type { CategoryId } from "../types";
