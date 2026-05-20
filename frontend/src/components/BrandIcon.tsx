@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { iconByKey } from "../data/iconLibrary";
+import { usePrefs } from "../context/PreferencesContext";
+import { iconColorForTheme, needsMutedIconOnDark } from "../utils/color";
 
 interface Props {
   slug: string;
@@ -7,6 +9,8 @@ interface Props {
   size?: number;
   className?: string;
   iconKey?: string;
+  /** Keep catalog brand hex on dark UI (e.g. tinted desktop cards). */
+  preserveBrandColor?: boolean;
 }
 
 const INLINE: Record<string, (color: string) => JSX.Element> = {
@@ -84,16 +88,37 @@ const INLINE: Record<string, (color: string) => JSX.Element> = {
       <path d="M13.479 9.883c-1.626-.604-2.512-1.067-2.512-1.803 0-.622.511-.977 1.422-.977 1.667 0 3.379.642 4.558 1.221l.666-4.111c-.935-.446-2.847-1.169-5.49-1.169-1.87 0-3.425.49-4.536 1.402-1.158.954-1.756 2.341-1.756 4.011 0 3.027 1.847 4.319 4.851 5.405 1.937.694 2.583 1.187 2.583 1.939 0 .732-.624 1.144-1.756 1.144-1.422 0-3.736-.706-5.245-1.587l-.666 4.157c1.291.732 3.683 1.484 6.176 1.484 1.973 0 3.617-.467 4.749-1.346 1.265-.984 1.917-2.428 1.917-4.292 0-3.094-1.879-4.382-4.961-5.482z" />
     </svg>
   ),
+  vercel: (c) => (
+    <svg viewBox="0 0 24 24" fill={`#${c}`}>
+      <path d="M12 2 22 20H2L12 2z" />
+    </svg>
+  ),
 };
 
-export default function BrandIcon({ slug, color, size = 28, className = "", iconKey }: Props) {
+export default function BrandIcon({
+  slug,
+  color,
+  size = 28,
+  className = "",
+  iconKey,
+  preserveBrandColor = false,
+}: Props) {
   const [failed, setFailed] = useState(false);
+  const { prefs } = usePrefs();
+  const uiDark = prefs.theme === "dark";
+  const hex = color.replace(/^#/, "");
+  const iconColor =
+    uiDark && needsMutedIconOnDark(hex)
+      ? "ffffff"
+      : preserveBrandColor
+        ? hex
+        : iconColorForTheme(color, uiDark);
   const Generic = iconByKey(iconKey);
 
   if (Generic) {
     return (
       <span
-        style={{ width: size, height: size, display: "inline-grid", placeItems: "center", color: `#${color}` }}
+        style={{ width: size, height: size, display: "inline-grid", placeItems: "center", color: `#${iconColor}` }}
         className={className}
       >
         <Generic size={Math.round(size * 0.78)} strokeWidth={2.1} />
@@ -105,7 +130,7 @@ export default function BrandIcon({ slug, color, size = 28, className = "", icon
   if (inline) {
     return (
       <span style={{ width: size, height: size, display: "inline-grid", placeItems: "center" }} className={className}>
-        {inline(color)}
+        {inline(iconColor)}
       </span>
     );
   }
@@ -113,7 +138,7 @@ export default function BrandIcon({ slug, color, size = 28, className = "", icon
   if (!failed) {
     return (
       <img
-        src={`https://cdn.simpleicons.org/${slug}/${color}`}
+        src={`https://cdn.simpleicons.org/${slug}/${iconColor}`}
         alt=""
         width={size}
         height={size}

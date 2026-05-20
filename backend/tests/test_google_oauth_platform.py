@@ -1,21 +1,7 @@
 import pytest
 
 from auth.google import get_google_oauth_config, google_oauth_configured, get_google_auth_url
-from routers.auth import _create_oauth_state, _verify_oauth_state, _oauth_state_valid, _parse_oauth_state
-
-
-def test_oauth_state_web_roundtrip():
-    state = _create_oauth_state(desktop=False)
-    valid, is_desktop = _verify_oauth_state(state)
-    assert valid is True
-    assert is_desktop is False
-
-
-def test_oauth_state_desktop_roundtrip():
-    state = _create_oauth_state(desktop=True)
-    valid, is_desktop = _verify_oauth_state(state)
-    assert valid is True
-    assert is_desktop is True
+from routers.auth import _create_oauth_state, _oauth_state_valid, _parse_oauth_state
 
 
 def test_oauth_state_valid_signed_with_cookie(monkeypatch):

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import HeroCard from "../components/HeroCard";
-import ExpirationBanner from "../components/ExpirationBanner";
 import CategoryFilters from "../components/CategoryFilters";
 import AppGrid from "../components/AppGrid";
 import { SkeletonGrid } from "../components/SkeletonCard";
@@ -30,17 +29,10 @@ export default function HomePage({ onOpenApp }: Props) {
   }, [apps, query, category]);
 
   const totalApps = apps.length;
-  const activeTrials = apps.filter((a) => a.plan === "trial").length;
 
   return (
     <div className="flex flex-col gap-3 sm:gap-6">
-      <HeroCard
-        query={query}
-        onQuery={setQuery}
-        totalApps={totalApps}
-        activeTrials={activeTrials}
-      />
-      <ExpirationBanner />
+      <HeroCard query={query} onQuery={setQuery} />
       <CategoryFilters active={category} onChange={setCategory} />
       {appsLoading ? <SkeletonGrid /> : <AppGrid apps={visible} totalApps={totalApps} onOpenApp={onOpenApp} query={query.trim() || undefined} onClearSearch={() => setQuery("")} />}
     </div>

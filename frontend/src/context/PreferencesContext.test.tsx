@@ -30,6 +30,7 @@ const fakePrefsApiResponse = {
   reminder_email: true,
   reminder_push: true,
   onboarding_completed: true,
+  monthly_budget: null,
 };
 
 const fakeApiKeyResponse = {
@@ -280,6 +281,7 @@ describe("PreferencesContext - usePrefs", () => {
       reminderEmail: true,
       reminderPush: false,
       onboardingCompleted: false,
+      monthlyBudget: null,
       country: "",
     };
 

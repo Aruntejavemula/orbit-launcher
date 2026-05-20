@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Sun, Moon, PlayCircle, Globe } from "lucide-react";
-import { COUNTRIES } from "../utils/countryData";
+import { Sun, Moon, PlayCircle, Globe, DollarSign } from "lucide-react";
+import { COUNTRIES, currencySymbol, formatBudgetAmount } from "../utils/countryData";
+import { getBudgetPresets } from "../utils/budgetPresets";
 import { useAuth } from "../context/AuthContext";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
@@ -8,12 +9,15 @@ import HowToUseTutorial from "../components/HowToUseTutorial";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import ConfirmModal from "../components/ConfirmModal";
+import LegalLinks from "../components/LegalLinks";
+import { LEGAL_COMPANY, LEGAL_OPERATOR } from "../lib/legal";
+import { getRemioDesktop, isRemioDesktop } from "../lib/desktop";
 import api from "../api";
 
 export default function SettingsPage() {
-  const { user, signOut, refreshUser } = useAuth();
+  const { user, signOut, signIn, refreshUser } = useAuth();
   const { apps, history } = useApps();
-  const { prefs, prefsFetched, update } = usePrefs();
+  const { prefs, prefsFetched, update, updateAsync } = usePrefs();
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [saved, setSaved] = useState(false);
@@ -26,8 +30,19 @@ export default function SettingsPage() {
   const [countrySaved, setCountrySaved] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
   const [rememberSaving, setRememberSaving] = useState(false);
+  const [storeUpdateBusy, setStoreUpdateBusy] = useState(false);
+  const [storeUpdateMsg, setStoreUpdateMsg] = useState<string | null>(null);
+  const [budgetDraft, setBudgetDraft] = useState("");
+  const [budgetSaving, setBudgetSaving] = useState(false);
+  const [budgetSaved, setBudgetSaved] = useState(false);
+
+  useEffect(() => {
+    const b = prefs.monthlyBudget;
+    setBudgetDraft(b != null && b > 0 ? String(b) : "");
+  }, [prefs.monthlyBudget]);
 
   const hasPassword = !!user;
+  const desktop = isRemioDesktop();
 
   useEffect(() => {
     setRememberDevice(user?.remember_device ?? false);
@@ -39,11 +54,26 @@ export default function SettingsPage() {
     setRememberSaving(true);
     try {
       await api.post("/auth/remember-device", { remember_device: value });
-      await refreshUser();
+      await signIn(value);
     } catch {
       setRememberDevice(!value);
     } finally {
       setRememberSaving(false);
+    }
+  };
+
+  const saveBudget = async () => {
+    if (budgetSaving) return;
+    const digits = budgetDraft.replace(/\D/g, "");
+    const parsed = digits ? parseInt(digits, 10) : null;
+    const value = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    setBudgetSaving(true);
+    try {
+      await updateAsync({ monthlyBudget: value });
+      setBudgetSaved(true);
+      setTimeout(() => setBudgetSaved(false), 2000);
+    } finally {
+      setBudgetSaving(false);
     }
   };
 
@@ -120,7 +150,7 @@ export default function SettingsPage() {
               Country
             </label>
             <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-              Used for time-based greetings and regional app links.
+              Used for currency, subscription prices, and regional app links.
             </p>
             <div className="mt-2 flex items-center gap-3">
               <select
@@ -146,6 +176,72 @@ export default function SettingsPage() {
                 ))}
               </select>
               {countrySaved && <span className="text-sm text-sage-ink">Saved</span>}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Monthly budget">
+        <div className="flex items-start gap-3">
+          <DollarSign size={18} className="mt-0.5 shrink-0 text-sage-ink" />
+          <div className="flex-1">
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Subscription spend cap for Activity and renewal alerts.
+            </p>
+            <div
+              className="mt-3 flex items-baseline gap-1 rounded-xl border px-4 py-3"
+              style={{ borderColor: "var(--line)", background: "var(--bg-deep)" }}
+            >
+              <span className="text-lg font-medium" style={{ color: "var(--text-muted)" }}>
+                {currencySymbol(prefs.country || "US")}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="w-full max-w-[180px] bg-transparent text-2xl font-semibold tabular-nums outline-none"
+                style={{ color: "var(--text)" }}
+                value={budgetDraft}
+                onChange={(e) => setBudgetDraft(e.target.value.replace(/\D/g, ""))}
+                aria-label="Monthly budget amount"
+                placeholder="0"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {getBudgetPresets(prefs.country || "US").chips.map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setBudgetDraft(String(amount))}
+                  className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+                    budgetDraft === String(amount)
+                      ? "border-[var(--accent)] bg-[var(--accent)]/15"
+                      : "hover:border-[var(--accent)]/40"
+                  }`}
+                  style={
+                    budgetDraft === String(amount)
+                      ? { color: "var(--text)" }
+                      : { borderColor: "var(--line)", color: "var(--text-muted)" }
+                  }
+                >
+                  {formatBudgetAmount(amount, prefs.country || "US")}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={budgetSaving || !prefsFetched}
+                onClick={() => void saveBudget()}
+                className="btn-primary disabled:opacity-60"
+              >
+                {budgetSaving ? "Saving…" : "Save budget"}
+              </button>
+              {budgetSaved && <span className="text-sm text-sage-ink">Saved</span>}
+              {prefs.monthlyBudget != null && prefs.monthlyBudget > 0 && (
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Current: {formatBudgetAmount(prefs.monthlyBudget, prefs.country || "US")}/mo
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -205,6 +301,65 @@ export default function SettingsPage() {
       <ChangePasswordModal open={showChangePass} onClose={() => setShowChangePass(false)} />
       <ForgotPasswordModal open={showForgotPass} onClose={() => setShowForgotPass(false)} />
 
+
+      {desktop && (
+        <Card title="Updates">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Microsoft Store builds check for updates through the Store (not a separate download server).
+            When an update is available, Windows shows the install prompt.
+          </p>
+          <button
+            type="button"
+            disabled={storeUpdateBusy}
+            onClick={async () => {
+              setStoreUpdateBusy(true);
+              setStoreUpdateMsg(null);
+              try {
+                const result = await getRemioDesktop()?.checkStoreUpdates?.();
+                if (!result) {
+                  setStoreUpdateMsg("Update check is only available in the desktop app.");
+                  return;
+                }
+                if (result.status === "up-to-date") {
+                  setStoreUpdateMsg("You're on the latest version from the Microsoft Store.");
+                } else if (result.status === "install-started") {
+                  setStoreUpdateMsg(
+                    result.mandatory
+                      ? "A required update is installing. Follow the Windows prompt — Remio may restart."
+                      : "An update is installing. Follow the Windows prompt when it appears.",
+                  );
+                } else if (result.status === "not-store") {
+                  setStoreUpdateMsg("This install is not from the Microsoft Store; use the Store build for automatic updates.");
+                } else if (result.status === "skipped") {
+                  setStoreUpdateMsg(result.message ?? "Store update helper not available in this build.");
+                } else {
+                  setStoreUpdateMsg(result.message ?? "Could not check for updates. Try again later.");
+                }
+              } finally {
+                setStoreUpdateBusy(false);
+              }
+            }}
+            className="btn mt-4"
+            style={{ background: "var(--bg-deep)", color: "var(--text)" }}
+          >
+            {storeUpdateBusy ? "Checking…" : "Check for updates"}
+          </button>
+          {storeUpdateMsg && (
+            <p className="mt-3 text-sm" style={{ color: "var(--text-muted)" }}>
+              {storeUpdateMsg}
+            </p>
+          )}
+        </Card>
+      )}
+
+      <Card title="Legal">
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {LEGAL_COMPANY} · Operated by {LEGAL_OPERATOR}
+        </p>
+        <div className="mt-3">
+          <LegalLinks tone="muted" />
+        </div>
+      </Card>
 
       <Card title="Data">
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>

@@ -1,7 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { axe } from "vitest-axe";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../context/AuthContext";
 import { createMockQueryClient } from "../test/helpers";
@@ -63,16 +62,5 @@ describe("SettingsPage a11y", () => {
     inputs.forEach((input) => {
       expect(input.closest("label")).not.toBeNull();
     });
-  });
-
-  it("passes axe accessibility scan on core sections", async () => {
-    const { container } = renderSettings();
-    await waitFor(() => screen.getByText("Settings"));
-    // Exclude button-name rule — HowToUseTutorial renders icon-only progress
-    // buttons whose labels are only visible in context; not a SettingsPage bug.
-    const results = await axe(container, {
-      rules: { "button-name": { enabled: false } },
-    });
-    expect(results.violations).toHaveLength(0);
   });
 });

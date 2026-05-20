@@ -1,11 +1,16 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { backdropTransition, modalTransition, modalVariants } from "../lib/motion";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  title: string;
+  /** Ignored when `header` is provided */
+  title?: string;
+  /** Custom header row (replaces default title + close) */
+  header?: ReactNode;
   children: ReactNode;
   width?: number;
 }
@@ -20,7 +25,7 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-export default function Modal({ open, onClose, title, children, width = 480 }: Props) {
+export default function Modal({ open, onClose, title = "", header, children, width = 480 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Initial focus — only runs when modal opens
@@ -69,18 +74,18 @@ export default function Modal({ open, onClose, title, children, width = 480 }: P
   const backdropHidden = dark ? "rgba(0,0,0,0)" : "rgba(31,36,33,0)";
   const backdropVisible = dark ? "rgba(0,0,0,0.7)" : "rgba(31,36,33,0.45)";
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center px-4 py-6"
+          className="fixed inset-0 z-[200] flex items-start justify-center px-4 py-6"
           style={{ background: backdropHidden }}
           animate={{ background: backdropVisible }}
           exit={{ background: backdropHidden }}
-          transition={{ duration: 0.2 }}
+          transition={backdropTransition}
           onClick={onClose}
         >
-          <div className="pointer-events-none absolute inset-0 backdrop-blur-sm" />
+          <div className="pointer-events-none absolute inset-0 backdrop-blur-md" />
           <motion.div
             ref={panelRef}
             role="dialog"
@@ -88,24 +93,28 @@ export default function Modal({ open, onClose, title, children, width = 480 }: P
             aria-labelledby="modal-title"
             className="modal-panel relative my-auto w-full overflow-y-auto rounded-2xl p-6 shadow-pop pointer-events-auto"
             style={{ width, maxHeight: "calc(100vh - 48px)", background: "var(--modal-bg)" }}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            variants={modalVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={modalTransition}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between">
-              <h2 id="modal-title" className="font-display text-xl font-semibold">
-                {title}
-              </h2>
-              <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-muted hover:bg-cream transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="mt-4">{children}</div>
+            {header ?? (
+              <div className="flex items-start justify-between">
+                <h2 id="modal-title" className="font-display text-xl font-semibold">
+                  {title}
+                </h2>
+                <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-muted hover:bg-cream transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+            <div className={header ? "" : "mt-4"}>{children}</div>
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

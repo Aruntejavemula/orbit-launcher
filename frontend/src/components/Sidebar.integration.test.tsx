@@ -75,10 +75,9 @@ describe("Sidebar integration", () => {
     });
   });
 
-  it("regression: shows user email on hover/expand", async () => {
+  it("regression: does not show email in profile footer", async () => {
     renderSidebar();
     await waitFor(() => screen.getByText(fakeUser.name));
-    // Email might be shown in tooltip or expanded view
-    expect(screen.getByText(fakeUser.name)).toBeInTheDocument();
+    expect(screen.queryByText(fakeUser.email)).not.toBeInTheDocument();
   });
 });

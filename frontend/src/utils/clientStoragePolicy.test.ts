@@ -17,6 +17,9 @@ describe("clientStoragePolicy", () => {
       name: "A",
       email: "a@b.com",
       avatar_url: "https://x/y.png",
+      remember_device: false,
     });
+
+    expect(toClientSafeUser({ ...user, remember_device: true }).remember_device).toBe(true);
   });
 });

@@ -1,6 +1,16 @@
 {
-  "identityName": "YourCompany.RemioLauncher",
+  "identityName": "Remioorg.RemioLauncher",
   "applicationId": "RemioLauncher",
-  "publisherDisplayName": "Your Company",
-  "publisher": "CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+  "publisherDisplayName": "Remio org",
+  "publisher": "CN=9E7B7C78-1DAC-448F-92A6-1EDC9218FFAD",
+  "partnerCenter": {
+    "packageIdentityName": "Remioorg.RemioLauncher",
+    "packageIdentityPublisher": "CN=9E7B7C78-1DAC-448F-92A6-1EDC9218FFAD",
+    "publisherDisplayName": "Remio org",
+    "packageFamilyName": "Remioorg.RemioLauncher_njmm627nw2ayj",
+    "packageSid": "S-1-15-2-1862165723-684879438-23709855-1489482949-4155244641-3500490020-36580932",
+    "storeId": "9PBXZGKG0N6L",
+    "storeDeepLink": "Available after the product is live",
+    "webStoreUrl": "Available after the product is live"
+  }
 }

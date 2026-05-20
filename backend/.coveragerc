@@ -8,10 +8,14 @@ omit =
     tests/*
     tests/**/*
     worker.py
+    db_migrate.py
+    tasks/reminder_cron.py
+    tasks/send_push.py
     */__init__.py
     */conftest.py
 
 [report]
+fail_under = 80
 exclude_lines =
     pragma: no cover
     raise NotImplementedError

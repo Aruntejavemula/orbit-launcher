@@ -101,7 +101,7 @@ async def usage_stats(request: Request, user_id: str = Depends(get_current_user_
 @user_limiter.limit("60/minute")
 async def renewals(request: Request, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
-    cutoff = now + timedelta(days=30)
+    cutoff = now + timedelta(days=7)
     result = await db.execute(
         select(AppItem.id, AppItem.name, AppItem.slug, AppItem.expires_at)
         .where(

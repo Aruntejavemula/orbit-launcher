@@ -29,18 +29,35 @@ class TestCollectPending:
         pending = await collect_pending_deliveries(db_session, date.today())
         assert any(p.app.id == app.id and p.channel == "email" for p in pending)
 
-    async def test_default_prefs_uses_reminder_days(self, db_session):
+    async def test_default_automated_at_3_and_1_days(self, db_session):
         user = await seed_user(db_session, email="renew2@example.com")
         prefs = await seed_preferences(db_session, user.id)
-        prefs.reminder_days = 7
         prefs.reminder_email = True
         prefs.reminder_push = False
-        app = await seed_app(db_session, user.id, plan="trial")
-        app.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        app3 = await seed_app(db_session, user.id, name="Three", slug="three", plan="trial")
+        app3.expires_at = datetime.now(timezone.utc) + timedelta(days=3)
+        app1 = await seed_app(db_session, user.id, name="One", slug="one", plan="paid")
+        app1.expires_at = datetime.now(timezone.utc) + timedelta(days=1)
+        app7 = await seed_app(db_session, user.id, name="Seven", slug="seven", plan="paid")
+        app7.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         await db_session.commit()
 
         pending = await collect_pending_deliveries(db_session, date.today())
-        assert any(p.app.id == app.id and p.channel == "email" for p in pending)
+        assert any(p.app.id == app3.id and p.days_before == 3 for p in pending)
+        assert any(p.app.id == app1.id and p.days_before == 1 for p in pending)
+        assert not any(p.app.id == app7.id for p in pending)
+
+    async def test_per_app_overrides_default_offset(self, db_session):
+        user = await seed_user(db_session, email="renew2b@example.com")
+        prefs = await seed_preferences(db_session, user.id)
+        prefs.reminder_email = True
+        app = await seed_app(db_session, user.id, plan="paid")
+        app.expires_at = datetime.now(timezone.utc) + timedelta(days=14)
+        await seed_reminder(db_session, user.id, app.id, remind_days_before=14, method="email")
+        await db_session.commit()
+
+        pending = await collect_pending_deliveries(db_session, date.today())
+        assert any(p.app.id == app.id and p.days_before == 14 for p in pending)
 
 
 class TestRunRenewalNotifications:

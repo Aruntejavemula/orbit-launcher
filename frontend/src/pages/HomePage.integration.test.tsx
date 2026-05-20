@@ -49,7 +49,7 @@ describe("HomePage integration", () => {
     renderHomePage();
     await waitFor(() => screen.getByText("Claude"));
 
-    const input = screen.getByPlaceholderText(/search your tools/i);
+    const input = screen.getByPlaceholderText(/search and launch any app/i);
     fireEvent.change(input, { target: { value: "claude" } });
 
     await waitFor(() => {
@@ -75,8 +75,8 @@ describe("HomePage integration", () => {
   it("shows correct app count in hero card", async () => {
     renderHomePage();
     await waitFor(() => {
-      // Should show total app count (2 apps from fakeApps)
-      expect(screen.getByText(/2/)).toBeInTheDocument();
+      expect(screen.getByText("Total apps")).toBeInTheDocument();
+      expect(screen.getByText("2", { selector: ".dashboard-hero-chip .text-xl" })).toBeInTheDocument();
     });
   });
 

@@ -1,36 +1,33 @@
 /**
- * Unit tests for AddAppModal manual form — plan/date/cost fields, validation.
- * Uses mocked contexts to avoid MSW overhead.
+ * Unit tests for AddAppModal 4-step wizard.
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 const mockAddApp = vi.hoisted(() => vi.fn());
-const mockApi = vi.hoisted(() => ({
-  get: vi.fn(),
-  post: vi.fn(),
-  patch: vi.fn(),
-  delete: vi.fn(),
-}));
 
-vi.mock("../api", () => ({ default: mockApi }));
 vi.mock("../context/AppsContext", () => ({
   useApps: () => ({ addApp: mockAddApp, apps: [] }),
 }));
 vi.mock("../context/PreferencesContext", () => ({
-  usePrefs: () => ({ prefs: { country: "" }, update: vi.fn() }),
+  usePrefs: () => ({ prefs: { country: "US" }, update: vi.fn() }),
 }));
 vi.mock("./Modal", () => ({
-  default: ({ open, children, title }: { open: boolean; children: React.ReactNode; title: string }) =>
-    open ? <div data-testid="modal"><h2>{title}</h2>{children}</div> : null,
+  default: ({ open, children, header }: { open: boolean; children: React.ReactNode; header?: React.ReactNode }) =>
+    open ? (
+      <div data-testid="modal">
+        {header}
+        {children}
+      </div>
+    ) : null,
 }));
 vi.mock("./BrandIcon", () => ({
   default: () => <div data-testid="brand-icon" />,
 }));
 vi.mock("./IconPicker", () => ({
-  default: ({ value, onChange }: { value: string; onChange: (k: string) => void }) =>
-    <button onClick={() => onChange("star")}>PickIcon</button>,
+  default: ({ onChange }: { onChange: (k: string) => void }) =>
+    <button type="button" onClick={() => onChange("star")}>PickIcon</button>,
 }));
 vi.mock("./Toast", () => ({
   toast: vi.fn(),
@@ -41,137 +38,161 @@ vi.mock("../data/appCatalog", () => ({
     { name: "Figma", slug: "figma", color: "F24E1E", category: "design", url: "https://figma.com" },
   ],
 }));
+vi.mock("../data/catalogPlanPricing", () => ({
+  suggestedMonthlyPrice: () => 20,
+  getCatalogSubscriptionOptions: () => ({
+    tiers: [
+      { frequency: "monthly", amount: 20 },
+      { frequency: "yearly", amount: 200 },
+    ],
+    freeTier: true,
+    hasCatalogPricing: true,
+  }),
+}));
 
 import AddAppModal from "./AddAppModal";
 
-async function goToManualTab() {
-  render(<AddAppModal open={true} onClose={vi.fn()} />);
-  await waitFor(() => screen.getByText("Add Manually"));
-  fireEvent.click(screen.getByText("Add Manually"));
+function renderWizard() {
+  return render(<AddAppModal open={true} onClose={vi.fn()} />);
+}
+
+async function openManualPanel() {
+  await waitFor(() => screen.getByRole("button", { name: /^quick add$/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^add manually$/i }));
   await waitFor(() => screen.getByPlaceholderText("Notion"));
 }
 
-describe("AddAppModal manual form", () => {
+async function openQuickPanel() {
+  await waitFor(() => screen.getByRole("button", { name: /^quick add$/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^quick add$/i }));
+  await waitFor(() => screen.getByPlaceholderText("Search 100+ apps…"));
+}
+
+async function fillManualAndContinue() {
+  await openManualPanel();
+  fireEvent.change(screen.getByPlaceholderText("Notion"), { target: { value: "MyApp" } });
+  fireEvent.change(screen.getByPlaceholderText("https://notion.so"), {
+    target: { value: "https://myapp.com" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
+  await waitFor(() => screen.getByText("Pick your plan"));
+  fireEvent.click(screen.getByText("Paid"));
+}
+
+describe("AddAppModal wizard", () => {
   beforeEach(() => {
     mockAddApp.mockReset();
-    mockApi.post.mockReset();
+    mockAddApp.mockResolvedValue({ id: "new-1" });
   });
 
-  it("shows name and URL fields in manual tab", async () => {
-    await goToManualTab();
-    expect(screen.getByPlaceholderText("Notion")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("https://notion.so")).toBeInTheDocument();
-  });
-
-  it("shows plan buttons (Free, Trial, Paid)", async () => {
-    await goToManualTab();
-    expect(screen.getByText("Free")).toBeInTheDocument();
-    expect(screen.getByText("Trial")).toBeInTheDocument();
-    expect(screen.getByText("Paid")).toBeInTheDocument();
-  });
-
-  it("clicking Paid plan shows date/frequency fields", async () => {
-    await goToManualTab();
-    fireEvent.click(screen.getByText("Paid"));
+  it("step 1 shows segmented Quick Add and Add Manually tabs", async () => {
+    renderWizard();
     await waitFor(() => {
-      expect(screen.getByText("Start date")).toBeInTheDocument();
-      expect(screen.getByText("Frequency")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^quick add$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^add manually$/i })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search 100+ apps…")).toBeInTheDocument();
+    });
+    expect(screen.queryByPlaceholderText("Notion")).not.toBeInTheDocument();
+  });
+
+  it("quick add tab shows full catalog list", async () => {
+    renderWizard();
+    await openQuickPanel();
+    expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Figma").length).toBeGreaterThan(0);
+  });
+
+  it("catalog pick advances to subscription step with tiers", async () => {
+    renderWizard();
+    await openQuickPanel();
+    fireEvent.click(screen.getByText("Claude"));
+    await waitFor(() => {
+      expect(screen.getByText("Step 2 of 4")).toBeInTheDocument();
+      expect(screen.getByText("Choose subscription")).toBeInTheDocument();
+      expect(screen.getByText(/monthly —/i)).toBeInTheDocument();
+      expect(screen.getByText(/yearly —/i)).toBeInTheDocument();
+      expect(screen.queryByText(/quarterly —/i)).not.toBeInTheDocument();
     });
   });
 
-  it("clicking Trial plan shows date and trial days fields", async () => {
-    await goToManualTab();
-    fireEvent.click(screen.getByText("Trial"));
+  it("catalog tier selection skips manual cost entry", async () => {
+    renderWizard();
+    await openQuickPanel();
+    fireEvent.click(screen.getByText("Claude"));
+    await waitFor(() => screen.getByText(/monthly —/i));
+    fireEvent.click(screen.getByText(/monthly —/i));
     await waitFor(() => {
-      expect(screen.getByText("Start date")).toBeInTheDocument();
-      expect(screen.getByText("Trial days")).toBeInTheDocument();
+      expect(screen.getByText("Step 3 of 4")).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("0.00")).not.toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
+    await waitFor(() => screen.getByRole("button", { name: /add claude/i }));
   });
 
-  it("clicking Free plan hides date fields", async () => {
-    await goToManualTab();
-    fireEvent.click(screen.getByText("Paid"));
-    await waitFor(() => screen.getByText("Start date"));
-    fireEvent.click(screen.getByText("Free"));
-    await waitFor(() => {
-      expect(screen.queryByText("Start date")).not.toBeInTheDocument();
-    });
-  });
-
-  it("shows monthly cost field when Paid selected", async () => {
-    await goToManualTab();
-    fireEvent.click(screen.getByText("Paid"));
-    await waitFor(() => {
-      expect(screen.getByText(/monthly cost/i)).toBeInTheDocument();
-    });
-  });
-
-  it("shows name validation error when name empty on submit", async () => {
-    await goToManualTab();
-    const submitBtn = screen.getByRole("button", { name: /add app/i });
-    await act(async () => { fireEvent.click(submitBtn); });
+  it("manual validation on step 1 continue", async () => {
+    renderWizard();
+    await waitFor(() => screen.getByRole("button", { name: /^continue$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     await waitFor(() => {
       expect(screen.getByText(/name is required/i)).toBeInTheDocument();
     });
   });
 
-  it("shows URL validation error when URL invalid on submit", async () => {
-    await goToManualTab();
-    fireEvent.change(screen.getByPlaceholderText("Notion"), { target: { value: "My App" } });
-    fireEvent.change(screen.getByPlaceholderText("https://notion.so"), { target: { value: "notaurl" } });
-    const submitBtn = screen.getByRole("button", { name: /add app/i });
-    await act(async () => { fireEvent.click(submitBtn); });
+  it("paid plan shows cost step then confirm with price", async () => {
+    renderWizard();
+    await fillManualAndContinue();
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
+    await waitFor(() => screen.getByText("Cost & renewal"));
+    const costInput = screen.getByPlaceholderText("0.00");
+    fireEvent.change(costInput, { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     await waitFor(() => {
-      expect(screen.getByText(/url must start with https/i)).toBeInTheDocument();
+      expect(screen.getByText(/price/i)).toBeInTheDocument();
     });
   });
 
-  it("color swatch click changes color", async () => {
-    await goToManualTab();
-    const swatches = document.querySelectorAll('.rounded-full.border-2');
-    expect(swatches.length).toBeGreaterThan(0);
-    fireEvent.click(swatches[1]);
-    // No error thrown = success
-  });
-
-  it("category select changes category", async () => {
-    await goToManualTab();
-    const select = screen.getByText("AI").closest("select") ?? document.querySelector("select");
-    if (select) {
-      fireEvent.change(select, { target: { value: "design" } });
-    }
-  });
-
-  it("icon picker change triggers setIconKey", async () => {
-    await goToManualTab();
-    fireEvent.click(screen.getByText("PickIcon"));
-    // No error = success
-  });
-
-  it("submits valid manual form", async () => {
-    mockAddApp.mockResolvedValueOnce({ id: "new-1" });
-    await goToManualTab();
-    fireEvent.change(screen.getByPlaceholderText("Notion"), { target: { value: "MyApp" } });
-    fireEvent.change(screen.getByPlaceholderText("https://notion.so"), { target: { value: "https://myapp.com" } });
-    const submitBtn = screen.getByRole("button", { name: /add app/i });
-    await act(async () => { fireEvent.click(submitBtn); });
+  it("free plan skips to confirm", async () => {
+    renderWizard();
+    await fillManualAndContinue();
+    fireEvent.click(screen.getByText("Free"));
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     await waitFor(() => {
-      expect(mockAddApp).toHaveBeenCalled();
+      expect(screen.getByText("Confirm")).toBeInTheDocument();
+      expect(screen.queryByText("Cost & renewal")).not.toBeInTheDocument();
     });
   });
 
-  it("back button from catalog app draft goes back to list", async () => {
-    render(<AddAppModal open={true} onClose={vi.fn()} />);
-    await waitFor(() => screen.getByText("Claude"));
+  it("submits on confirm", async () => {
+    renderWizard();
+    await fillManualAndContinue();
+    fireEvent.click(screen.getByText("Free"));
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
+    await waitFor(() => screen.getByRole("button", { name: /add myapp/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /add myapp/i }));
+    });
+    await waitFor(() => expect(mockAddApp).toHaveBeenCalled());
+  });
+
+  it("back from step 2 returns to step 1", async () => {
+    renderWizard();
+    await openQuickPanel();
     fireEvent.click(screen.getByText("Claude"));
-    await waitFor(() => screen.getByText(/back/i));
-    fireEvent.click(screen.getByText(/back/i));
-    await waitFor(() => screen.getByText("Claude"));
+    await waitFor(() => screen.getByText("← Back"));
+    fireEvent.click(screen.getByText("← Back"));
+    await waitFor(() => {
+      expect(screen.getByText("Add a tool")).toBeInTheDocument();
+    });
   });
 
-  it("quick tab shows search and apps list", async () => {
-    render(<AddAppModal open={true} onClose={vi.fn()} />);
-    await waitFor(() => screen.getByText("Claude"));
-    expect(screen.getByPlaceholderText("Search 100+ apps…")).toBeInTheDocument();
+  it("search filters catalog", async () => {
+    renderWizard();
+    await openQuickPanel();
+    fireEvent.change(screen.getByPlaceholderText("Search 100+ apps…"), {
+      target: { value: "figma" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Figma")).toBeInTheDocument();
+    });
   });
 });

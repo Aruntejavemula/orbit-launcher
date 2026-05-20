@@ -4,12 +4,24 @@
 
 :root {
   color-scheme: light;
+  --accent: #E8541A;
+  --dashboard-bg: var(--surface);
+  --dashboard-chip: var(--surface-2);
+  --dashboard-text: var(--text);
+  --dashboard-muted: var(--text-muted);
+  --dashboard-bar-track: var(--line);
+  --dashboard-border: rgba(31, 36, 33, 0.1);
+  --list-row-bg: var(--surface);
+  --list-row-border: var(--line);
+  --list-row-text: var(--text);
+  --list-row-muted: var(--text-muted);
   --bg: #f7f4ee;
   --bg-deep: #efe9dc;
   --surface: #ffffff;
   --surface-2: #f1ede4;
   --text: #1f2421;
   --text-muted: #6b7269;
+  --card-subtle: #6b7269;
   --line: #e7e2d9;
   --hero: #d4e3d2;
   --hero-2: #b4d3b8;
@@ -18,17 +30,28 @@
 }
 html.dark {
   color-scheme: dark;
-  --bg: #1e2820;
-  --bg-deep: #182018;
-  --surface: #273129;
-  --surface-2: #222c24;
-  --text: #ddeadd;
-  --text-muted: #8fa892;
-  --line: #334038;
-  --hero: #2c3e2f;
-  --hero-2: #38503c;
+  --dashboard-bg: #141414;
+  --dashboard-chip: #1f1f1f;
+  --dashboard-text: #ffffff;
+  --dashboard-muted: #8a8a8a;
+  --dashboard-bar-track: #2a2a2a;
+  --dashboard-border: rgba(255, 255, 255, 0.08);
+  --list-row-bg: #121212;
+  --list-row-border: rgba(255, 255, 255, 0.06);
+  --list-row-text: #ffffff;
+  --list-row-muted: #b0b0b0;
+  --card-subtle: #b0b0b0;
+  --bg: #0a0a0a;
+  --bg-deep: #111111;
+  --surface: #1a1a1a;
+  --surface-2: #242424;
+  --text: #f0f0f0;
+  --text-muted: #b0b0b0;
+  --line: #2a2a2a;
+  --hero: #141414;
+  --hero-2: #1a1a1a;
   --modal-bg: #1e1e1e;
-  --confirm-bg: #1a2e1a;
+  --confirm-bg: #1a1a1a;
 }
 
 /* ── Modal dark mode token overrides ────────────────────────────────────────
@@ -77,6 +100,22 @@ html.dark .modal-panel .hover\:bg-red-100:hover {
 }
 html.dark .modal-panel .border-red-200 {
   border-color: rgba(239,68,68,0.3) !important;
+}
+/* Buttons default to light UA text in dark mode — force theme tokens */
+html.dark .modal-panel button {
+  color: var(--text);
+}
+html.dark .modal-panel .bg-sage-soft {
+  background-color: rgba(107, 143, 113, 0.22) !important;
+}
+html.dark .modal-panel .bg-sage-soft .text-sage-ink,
+html.dark .modal-panel .bg-sage-soft .font-semibold {
+  color: var(--text) !important;
+}
+
+/* Forgot-password flow: always dark card (matches login mock) */
+.modal-panel:has(.forgot-password-modal) {
+  background: #121212 !important;
 }
 
 /* Smooth light↔dark transition — only on color properties, not layout */
@@ -132,6 +171,14 @@ select {
   background: transparent;
 }
 
+.modal-panel-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.modal-panel-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .brand-tile {
   display: grid;
   place-items: center;
@@ -163,6 +210,145 @@ select {
 .bg-app-deep { background: var(--bg-deep); }
 .bg-hero { background: linear-gradient(135deg, var(--hero) 0%, var(--hero-2) 100%); }
 
+.dashboard-hero {
+  border-top: 3px solid var(--accent);
+  border-radius: 1rem;
+  background: var(--dashboard-bg);
+  padding: 1rem 1rem 1.25rem;
+  color: var(--dashboard-text);
+  border: 1px solid var(--dashboard-border);
+  border-top-width: 3px;
+  border-top-color: var(--accent);
+}
+@media (min-width: 640px) {
+  .dashboard-hero {
+    border-radius: 1.5rem;
+    padding: 1.75rem 2rem 2rem;
+  }
+}
+.dashboard-hero-muted {
+  color: var(--dashboard-muted);
+}
+.dashboard-hero-chip {
+  background: var(--dashboard-chip);
+  border: 1px solid var(--dashboard-border);
+}
+.dashboard-hero-text {
+  color: var(--dashboard-text);
+}
+.dashboard-hero-bar {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--dashboard-bar-track);
+  overflow: hidden;
+}
+.dashboard-hero-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--accent);
+  transition: width 280ms ease;
+}
+.dashboard-hero-search {
+  background: var(--dashboard-chip);
+  border: 1px solid var(--dashboard-border);
+  color: var(--dashboard-text);
+}
+.dashboard-hero-search::placeholder {
+  color: var(--dashboard-muted);
+  opacity: 0.85;
+}
+.dashboard-hero-search:focus {
+  border-color: rgba(232, 84, 26, 0.45);
+  outline: none;
+}
+
+.fab-add {
+  background: var(--accent);
+  color: #fff;
+  transition: filter 150ms ease;
+}
+.fab-add:hover {
+  filter: brightness(0.92);
+}
+.fab-add:active {
+  filter: brightness(0.88);
+}
+
+.app-list-row {
+  background: var(--list-row-bg);
+  border: 1px solid var(--list-row-border);
+}
+.app-list-row-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--list-row-muted);
+  background: rgba(128, 128, 128, 0.2);
+  border: 1px solid var(--list-row-border);
+}
+html.dark .app-list-row-pill {
+  background: rgba(107, 143, 113, 0.12);
+}
+.app-list-row-icon-tile {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+html.dark .app-list-row-icon-tile {
+  background: #0a0a0a;
+}
+.app-card-icon-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 0.625rem;
+}
+.app-card-title {
+  color: var(--text);
+}
+.app-card-subtle {
+  color: var(--card-subtle, var(--text-muted));
+}
+html.dark .app-card-subtle {
+  color: var(--card-subtle);
+}
+.app-list-row-launch {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  color: #fff;
+  transition: filter 150ms ease, transform 150ms ease, background-color 150ms ease;
+}
+.app-list-row-launch:active {
+  transform: scale(0.96);
+}
+.app-list-row-launch:hover {
+  filter: brightness(1.08);
+}
+html.dark .app-list-row-launch {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.72);
+  filter: none;
+}
+html.dark .app-list-row-launch:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.9);
+  filter: none;
+}
+
 @layer components {
   .nav-pill {
     @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium;
@@ -179,7 +365,7 @@ select {
     box-shadow: 0 1px 2px rgba(31,36,33,.04), 0 6px 18px rgba(31,36,33,.06);
   }
   html.dark .nav-pill.active {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255, 255, 255, 0.06);
     color: #c8e0c9;
   }
   .filter-pill {
@@ -253,13 +439,41 @@ body, aside, nav, header, section, main, footer,
   to   { transform: scaleX(1); }
 }
 
+.app-card-shell {
+  background: var(--list-row-bg);
+  border: 1px solid var(--list-row-border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 6px 20px rgba(0, 0, 0, 0.08);
+}
+html.dark .app-card-shell {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.app-card-icon-tile {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+}
 .app-card {
   transition: transform 150ms ease-out, box-shadow 150ms ease-out;
   will-change: transform;
 }
 .app-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(31,36,33,0.13);
+}
+.app-card-shell.app-card:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 14px 36px rgba(0, 0, 0, 0.14);
+}
+html.dark .app-card-shell.app-card:hover {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 16px 40px rgba(0, 0, 0, 0.55);
 }
 .app-card:active {
   transform: scale(0.97);
@@ -282,6 +496,26 @@ body, aside, nav, header, section, main, footer,
 @keyframes fadein {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-enter {
+  animation: login-enter 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+@keyframes login-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.login-marketing-enter {
+  animation: login-enter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) 0.06s both;
+}
+.login-page .field {
+  background: #1a1a1a;
+  border-color: #333;
+  color: #f0f0f0;
+}
+.login-page .field:focus {
+  border-color: #e8541a;
+  --tw-ring-color: rgb(232 84 26 / 0.25);
 }
 
 /* Page-level transition — slightly slower, feels intentional */

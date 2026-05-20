@@ -8,7 +8,12 @@ const mockApi = vi.hoisted(() => ({
   patch: vi.fn(),
   delete: vi.fn(),
 }));
+const mockResetNav = vi.hoisted(() => ({
+  saveResetSession: vi.fn(),
+  navigateToResetPassword: vi.fn(),
+}));
 vi.mock("../api", () => ({ default: mockApi }));
+vi.mock("../lib/passwordResetSession", () => mockResetNav);
 
 vi.mock("./Modal", () => ({
   default: ({ open, children, title }: { open: boolean; children: React.ReactNode; title: string }) =>
@@ -24,11 +29,6 @@ vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
-vi.mock("./PasswordStrength", () => ({
-  default: ({ password }: { password: string }) =>
-    password ? <div data-testid="pwd-strength" /> : null,
-}));
-
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 describe("ForgotPasswordModal", () => {
@@ -37,6 +37,8 @@ describe("ForgotPasswordModal", () => {
   beforeEach(() => {
     onClose.mockReset();
     mockApi.post.mockReset();
+    mockResetNav.saveResetSession.mockReset();
+    mockResetNav.navigateToResetPassword.mockReset();
   });
 
   it("renders nothing when closed", () => {
@@ -46,13 +48,13 @@ describe("ForgotPasswordModal", () => {
 
   it("renders email step when open", () => {
     render(<ForgotPasswordModal open={true} onClose={onClose} />);
-    expect(screen.getByText("Reset password")).toBeInTheDocument();
+    expect(screen.getByText("Forgot password?")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("you@example.com")).toBeInTheDocument();
   });
 
-  it("Cancel button calls onClose", () => {
+  it("Back to sign in calls onClose on email step", () => {
     render(<ForgotPasswordModal open={true} onClose={onClose} />);
-    fireEvent.click(screen.getByText("Cancel"));
+    fireEvent.click(screen.getByText("Back to sign in"));
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -96,10 +98,10 @@ describe("ForgotPasswordModal", () => {
     });
   });
 
-  it("navigates OTP step → verifies code → shows newpass step", async () => {
+  it("saves session and navigates to reset page after valid OTP", async () => {
     mockApi.post
-      .mockResolvedValueOnce({}) // send otp
-      .mockResolvedValueOnce({ data: { reset_token: "tok123" } }); // verify otp
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ data: { reset_token: "tok123" } });
 
     render(<ForgotPasswordModal open={true} onClose={onClose} />);
     fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "a@b.com" } });
@@ -108,7 +110,6 @@ describe("ForgotPasswordModal", () => {
     });
     await waitFor(() => screen.getByText(/Code sent to/));
 
-    // Fill 6 digit inputs
     const digitInputs = document.querySelectorAll('input[type="text"][maxlength="1"]');
     "123456".split("").forEach((d, i) => {
       fireEvent.change(digitInputs[i], { target: { value: d } });
@@ -118,7 +119,9 @@ describe("ForgotPasswordModal", () => {
       fireEvent.submit(document.querySelector("form") as HTMLFormElement);
     });
     await waitFor(() => {
-      expect(screen.getByText("Choose a strong new password.")).toBeInTheDocument();
+      expect(mockResetNav.saveResetSession).toHaveBeenCalledWith("tok123", "a@b.com");
+      expect(mockResetNav.navigateToResetPassword).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
     });
   });
 
@@ -170,65 +173,6 @@ describe("ForgotPasswordModal", () => {
     await waitFor(() => {
       expect(screen.getByText(/Too many attempts/)).toBeInTheDocument();
     });
-  });
-
-  it("shows done step after successful password reset", async () => {
-    mockApi.post
-      .mockResolvedValueOnce({}) // send otp
-      .mockResolvedValueOnce({ data: { reset_token: "tok" } }) // verify
-      .mockResolvedValueOnce({}); // reset
-
-    render(<ForgotPasswordModal open={true} onClose={onClose} />);
-    fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "xyz@b.com" } });
-    await act(async () => {
-      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
-    });
-    await waitFor(() => screen.getByText(/Code sent to/));
-
-    const digitInputs = document.querySelectorAll('input[type="text"][maxlength="1"]');
-    "123456".split("").forEach((d, i) => {
-      fireEvent.change(digitInputs[i], { target: { value: d } });
-    });
-    await act(async () => {
-      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
-    });
-    await waitFor(() => screen.getByText("Choose a strong new password."));
-
-    const pwdInputs = document.querySelectorAll('input[type="password"]');
-    fireEvent.change(pwdInputs[0], { target: { value: "V4lidP@ssword" } });
-    fireEvent.change(pwdInputs[1], { target: { value: "V4lidP@ssword" } });
-    await act(async () => {
-      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
-    });
-    await waitFor(() => {
-      expect(screen.getByText("Password reset!")).toBeInTheDocument();
-    });
-  });
-
-  it("Done button calls onClose from done step", async () => {
-    mockApi.post
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ data: { reset_token: "tok" } })
-      .mockResolvedValueOnce({});
-
-    render(<ForgotPasswordModal open={true} onClose={onClose} />);
-    fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "xyz@b.com" } });
-    await act(async () => { fireEvent.submit(document.querySelector("form") as HTMLFormElement); });
-    await waitFor(() => screen.getByText(/Code sent to/));
-
-    const digitInputs = document.querySelectorAll('input[type="text"][maxlength="1"]');
-    "123456".split("").forEach((d, i) => { fireEvent.change(digitInputs[i], { target: { value: d } }); });
-    await act(async () => { fireEvent.submit(document.querySelector("form") as HTMLFormElement); });
-    await waitFor(() => screen.getByText("Choose a strong new password."));
-
-    const pwdInputs = document.querySelectorAll('input[type="password"]');
-    fireEvent.change(pwdInputs[0], { target: { value: "V4lidP@ssword" } });
-    fireEvent.change(pwdInputs[1], { target: { value: "V4lidP@ssword" } });
-    await act(async () => { fireEvent.submit(document.querySelector("form") as HTMLFormElement); });
-    await waitFor(() => screen.getByText("Password reset!"));
-
-    fireEvent.click(screen.getByRole("button", { name: /done/i }));
-    expect(onClose).toHaveBeenCalled();
   });
 
   it("Wrong email? link goes back to email step", async () => {

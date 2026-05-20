@@ -14,6 +14,7 @@ const DEFAULTS: Preferences = {
   reminderEmail: true,
   reminderPush: false,
   onboardingCompleted: false,
+  monthlyBudget: null,
   country: "",
 };
 
@@ -27,6 +28,7 @@ interface PrefsApiResponse {
   reminder_email: boolean;
   reminder_push: boolean;
   onboarding_completed: boolean;
+  monthly_budget: number | null;
   country: string;
 }
 
@@ -50,6 +52,7 @@ function toPrefs(raw: PrefsApiResponse): Preferences {
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
     onboardingCompleted: raw.onboarding_completed ?? false,
+    monthlyBudget: raw.monthly_budget ?? null,
     country: raw.country ?? "",
   };
 }
@@ -65,8 +68,26 @@ function prefsPatchBody(patch: Partial<Preferences>): Record<string, unknown> {
   if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
   if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
   if (patch.onboardingCompleted !== undefined) body.onboarding_completed = patch.onboardingCompleted;
+  if (patch.monthlyBudget !== undefined) body.monthly_budget = patch.monthlyBudget;
   if (patch.country !== undefined) body.country = patch.country;
   return body;
+}
+
+function preferencesErrorMessage(err: unknown): string {
+  const res = (err as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
+  const detail = res?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const msg = detail
+      .map((d) => (typeof d === "object" && d && "msg" in d ? String((d as { msg: string }).msg) : ""))
+      .filter(Boolean)
+      .join("; ");
+    if (msg) return msg;
+  }
+  if (res?.status === 500) {
+    return "Server error saving preferences. If this persists, contact support — the database may need a migration.";
+  }
+  return "Could not save preferences. Please try again.";
 }
 
 async function patchPreferences(patch: Partial<Preferences>): Promise<Preferences> {
@@ -134,9 +155,9 @@ export function usePrefs() {
     onSuccess: (data) => {
       qc.setQueryData(["preferences"], data);
     },
-    onError: (_err, _patch, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["preferences"], ctx.prev);
-      toast("Could not save preferences. Please try again.", "error");
+    onError: async (err) => {
+      await qc.invalidateQueries({ queryKey: ["preferences"] });
+      toast(preferencesErrorMessage(err), "error");
     },
   });
 
@@ -159,6 +180,7 @@ export function usePrefs() {
     prefs,
     prefsFetched,
     update: updateMutation.mutate,
+    updateAsync: updateMutation.mutateAsync,
     apiKeys,
     createApiKey: async (name: string): Promise<ApiKey & { secret: string }> => {
       const raw = await createKeyMutation.mutateAsync(name);

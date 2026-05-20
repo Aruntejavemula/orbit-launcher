@@ -2,12 +2,15 @@ const fs = require("fs");
 const path = require("path");
 const { build } = require("./package.json");
 
-const appxFile = path.join(__dirname, "electron", "store.appx.json");
-const appx = JSON.parse(
-  fs.readFileSync(fs.existsSync(appxFile) ? appxFile : path.join(__dirname, "electron", "store.appx.example.json"), "utf8")
-);
+const { loadAppxBuildOptions } = require("./electron/load-appx.cjs");
+const appx = loadAppxBuildOptions();
 
-const appIcon = path.join(__dirname, "public", "icon-512x512.png");
+const { resolveAppIcon } = require("./electron/resolve-app-icon.cjs");
+const appIcon = resolveAppIcon(__dirname);
+const storeHelperExe = path.join(__dirname, "electron", "store-update", "bin", "Remio.StoreUpdate.exe");
+const storeUpdateResources = fs.existsSync(storeHelperExe)
+  ? [{ from: "electron/store-update/bin", to: "store-update", filter: ["Remio.StoreUpdate.exe"] }]
+  : [];
 
 /** Microsoft Store MSIX — signing happens in Partner Center, not locally. */
 module.exports = {
@@ -23,8 +26,10 @@ module.exports = {
   },
   appx: {
     ...appx,
+    displayName: "Remio",
     publish: null,
   },
+  extraResources: storeUpdateResources,
   mac: undefined,
   linux: undefined,
 };

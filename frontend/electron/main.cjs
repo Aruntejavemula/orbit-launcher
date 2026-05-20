@@ -2,6 +2,11 @@ const { app, BrowserWindow, shell, session, ipcMain, nativeImage } = require("el
 const path = require("path");
 const fs = require("fs");
 const { APP_URL, API_ORIGIN } = require("./config.cjs");
+const {
+  checkForStoreUpdates,
+  scheduleStoreUpdateChecks,
+  isMicrosoftStoreInstall,
+} = require("./store-updater.cjs");
 
 const isPackaged = app.isPackaged;
 const openDevTools =
@@ -13,6 +18,7 @@ const PROTOCOL = "remio";
 function getAppIcon() {
   const candidates = [
     path.join(app.getAppPath(), "dist", "icon-512x512.png"),
+    path.join(app.getAppPath(), "dist", "icon.png"),
     path.join(__dirname, "..", "public", "icon-512x512.png"),
   ];
   for (const p of candidates) {
@@ -213,6 +219,10 @@ async function completeDesktopOAuth(rawUrl) {
       win.focus();
       return;
     }
+    await win.webContents.executeJavaScript(
+      `try { sessionStorage.setItem("remio_pending_remember_prompt", "1"); } catch (_) {}`,
+      true
+    );
     await loadApp(win);
     win.webContents.reload();
     win.focus();
@@ -310,6 +320,13 @@ app.on("open-url", (event, url) => {
 
 ipcMain.handle("google-sign-in", () => openGoogleOAuthWindow());
 
+ipcMain.handle("remio-check-store-updates", async () => {
+  const win = mainWindow ?? BrowserWindow.getAllWindows()[0];
+  return checkForStoreUpdates(win);
+});
+
+ipcMain.handle("remio-is-store-install", () => isMicrosoftStoreInstall());
+
 /** file:// UI cannot send cookies to https API — use the shared session partition. */
 ipcMain.handle("remio-session-fetch", async (_event, { path, method = "GET", body }) => {
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -337,10 +354,11 @@ ipcMain.handle("remio-session-fetch", async (_event, { path, method = "GET", bod
 
 app.whenReady().then(() => {
   const ses = session.fromPartition(SESSION_PARTITION);
-  ses.setUserAgent(`${ses.getUserAgent()} RemioDesktop/0.1.0`);
+  ses.setUserAgent(`${ses.getUserAgent()} RemioDesktop/1.0.0`);
 
   const oauthUrl = parseProtocolArg(process.argv);
   createWindow();
+  scheduleStoreUpdateChecks(() => mainWindow);
   if (oauthUrl) completeDesktopOAuth(oauthUrl);
 
   app.on("activate", () => {

@@ -6,6 +6,26 @@ import { createMockQueryClient } from "../test/helpers";
 import AppDetailModal from "./AppDetailModal";
 import type { AppItem } from "../types";
 
+vi.mock("../context/AppsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../context/AppsContext")>();
+  return {
+    ...actual,
+    useApps: () => ({
+      launch: vi.fn(),
+      removeApp: vi.fn(),
+      updateApp: vi.fn(),
+      history: [
+        { appId: "app-1", ts: Date.now() - 3_600_000 },
+        { appId: "app-1", ts: Date.now() - 2 * 86_400_000 },
+      ],
+      apps: [],
+      loading: false,
+      addApp: vi.fn(),
+      reorderApps: vi.fn(),
+    }),
+  };
+});
+
 const mkApp = (overrides: Partial<AppItem> = {}): AppItem => ({
   id: "app-1",
   name: "Claude",
@@ -58,6 +78,16 @@ describe("AppDetailModal", () => {
   it("shows 'price not set' when paid plan lacks monthlyCost", () => {
     renderModal(mkApp({ monthlyCost: null }));
     expect(screen.getByText(/price not set/i)).toBeInTheDocument();
+  });
+
+  it("shows Activity section with open counts and value rating", () => {
+    renderModal(mkApp());
+    expect(screen.getByText(/^activity$/i)).toBeInTheDocument();
+    expect(screen.getByText(/last opened/i)).toBeInTheDocument();
+    expect(screen.getByText(/last 7 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/last 30 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/not worth it|low value|good value|great value/i)).toBeInTheDocument();
+    expect(screen.queryByText(/visit website/i)).not.toBeInTheDocument();
   });
 
   it("does not show expiry block for free plan", () => {
