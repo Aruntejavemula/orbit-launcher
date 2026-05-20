@@ -24,6 +24,8 @@ backend/backups/
 .coverage
 coverage/
 frontend/coverage/
+frontend/build/
+frontend/.jscpd-tmp/
 test-results/
 *.tsbuildinfo
 
