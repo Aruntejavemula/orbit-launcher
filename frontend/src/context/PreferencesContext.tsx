@@ -41,7 +41,14 @@ interface ApiKeyApiResponse {
   last_used_at: string | null;
 }
 
-function toPrefs(raw: PrefsApiResponse): Preferences {
+function apiHasMonthlyBudgetField(raw: unknown): boolean {
+  return typeof raw === "object" && raw !== null && Object.prototype.hasOwnProperty.call(raw, "monthly_budget");
+}
+
+function toPrefs(raw: PrefsApiResponse, previous?: Preferences): Preferences {
+  const monthlyBudget = apiHasMonthlyBudgetField(raw)
+    ? (raw.monthly_budget ?? null)
+    : (previous?.monthlyBudget ?? null);
   return {
     theme: (raw.theme as Preferences["theme"]) ?? "light",
     startWeekOnMonday: raw.start_week_on_monday ?? false,
@@ -52,7 +59,7 @@ function toPrefs(raw: PrefsApiResponse): Preferences {
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
     onboardingCompleted: raw.onboarding_completed ?? false,
-    monthlyBudget: raw.monthly_budget ?? null,
+    monthlyBudget,
     country: raw.country ?? "",
   };
 }
@@ -90,18 +97,26 @@ function preferencesErrorMessage(err: unknown): string {
   return "Could not save preferences. Please try again.";
 }
 
-async function patchPreferences(patch: Partial<Preferences>): Promise<Preferences> {
+async function patchPreferences(
+  patch: Partial<Preferences>,
+  previous: Preferences,
+): Promise<{ raw: PrefsApiResponse; prefs: Preferences }> {
   const body = prefsPatchBody(patch);
-  try {
+  const apply = async () => {
     const r = await api.patch("/preferences", body);
-    return toPrefs(r.data);
+    return r.data as PrefsApiResponse;
+  };
+  let raw: PrefsApiResponse;
+  try {
+    raw = await apply();
   } catch (err: unknown) {
     const status = (err as { response?: { status?: number } })?.response?.status;
     if (status !== 404) throw err;
     await api.post("/preferences/init");
-    const r = await api.patch("/preferences", body);
-    return toPrefs(r.data);
+    raw = await apply();
   }
+
+  return { raw, prefs: toPrefs(raw, previous) };
 }
 
 function toApiKey(raw: ApiKeyApiResponse): ApiKey {
@@ -118,18 +133,23 @@ function toApiKey(raw: ApiKeyApiResponse): ApiKey {
 export function usePrefs() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const prefsQueryKey = ["preferences", user?.id] as const;
 
   const { data: prefs = DEFAULTS, isFetched: prefsFetched } = useQuery({
-    queryKey: ["preferences"],
+    queryKey: prefsQueryKey,
     queryFn: async () => {
-      try {
+      const load = async (): Promise<PrefsApiResponse> => {
         const r = await api.get("/preferences");
-        return toPrefs(r.data);
+        return r.data as PrefsApiResponse;
+      };
+      try {
+        const raw = await load();
+        return toPrefs(raw);
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 404) {
           const r = await api.post("/preferences/init");
-          return toPrefs(r.data);
+          return toPrefs(r.data as PrefsApiResponse);
         }
         throw err;
       }
@@ -145,18 +165,28 @@ export function usePrefs() {
 
   const updateMutation = useMutation({
     scope: { id: "preferences-update" },
-    mutationFn: (patch: Partial<Preferences>) => patchPreferences(patch),
+    mutationFn: (patch: Partial<Preferences>) => {
+      const prev = qc.getQueryData<Preferences>(prefsQueryKey) ?? DEFAULTS;
+      return patchPreferences(patch, prev);
+    },
     onMutate: async (patch) => {
-      await qc.cancelQueries({ queryKey: ["preferences"] });
-      const prev = qc.getQueryData<Preferences>(["preferences"]);
-      qc.setQueryData<Preferences>(["preferences"], (old = DEFAULTS) => ({ ...old, ...patch }));
+      await qc.cancelQueries({ queryKey: prefsQueryKey });
+      const prev = qc.getQueryData<Preferences>(prefsQueryKey);
+      qc.setQueryData<Preferences>(prefsQueryKey, (old = DEFAULTS) => ({ ...old, ...patch }));
       return { prev };
     },
-    onSuccess: (data) => {
-      qc.setQueryData(["preferences"], data);
+    onSuccess: ({ prefs, raw }, variables, context) => {
+      const prev = context?.prev ?? DEFAULTS;
+      let next = prefs;
+      if (variables.monthlyBudget === undefined && !apiHasMonthlyBudgetField(raw)) {
+        if (prev.monthlyBudget != null) {
+          next = { ...next, monthlyBudget: prev.monthlyBudget };
+        }
+      }
+      qc.setQueryData(prefsQueryKey, next);
     },
     onError: async (err) => {
-      await qc.invalidateQueries({ queryKey: ["preferences"] });
+      await qc.invalidateQueries({ queryKey: prefsQueryKey });
       toast(preferencesErrorMessage(err), "error");
     },
   });

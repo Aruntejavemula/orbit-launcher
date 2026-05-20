@@ -7,6 +7,8 @@ import { backdropTransition, modalTransition, modalVariants } from "../lib/motio
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** When false, hide close control and ignore Escape / backdrop dismiss. */
+  closable?: boolean;
   /** Ignored when `header` is provided */
   title?: string;
   /** Custom header row (replaces default title + close) */
@@ -25,7 +27,15 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-export default function Modal({ open, onClose, title = "", header, children, width = 480 }: Props) {
+export default function Modal({
+  open,
+  onClose,
+  closable = true,
+  title = "",
+  header,
+  children,
+  width = 480,
+}: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Initial focus — only runs when modal opens
@@ -43,7 +53,7 @@ export default function Modal({ open, onClose, title = "", header, children, wid
     if (!open) return;
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Escape" && closable) { onClose(); return; }
       if (e.key !== "Tab") return;
 
       const els = Array.from(
@@ -68,7 +78,7 @@ export default function Modal({ open, onClose, title = "", header, children, wid
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, onClose, closable]);
 
   const dark = isDark();
   const backdropHidden = dark ? "rgba(0,0,0,0)" : "rgba(31,36,33,0)";
@@ -83,7 +93,7 @@ export default function Modal({ open, onClose, title = "", header, children, wid
           animate={{ background: backdropVisible }}
           exit={{ background: backdropHidden }}
           transition={backdropTransition}
-          onClick={onClose}
+          onClick={closable ? onClose : undefined}
         >
           <div className="pointer-events-none absolute inset-0 backdrop-blur-md" />
           <motion.div
@@ -105,9 +115,11 @@ export default function Modal({ open, onClose, title = "", header, children, wid
                 <h2 id="modal-title" className="font-display text-xl font-semibold">
                   {title}
                 </h2>
-                <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-muted hover:bg-cream transition-colors">
-                  <X size={18} />
-                </button>
+                {closable && (
+                  <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-muted hover:bg-cream transition-colors">
+                    <X size={18} />
+                  </button>
+                )}
               </div>
             )}
             <div className={header ? "" : "mt-4"}>{children}</div>

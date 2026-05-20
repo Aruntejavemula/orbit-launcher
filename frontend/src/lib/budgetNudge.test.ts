@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
-  BUDGET_NUDGE_INTERVAL_MS,
   clearBudgetNudge,
   getBudgetNudgeAt,
   shouldShowBudgetNudge,
@@ -20,27 +19,16 @@ describe("budgetNudge", () => {
     vi.useRealTimers();
   });
 
-  it("shows when onboarding done and budget unset with no prior snooze", () => {
-    expect(shouldShowBudgetNudge(USER, null, true)).toBe(true);
+  it("shows when onboarding done and budget unset", () => {
+    expect(shouldShowBudgetNudge(null, true)).toBe(true);
   });
 
   it("hides when budget is set", () => {
-    expect(shouldShowBudgetNudge(USER, 300, true)).toBe(false);
+    expect(shouldShowBudgetNudge(300, true)).toBe(false);
   });
 
   it("hides during onboarding", () => {
-    expect(shouldShowBudgetNudge(USER, null, false)).toBe(false);
-  });
-
-  it("snoozes for 3 days after dismiss", () => {
-    snoozeBudgetNudge(USER);
-    expect(shouldShowBudgetNudge(USER, null, true)).toBe(false);
-
-    vi.setSystemTime(new Date(Date.now() + BUDGET_NUDGE_INTERVAL_MS - 1));
-    expect(shouldShowBudgetNudge(USER, null, true)).toBe(false);
-
-    vi.setSystemTime(new Date(Date.now() + 1));
-    expect(shouldShowBudgetNudge(USER, null, true)).toBe(true);
+    expect(shouldShowBudgetNudge(null, false)).toBe(false);
   });
 
   it("clearBudgetNudge removes snooze timestamp", () => {

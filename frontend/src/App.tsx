@@ -46,7 +46,7 @@ import {
   consumePendingRememberPrompt,
   markPendingRememberPrompt,
 } from "./lib/rememberDevicePrompt";
-import { shouldShowBudgetNudge, snoozeBudgetNudge } from "./lib/budgetNudge";
+import { shouldShowBudgetNudge } from "./lib/budgetNudge";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
 import { appleSpringDrawer, appleSpringGentle, fadeUpVariants } from "./lib/motion";
@@ -136,14 +136,7 @@ export default function App() {
 
   useEffect(() => {
     if (!user || authLoading || !prefsFetched || showRememberPrompt) return;
-    if (!prefs.onboardingCompleted) return;
-    if (prefs.monthlyBudget != null && prefs.monthlyBudget > 0) {
-      setShowBudgetNudge(false);
-      return;
-    }
-    if (shouldShowBudgetNudge(user.id, prefs.monthlyBudget, prefs.onboardingCompleted)) {
-      setShowBudgetNudge(true);
-    }
+    setShowBudgetNudge(shouldShowBudgetNudge(prefs.monthlyBudget, prefs.onboardingCompleted));
   }, [
     user,
     authLoading,
@@ -152,15 +145,6 @@ export default function App() {
     prefs.monthlyBudget,
     showRememberPrompt,
   ]);
-
-  const handleBudgetNudgeSnooze = useCallback(() => {
-    if (user) snoozeBudgetNudge(user.id);
-    setShowBudgetNudge(false);
-  }, [user]);
-
-  const handleBudgetNudgeSet = useCallback(() => {
-    setShowBudgetNudge(false);
-  }, []);
 
   const handleRememberChoice = useCallback(
     async (remember: boolean) => {
@@ -427,9 +411,8 @@ export default function App() {
       <ToastContainer />
       <RememberDeviceDialog open={showRememberPrompt} onChoose={handleRememberChoice} />
       <BudgetReminderModal
-        open={showBudgetNudge && !showRememberPrompt && prefs.onboardingCompleted}
-        onSnooze={handleBudgetNudgeSnooze}
-        onSet={handleBudgetNudgeSet}
+        open={showBudgetNudge && !showRememberPrompt}
+        onSaved={() => setShowBudgetNudge(false)}
       />
       {prefsFetched && !prefs.onboardingCompleted && <OnboardingOverlay />}
     </motion.div>

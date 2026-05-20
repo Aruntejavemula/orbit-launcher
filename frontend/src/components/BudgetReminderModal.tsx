@@ -5,21 +5,29 @@ import { formatBudgetAmount, getBudgetPresets } from "../utils/budgetPresets";
 
 interface Props {
   open: boolean;
-  onSnooze: () => void;
-  onSet: () => void;
+  onSaved: () => void;
 }
 
-export default function BudgetReminderModal({ open, onSnooze, onSet }: Props) {
+/**
+ * Existing users who finished onboarding before budget was required.
+ * Shown until monthlyBudget is set (same gate as onboarding step 4).
+ */
+export default function BudgetReminderModal({ open, onSaved }: Props) {
   const { prefs, updateAsync } = usePrefs();
-  const chips = getBudgetPresets(prefs.country).chips;
+  const country = prefs.country || "US";
+  const chips = getBudgetPresets(country).chips;
   const [saving, setSaving] = useState<number | null>(null);
+  const [error, setError] = useState(false);
 
   const pick = async (amount: number) => {
     if (saving != null) return;
     setSaving(amount);
+    setError(false);
     try {
       await updateAsync({ monthlyBudget: amount });
-      onSet();
+      onSaved();
+    } catch {
+      setError(true);
     } finally {
       setSaving(null);
     }
@@ -28,38 +36,47 @@ export default function BudgetReminderModal({ open, onSnooze, onSet }: Props) {
   return (
     <Modal
       open={open}
-      onClose={onSnooze}
-      title="Set a monthly budget?"
+      closable={false}
+      onClose={() => {}}
+      title="Set a budget"
       width={420}
     >
       <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-        Track your subscription spend on Home and Activity. We&apos;ll remind you again in 3 days if
-        you skip this.
+        How much do you want to spend on subscriptions per month?
+      </p>
+      <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+        Required — we&apos;ll alert you when you&apos;re getting close
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {chips.map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            disabled={saving != null}
-            onClick={() => void pick(amount)}
-            className="rounded-full border px-4 py-2 text-sm font-semibold transition hover:border-[var(--accent)] hover:bg-[var(--accent)]/10 disabled:opacity-60"
-            style={{ borderColor: "var(--line)", color: "var(--text)" }}
-          >
-            {saving === amount ? "Saving…" : formatBudgetAmount(amount, prefs.country)}
-          </button>
-        ))}
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        {chips.map((amount) => {
+          const active = saving === amount;
+          return (
+            <button
+              key={amount}
+              type="button"
+              disabled={saving != null}
+              onClick={() => void pick(amount)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition disabled:opacity-60 ${
+                active ? "border-[var(--accent)] bg-[var(--accent)]/15" : "hover:border-[var(--accent)]/40"
+              }`}
+              style={
+                active
+                  ? { color: "var(--text)" }
+                  : { borderColor: "var(--line)", color: "var(--text-muted)" }
+              }
+            >
+              {active ? "Saving…" : formatBudgetAmount(amount, country)}
+            </button>
+          );
+        })}
       </div>
 
-      <button
-        type="button"
-        onClick={onSnooze}
-        className="mt-5 w-full rounded-xl border py-2.5 text-sm font-medium transition hover:bg-cream/40"
-        style={{ borderColor: "var(--line)", color: "var(--text-muted)" }}
-      >
-        Not now
-      </button>
+      {error && (
+        <p className="mt-4 text-center text-sm text-red-600" role="alert">
+          Could not save your budget. Please try again.
+        </p>
+      )}
     </Modal>
   );
 }

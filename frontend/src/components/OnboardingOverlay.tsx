@@ -355,16 +355,12 @@ export default function OnboardingOverlay() {
 
 
 
-  const hasValidBudget = () => {
-    const b = monthlyBudget ?? parseBudget();
-    return b != null && b > 0;
-  };
-
   const finish = async () => {
 
     if (finishing) return;
 
-    if (!hasValidBudget()) {
+    const budget = monthlyBudget ?? parseBudget();
+    if (budget == null || budget <= 0) {
       setBudgetError(true);
       setStep(4);
       return;
@@ -374,7 +370,7 @@ export default function OnboardingOverlay() {
 
     try {
 
-      await updateAsync(buildFinishPatch());
+      await updateAsync({ ...buildFinishPatch(), monthlyBudget: budget });
 
     } finally {
 

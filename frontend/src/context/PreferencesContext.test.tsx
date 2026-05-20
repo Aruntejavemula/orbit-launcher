@@ -18,6 +18,9 @@ vi.mock("./AuthContext", () => ({
   useAuth: () => ({ user: { id: "u-1", name: "Test", email: "t@t.com" }, loading: false }),
 }));
 
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock("../components/Toast", () => ({ toast: mockToast }));
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const fakePrefsApiResponse = {
@@ -78,6 +81,8 @@ describe("PreferencesContext - usePrefs", () => {
     mockApi.post.mockReset();
     mockApi.patch.mockReset();
     mockApi.delete.mockReset();
+    mockToast.mockReset();
+    localStorage.clear();
   });
 
   it("fetches preferences on first access", async () => {
@@ -287,6 +292,102 @@ describe("PreferencesContext - usePrefs", () => {
 
     expect(result.current.prefs).toEqual(defaults);
     expect(result.current.prefsFetched).toBe(false);
+  });
+
+  it("loads monthly budget from API only (ignores localStorage)", async () => {
+    localStorage.setItem("remio_monthly_budget:u-1", "1000");
+    mockApi.get.mockImplementation((url: string) => {
+      if (url === "/preferences") {
+        return Promise.resolve({ data: { ...fakePrefsApiResponse, monthly_budget: null } });
+      }
+      if (url === "/api-keys") return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`Unexpected GET: ${url}`));
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prefsFetched).toBe(true);
+      expect(result.current.prefs.monthlyBudget).toBeNull();
+    });
+  });
+
+  it("persists monthly budget from PATCH response (server source of truth)", async () => {
+    setupDefaultMocks();
+    mockApi.patch.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, monthly_budget: 750 },
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 750 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBe(750);
+      expect(mockApi.patch).toHaveBeenCalledWith("/preferences", { monthly_budget: 750 });
+    });
+  });
+
+  it("uses server null when PATCH does not persist budget (no client override)", async () => {
+    setupDefaultMocks();
+    mockApi.patch.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, monthly_budget: null },
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 500 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBeNull();
+    });
+  });
+
+  it("keeps monthly budget when a legacy API omits monthly_budget on theme PATCH", async () => {
+    const legacyGet = { ...fakePrefsApiResponse };
+    delete (legacyGet as { monthly_budget?: number | null }).monthly_budget;
+
+    mockApi.get.mockImplementation((url: string) => {
+      if (url === "/preferences") return Promise.resolve({ data: legacyGet });
+      if (url === "/api-keys") return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`Unexpected GET: ${url}`));
+    });
+
+    const legacyThemePatch = { ...legacyGet, theme: "light" };
+    delete (legacyThemePatch as { monthly_budget?: number | null }).monthly_budget;
+    mockApi.patch
+      .mockResolvedValueOnce({ data: { ...legacyGet, monthly_budget: 400 } })
+      .mockResolvedValueOnce({ data: legacyThemePatch });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 400 });
+    });
+    await waitFor(() => expect(result.current.prefs.monthlyBudget).toBe(400));
+
+    act(() => {
+      result.current.update({ theme: "light" });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.theme).toBe("light");
+      expect(result.current.prefs.monthlyBudget).toBe(400);
+    });
   });
 
   it("rolls back optimistic update on PATCH error", async () => {

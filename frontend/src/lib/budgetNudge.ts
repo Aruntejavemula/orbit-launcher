@@ -32,16 +32,11 @@ export function clearBudgetNudge(userId: string): void {
   }
 }
 
+/** Post-onboarding gate: budget is required (no snooze / skip). */
 export function shouldShowBudgetNudge(
-  userId: string,
   monthlyBudget: number | null,
   onboardingCompleted: boolean,
-  now = Date.now(),
 ): boolean {
   if (!onboardingCompleted) return false;
-  if (monthlyBudget != null && monthlyBudget > 0) return false;
-
-  const last = getBudgetNudgeAt(userId);
-  if (last == null) return true;
-  return now - last >= BUDGET_NUDGE_INTERVAL_MS;
+  return monthlyBudget == null || monthlyBudget <= 0;
 }
