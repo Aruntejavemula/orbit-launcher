@@ -55,12 +55,16 @@ for (const size of pwaSizes) {
 await writePng(180, "apple-touch-icon.png", publicDir, source);
 fs.copyFileSync(path.join(publicDir, "icon-512x512.png"), path.join(publicDir, "icon.png"));
 
-/** Windows ICO for taskbar / exe / electron-builder (16–256). */
+/** Windows ICO (16–256). mac/linux use build/icon.png (512) — to-ico does not embed 512. */
 const icoSizes = [16, 24, 32, 48, 64, 128, 256];
 const icoBuffers = await Promise.all(icoSizes.map((s) => pngBuffer(s, source)));
 const icoPath = path.join(buildDir, "icon.ico");
 fs.writeFileSync(icoPath, await toIco(icoBuffers));
 console.log("wrote", icoPath);
+
+const icon512Path = path.join(buildDir, "icon.png");
+fs.writeFileSync(icon512Path, await pngBuffer(512, source));
+console.log("wrote", icon512Path);
 
 /** Partner Center / MSIX reference tiles (electron-builder also derives from build.icon). */
 const storeTiles = [
