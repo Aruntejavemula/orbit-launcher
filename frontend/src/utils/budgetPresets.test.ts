@@ -14,6 +14,11 @@ describe("getBudgetPresets", () => {
   it("uses EUR-scale chips for Germany", () => {
     expect(getBudgetPresets("DE").chips).toEqual([50, 100, 150, 250]);
   });
+
+  it("falls back to default presets for empty or unknown codes", () => {
+    expect(getBudgetPresets("")).toEqual(getBudgetPresets("US"));
+    expect(getBudgetPresets("ZZ").chips).toEqual([100, 200, 300, 500]);
+  });
 });
 
 describe("formatBudgetAmount", () => {

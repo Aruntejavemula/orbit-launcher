@@ -54,4 +54,11 @@ describe("authSession", () => {
     clearCachedUser();
     expect(getCachedUser()).toBeNull();
   });
+
+  it("returns null when cached user JSON is invalid", () => {
+    localStorage.setItem("remio_auth_user", "{not-json");
+    localStorage.setItem("remio_auth_expires", String(Date.now() + 999_999));
+    expect(getCachedUser()).toBeNull();
+    expect(localStorage.getItem("remio_auth_user")).toBeNull();
+  });
 });

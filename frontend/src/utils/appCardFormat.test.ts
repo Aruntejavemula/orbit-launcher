@@ -45,12 +45,23 @@ describe("appCardFormat", () => {
   });
 
   it("cardTimeAgo uses compact format", () => {
-    const hourAgo = Date.now() - 3600_000;
-    expect(cardTimeAgo(hourAgo)).toBe("1h ago");
+    const now = Date.now();
+    expect(cardTimeAgo(null)).toBe("Never");
+    expect(cardTimeAgo(now - 30_000)).toBe("just now");
+    expect(cardTimeAgo(now - 120_000)).toBe("2m ago");
+    expect(cardTimeAgo(now - 3600_000)).toBe("1h ago");
+    expect(cardTimeAgo(now - 3 * 86_400_000)).toBe("3d ago");
+    expect(cardTimeAgo(now - 10 * 86_400_000)).toBe("1w ago");
+    expect(cardTimeAgo(now - 200 * 86_400_000)).toMatch(/mo ago$/);
   });
 
   it("meta right uses renews when last opened hidden", () => {
-    const app = { ...base, expiresAt: Date.now() + 5 * 86_400_000 };
+    const now = Date.now();
+    const app = { ...base, expiresAt: now + 5 * 86_400_000 };
     expect(cardMetaRight(app, false)).toMatch(/Renews in 5d/);
+    expect(cardMetaRight({ ...base, expiresAt: now }, false)).toBe("Renews today");
+    expect(cardMetaRight({ ...base, plan: "trial", expiresAt: now }, false)).toBe("Trial ends today");
+    expect(cardMetaRight({ ...base, expiresAt: now - 86_400_000 }, false)).toBe("Expired");
+    expect(cardMetaRight({ ...base, lastOpened: now - 3600_000 }, true)).toBe("1h ago");
   });
 });

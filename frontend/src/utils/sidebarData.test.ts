@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import type { AppItem } from "../types";
-import { recentlyOpenedApps, upcomingRenewalApps, renewalUrgent } from "./sidebarData";
+import {
+  isUpcomingRenewal,
+  recentlyOpenedApps,
+  upcomingRenewalApps,
+  renewalUrgent,
+} from "./sidebarData";
 
 const now = Date.now();
 const app = (partial: Partial<AppItem> & Pick<AppItem, "id" | "name">): AppItem => ({
@@ -39,5 +44,15 @@ describe("sidebarData", () => {
   it("renewalUrgent within 7 days", () => {
     expect(renewalUrgent(now + 3 * 86_400_000, now)).toBe(true);
     expect(renewalUrgent(now + 10 * 86_400_000, now)).toBe(false);
+  });
+
+  it("isUpcomingRenewal only includes paid/trial within horizon", () => {
+    expect(isUpcomingRenewal(app({ id: "free", name: "Free", plan: "free", expiresAt: now + 86_400_000 }), 7, now)).toBe(
+      false,
+    );
+    expect(isUpcomingRenewal(app({ id: "none", name: "None", expiresAt: null }), 7, now)).toBe(false);
+    expect(isUpcomingRenewal(app({ id: "past", name: "Past", expiresAt: now - 86_400_000 }), 7, now)).toBe(false);
+    expect(isUpcomingRenewal(app({ id: "far", name: "Far", expiresAt: now + 20 * 86_400_000 }), 7, now)).toBe(false);
+    expect(isUpcomingRenewal(app({ id: "soon", name: "Soon", expiresAt: now + 3 * 86_400_000 }), 7, now)).toBe(true);
   });
 });
