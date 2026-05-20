@@ -28,6 +28,7 @@ const fakeUser: User = {
   name: "Test User",
   email: "test@example.com",
   avatar_url: "https://example.com/avatar.png",
+  remember_device: false,
 };
 
 function createWrapper() {

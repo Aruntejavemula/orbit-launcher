@@ -14,6 +14,7 @@ const user: User = {
   name: "Test",
   email: "t@e.com",
   avatar_url: null,
+  remember_device: false,
 };
 
 describe("authSession", () => {

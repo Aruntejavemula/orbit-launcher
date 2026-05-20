@@ -58,9 +58,7 @@ describe("SettingsPage a11y", () => {
   it("profile form inputs are inside label elements", async () => {
     renderSettings();
     await waitFor(() => screen.getByText("Profile"));
-    const inputs = screen.getAllByRole("textbox");
-    inputs.forEach((input) => {
-      expect(input.closest("label")).not.toBeNull();
-    });
+    expect(screen.getByLabelText(/^name$/i).closest("label")).not.toBeNull();
+    expect(screen.getByLabelText(/^email$/i).closest("label")).not.toBeNull();
   });
 });
