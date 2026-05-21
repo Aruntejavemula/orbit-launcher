@@ -24,6 +24,7 @@ class PreferencesResponse(BaseModel):
     reminder_email: bool
     reminder_push: bool
     onboarding_completed: bool
+    monthly_budget: Optional[int] = None
     country: str
 
     class Config:
@@ -40,7 +41,17 @@ class PreferencesUpdate(BaseModel):
     reminder_email: Optional[bool] = None
     reminder_push: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    monthly_budget: Optional[int] = None
     country: Optional[str] = Field(default=None, max_length=2)
+
+    @field_validator("monthly_budget")
+    @classmethod
+    def validate_monthly_budget(cls, v: Optional[int]) -> Optional[int]:
+        if v is None:
+            return None
+        if v < 1 or v > 100_000:
+            raise ValueError("monthly_budget must be between 1 and 100000")
+        return v
 
     @field_validator("country")
     @classmethod

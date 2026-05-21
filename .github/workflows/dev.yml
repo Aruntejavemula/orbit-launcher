@@ -111,6 +111,16 @@ jobs:
       - name: Build desktop UI
         run: npm run electron:build:ui
 
+      - name: Setup .NET SDK
+        if: matrix.platform == 'windows'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build Microsoft Store update helper
+        if: matrix.platform == 'windows'
+        run: npm run electron:build:store:helper
+
       - name: Pack desktop app
         run: npx electron-builder --config electron-builder.ci.config.cjs ${{ matrix.pack_flag }} --publish never
         env:

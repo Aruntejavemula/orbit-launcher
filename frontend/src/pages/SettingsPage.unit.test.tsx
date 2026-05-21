@@ -8,7 +8,9 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 
 const mockSignOut = vi.hoisted(() => vi.fn());
 const mockRefreshUser = vi.hoisted(() => vi.fn());
+const mockSignIn = vi.hoisted(() => vi.fn());
 const mockUpdate = vi.hoisted(() => vi.fn());
+const mockUpdateAsync = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -22,6 +24,7 @@ vi.mock("../context/AuthContext", () => ({
     user: { id: "u-1", name: "Test User", email: "test@example.com", remember_device: false },
     signOut: mockSignOut,
     refreshUser: mockRefreshUser,
+    signIn: mockSignIn,
   }),
 }));
 vi.mock("../context/AppsContext", () => ({
@@ -35,9 +38,12 @@ vi.mock("../context/PreferencesContext", () => ({
       compactCards: false,
       showLastOpened: true,
       notifyExpirations: true,
+      country: "US",
+      monthlyBudget: null,
     },
     prefsFetched: true,
     update: mockUpdate,
+    updateAsync: mockUpdateAsync,
   }),
 }));
 vi.mock("../components/HowToUseTutorial", () => ({
@@ -67,6 +73,7 @@ describe("SettingsPage unit", () => {
   beforeEach(() => {
     mockSignOut.mockReset();
     mockRefreshUser.mockReset();
+    mockSignIn.mockReset();
     mockUpdate.mockReset();
     mockApi.patch.mockReset();
   });
@@ -180,6 +187,21 @@ describe("SettingsPage unit", () => {
       expect(mockApi.patch).toHaveBeenCalledWith("/auth/me", expect.objectContaining({ name: "New Name" }));
     });
     expect(mockRefreshUser).toHaveBeenCalled();
+  });
+
+  it("remember device toggle posts and calls signIn", async () => {
+    mockApi.post.mockResolvedValueOnce({ data: { remember_device: true } });
+    mockSignIn.mockResolvedValueOnce(undefined);
+    render(<SettingsPage />);
+    const toggles = screen.getAllByRole("switch");
+    const rememberSwitch = toggles[toggles.length - 1];
+    await act(async () => {
+      fireEvent.click(rememberSwitch);
+    });
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith("/auth/remember-device", { remember_device: true });
+      expect(mockSignIn).toHaveBeenCalledWith(true);
+    });
   });
 
   it("shows Saved confirmation after successful save", async () => {

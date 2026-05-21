@@ -109,8 +109,8 @@ Use this checklist so local testing settings are not mistaken for production Sto
 | **Google Cloud Console** (both clients) | Prod redirect URI registered; localhost only for dev |
 | **`electron/store.appx.json`** | Real Partner Center identity (not `store.appx.example.json` placeholders) |
 | **`VITE_API_URL` at build** | `https://www.remiolauncher.com/api` (`electron:build:ui` already sets this) |
-| **App icon** | Add `build/icon.ico` + `package.json` `build.icon` — replace default Electron icon |
-| **`package.json` `author` / `description`** | Fill for Store metadata (warnings today) |
+| **App icons** | Run `npm run icons:generate` before desktop/Store builds (see **Icons** below) |
+| **`package.json` `author` / `description`** | Set (`author` filled; add `description` if Partner Center asks) |
 
 ### Do not ship / do not rely on in production
 
@@ -125,6 +125,27 @@ Use this checklist so local testing settings are not mistaken for production Sto
 2. Install via Partner Center **flight** / internal test (preferred) or sideload with Developer Mode.
 3. Sign in with Google → same apps as **remiolauncher.com** (proves prod API + desktop OAuth).
 4. Uninstall test build; submit `.appx` from Partner Center upload (Microsoft signs).
+
+---
+
+## Icons (no default Electron branding)
+
+All shell icons are generated from **`public/app-hero-icon.jpeg`** (proprietary Remio mark — Remio Org). Do not ship the stock Electron atom icon.
+
+```bash
+cd frontend && npm run icons:generate
+```
+
+| Output | Use |
+|--------|-----|
+| `build/icon.ico` | Windows taskbar, `.exe`, `electron-builder` (`package.json` → `build.icon`) |
+| `public/icon-16x16.png` … `icon-512x512.png` | Favicon, PWA, in-app |
+| `build/store-assets/StoreLogo300x300.png` | Partner Center **Store logo** (300×300) upload |
+| `build/store-assets/Square44x44Logo.png` etc. | Reference tiles; MSIX also derives from `build/icon.ico` |
+
+`electron:build:ui`, `electron:pack`, and `electron:build:store` run `icons:generate` automatically. If `app-hero-icon.jpeg` is missing, the script falls back to `icon-512x512.png` or `app-hero-icon.svg`.
+
+**Copyright:** Remio app icon = your asset. Third-party app logos in the catalog/dashboard are not owned by Remio (see Privacy / Terms launcher disclaimer). App cards are not modified by this pipeline.
 
 ---
 

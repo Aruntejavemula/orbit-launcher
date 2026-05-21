@@ -24,7 +24,6 @@ export interface AppItem {
   createdAt: number;
   lastOpened: number | null;
   expiresAt?: number | null;
-  weeklyMinutes?: number;
   iconKey?: string;
   frequency?: BillingFrequency;
   manageUrl?: string;
@@ -61,6 +60,7 @@ export interface Preferences {
   reminderEmail: boolean;
   reminderPush: boolean;
   onboardingCompleted: boolean;
+  monthlyBudget: number | null;
   country: string;
 }
 
@@ -77,7 +77,7 @@ export interface Reminder {
 export type PageId =
   | "home"
   | "insights"
-  | "usage"
+  | "activity"
   | "calendar"
   | "settings"
   | "api-keys";

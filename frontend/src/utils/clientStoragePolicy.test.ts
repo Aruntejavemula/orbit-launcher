@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { toClientSafeUser } from "./clientStoragePolicy";
+import { describe, it, expect, vi } from "vitest";
+import { assertNoForbiddenStoragePayload, toClientSafeUser } from "./clientStoragePolicy";
 import type { User } from "../types";
 
 describe("clientStoragePolicy", () => {
@@ -17,6 +17,24 @@ describe("clientStoragePolicy", () => {
       name: "A",
       email: "a@b.com",
       avatar_url: "https://x/y.png",
+      remember_device: false,
     });
+
+    expect(toClientSafeUser({ ...user, remember_device: true }).remember_device).toBe(true);
+  });
+
+  it("assertNoForbiddenStoragePayload warns on forbidden keys in dev", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    assertNoForbiddenStoragePayload({ nested: { password: "x" } });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("assertNoForbiddenStoragePayload ignores non-objects", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    assertNoForbiddenStoragePayload(null);
+    assertNoForbiddenStoragePayload("plain");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

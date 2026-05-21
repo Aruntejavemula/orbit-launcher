@@ -1,37 +1,43 @@
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, X } from "lucide-react";
 import Modal from "./Modal";
-import PasswordInput from "./PasswordInput";
-import PasswordStrength from "./PasswordStrength";
-import { validatePassword } from "../utils/passwordPolicy";
+import { RESET_INPUT_CLASS, ResetField, ResetPageHeader } from "./passwordReset/shared";
+import {
+  navigateToResetPassword,
+  saveResetSession,
+} from "../lib/passwordResetSession";
 import api from "../api";
+import { pageTransition, pageVariants } from "../lib/motion";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-type Step = "email" | "otp" | "newpass" | "done";
+type Step = "email" | "otp";
 
-const fade = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
-  transition: { duration: 0.2 },
-};
-
-const OTP_EXPIRY_SECONDS = 600; // 10 minutes
-
+const OTP_EXPIRY_SECONDS = 600;
 const RESEND_COOLDOWN_SECONDS = 60;
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+function BackToSignIn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-6 flex w-full items-center justify-center gap-1.5 text-sm text-[#888] transition hover:text-white"
+    >
+      <ArrowLeft size={16} />
+      Back to sign in
+    </button>
+  );
+}
 
 export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
-  const [resetToken, setResetToken] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,18 +49,15 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
   const sendingRef = useRef(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // OTP expiry countdown
   useEffect(() => {
     if (step !== "otp" || !otpSentAt) return;
     const tick = setInterval(() => {
       const elapsed = Math.floor((Date.now() - otpSentAt) / 1000);
-      const left = Math.max(0, OTP_EXPIRY_SECONDS - elapsed);
-      setSecondsLeft(left);
+      setSecondsLeft(Math.max(0, OTP_EXPIRY_SECONDS - elapsed));
     }, 1000);
     return () => clearInterval(tick);
   }, [step, otpSentAt]);
 
-  // Resend rate-limit countdown — runs only while cooldown is active
   useEffect(() => {
     if (resendCooldown === 0) return;
     const tick = setInterval(() => {
@@ -64,18 +67,26 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       if (left === 0) cooldownSentAt.current = null;
     }, 1000);
     return () => clearInterval(tick);
-  }, [resendCooldown === 0]); // only re-subscribe when active→idle or idle→active
+  }, [resendCooldown === 0]);
 
   const otp = digits.join("");
 
+  const resetState = () => {
+    setStep("email");
+    setEmail("");
+    setDigits(Array(6).fill(""));
+    setError(null);
+    setOtpStatus(null);
+    setSecondsLeft(OTP_EXPIRY_SECONDS);
+    setOtpSentAt(null);
+    setResendCooldown(0);
+    cooldownSentAt.current = null;
+    sendingRef.current = false;
+  };
+
   const handleClose = () => {
     onClose();
-    setTimeout(() => {
-      setStep("email"); setEmail(""); setDigits(Array(6).fill(""));
-      setResetToken(""); setNewPass(""); setConfirm(""); setError(null);
-      setOtpStatus(null); setSecondsLeft(OTP_EXPIRY_SECONDS); setOtpSentAt(null);
-      setResendCooldown(0); cooldownSentAt.current = null; sendingRef.current = false;
-    }, 300);
+    setTimeout(resetState, 300);
   };
 
   const startCooldown = () => {
@@ -122,7 +133,9 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       setOtpSentAt(Date.now());
       setSecondsLeft(OTP_EXPIRY_SECONDS);
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
     setResending(false);
     sendingRef.current = false;
   };
@@ -159,11 +172,13 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
     setLoading(true);
     try {
       const res = await api.post<{ reset_token: string }>("/auth/verify-otp", { email, otp });
-      setResetToken(res.data.reset_token);
-      setStep("newpass");
+      saveResetSession(res.data.reset_token, email);
+      handleClose();
+      navigateToResetPassword();
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "";
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "";
       if (status === 429) {
         setOtpStatus("locked");
       } else if (detail.toLowerCase().includes("expired")) {
@@ -176,217 +191,178 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
     }
   };
 
-  const resetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const policyErr = validatePassword(newPass, email);
-    if (policyErr) { setError(policyErr); return; }
-    if (newPass !== confirm) { setError("Passwords do not match."); return; }
-    setError(null);
-    setLoading(true);
-    try {
-      await api.post("/auth/reset-password", { reset_token: resetToken, new_password: newPass });
-      setStep("done");
-    } catch {
-      setError("Could not set your new password. Please start the reset process again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const policyError = newPass ? validatePassword(newPass, email) : null;
-  const matchError = confirm && newPass !== confirm ? "Passwords do not match." : null;
   const mins = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
   const timerStr = `${mins}:${String(secs).padStart(2, "0")}`;
   const timerUrgent = secondsLeft <= 60;
 
-  return (
-    <Modal open={open} onClose={handleClose} title="Reset password" width={460}>
-      <AnimatePresence mode="wait">
+  const modalHeader = (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={handleClose}
+        aria-label="Close"
+        className="rounded-lg p-1 text-[#888] transition hover:text-white"
+      >
+        <X size={20} />
+      </button>
+    </div>
+  );
 
-        {/* ── Step 1: Email ── */}
-        {step === "email" && (
-          <motion.form key="email" {...fade} onSubmit={sendOtp} className="space-y-4">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Enter your account email and we'll send a 6-digit code.
-            </p>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="field mt-1.5"
-                placeholder="you@example.com"
-                required
-                autoFocus
+  return (
+    <Modal open={open} onClose={handleClose} header={modalHeader} width={440}>
+      <div className="forgot-password-modal -mt-2 text-white">
+        <AnimatePresence mode="wait">
+          {step === "email" && (
+            <motion.form
+              key="email"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={pageTransition}
+              onSubmit={sendOtp}
+            >
+              <ResetPageHeader
+                title="Forgot password?"
+                subtitle="Enter your account email and we'll send a 6-digit code."
               />
-            </div>
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={handleClose}
-                className="rounded-full px-4 py-2 text-sm text-ink-muted hover:bg-cream transition">
-                Cancel
-              </button>
-              <button type="submit" disabled={!email || loading || resendCooldown > 0}
-                className="btn-primary px-5 text-sm disabled:opacity-50">
+              <ResetField label="Email">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={RESET_INPUT_CLASS}
+                  placeholder="you@example.com"
+                  required
+                  autoFocus
+                />
+              </ResetField>
+              {error && (
+                <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={!email || loading || resendCooldown > 0}
+                className="mt-6 w-full rounded-xl bg-[#e8541a] py-3 text-sm font-semibold text-white transition hover:bg-[#d14a16] disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 {loading ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Send code"}
               </button>
-            </div>
-          </motion.form>
-        )}
+              <BackToSignIn onClick={handleClose} />
+            </motion.form>
+          )}
 
-        {/* ── Step 2: OTP ── */}
-        {step === "otp" && (
-          <motion.form key="otp" {...fade} onSubmit={verifyOtp} className="space-y-5">
-            <div>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Code sent to <strong style={{ color: "var(--text)" }}>{email}</strong>
-              </p>
+          {step === "otp" && (
+            <motion.form
+              key="otp"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={pageTransition}
+              onSubmit={verifyOtp}
+            >
+              <OtpSubtitle email={email} />
               {secondsLeft > 0 && (
-                <p className="mt-1 text-xs font-medium" style={{ color: timerUrgent ? "#ef4444" : "var(--text-muted)" }}>
+                <p
+                  className="mb-4 text-center text-xs font-medium"
+                  style={{ color: timerUrgent ? "#ef4444" : "#888" }}
+                >
                   Expires in {timerStr}
                 </p>
               )}
-            </div>
-
-            {/* 6 individual digit boxes */}
-            <div className="flex justify-center gap-2" onPaste={handleDigitPaste}>
-              {digits.map((d, i) => (
-                <motion.input
-                  key={i}
-                  ref={(el) => { inputRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={d}
-                  onChange={(e) => handleDigitChange(i, e.target.value)}
-                  onKeyDown={(e) => handleDigitKeyDown(i, e)}
-                  animate={d ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.1, ease: "easeOut" }}
-                  className="h-12 w-10 rounded-xl border text-center font-mono text-xl font-semibold outline-none transition focus:ring-2"
-                  style={{
-                    background: "var(--bg-deep)",
-                    borderColor: otpStatus ? "#f87171" : d ? "#6B8F71" : "var(--line)",
-                    color: "var(--text)",
-                    boxShadow: otpStatus ? undefined : d ? "0 0 0 2px rgba(107,143,113,0.15)" : undefined,
+              <div className="flex justify-center gap-2" onPaste={handleDigitPaste}>
+                {digits.map((d, i) => (
+                  <motion.input
+                    key={i}
+                    ref={(el) => {
+                      inputRefs.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={(e) => handleDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => handleDigitKeyDown(i, e)}
+                    animate={d ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
+                    className="h-12 w-10 rounded-xl border text-center font-mono text-xl font-semibold text-white outline-none transition focus:ring-2 focus:ring-[#e8541a]/25"
+                    style={{
+                      background: "#1a1a1a",
+                      borderColor: otpStatus ? "#f87171" : d ? "#e8541a" : "#333",
+                    }}
+                  />
+                ))}
+              </div>
+              {otpStatus === "invalid" && (
+                <p className="mt-3 text-center text-xs text-red-400">Incorrect code. Please try again.</p>
+              )}
+              {otpStatus === "locked" && (
+                <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-xs text-red-300">
+                  Too many attempts. Try again in 15 minutes.
+                </p>
+              )}
+              {(secondsLeft === 0 || otpStatus === "expired") && otpStatus !== "locked" && (
+                <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-xs text-red-300">
+                  Code expired.{" "}
+                  <button
+                    type="button"
+                    onClick={resendOtp}
+                    disabled={resending || resendCooldown > 0}
+                    className="font-semibold underline disabled:opacity-50"
+                  >
+                    {resending ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend"}
+                  </button>
+                </p>
+              )}
+              <div className="mt-4 flex justify-center gap-3 text-xs text-[#888]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("email");
+                    setOtpStatus(null);
                   }}
-                />
-              ))}
-            </div>
-
-            {/* Inline OTP errors */}
-            {otpStatus === "invalid" && (
-              <p className="text-center text-xs text-red-600">Incorrect code. Please try again.</p>
-            )}
-            {otpStatus === "locked" && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-700">
-                Too many attempts. Try again in 15 minutes.
-              </p>
-            )}
-            {(secondsLeft === 0 || otpStatus === "expired") && otpStatus !== "locked" && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-700">
-                Code expired. Request a new one.{" "}
-                <button type="button" onClick={resendOtp} disabled={resending || resendCooldown > 0}
-                  className="font-semibold underline disabled:opacity-50">
-                  {resending ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend"}
-                </button>
-              </p>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                <button type="button" onClick={() => { setStep("email"); setOtpStatus(null); }}
-                  className="hover:underline">
+                  className="hover:text-white"
+                >
                   Wrong email?
                 </button>
                 <span>·</span>
-                <button type="button" onClick={resendOtp} disabled={resending || resendCooldown > 0}
-                  className="hover:underline disabled:opacity-50">
-                  {resending ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend"}
+                <button
+                  type="button"
+                  onClick={resendOtp}
+                  disabled={resending || resendCooldown > 0}
+                  className="hover:text-white disabled:opacity-50"
+                >
+                  {resending ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                 </button>
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={handleClose}
-                  className="rounded-full px-4 py-2 text-sm text-ink-muted hover:bg-cream transition">
-                  Cancel
-                </button>
-                <button type="submit" disabled={otp.length !== 6 || loading || secondsLeft === 0 || otpStatus === "locked"}
-                  className="btn-primary px-5 text-sm disabled:opacity-50">
-                  {loading ? "Verifying…" : "Verify"}
-                </button>
-              </div>
-            </div>
-          </motion.form>
-        )}
-
-        {/* ── Step 3: New password ── */}
-        {step === "newpass" && (
-          <motion.form key="newpass" {...fade} onSubmit={resetPassword} className="space-y-4">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Choose a strong new password.</p>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                New password
-              </label>
-              <div className="mt-1.5">
-                <PasswordInput
-                  value={newPass}
-                  onChange={setNewPass}
-                  className={policyError ? "border-red-400 focus:ring-red-300" : ""}
-                  autoComplete="new-password"
-                  autoFocus
-                />
-              </div>
-              {policyError && <p className="mt-1 text-xs text-red-600">{policyError}</p>}
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                Re-enter password
-              </label>
-              <div className="mt-1.5">
-                <PasswordInput
-                  value={confirm}
-                  onChange={setConfirm}
-                  className={matchError ? "border-red-400 focus:ring-red-300" : ""}
-                  autoComplete="new-password"
-                />
-              </div>
-              {matchError && <p className="mt-1 text-xs text-red-600">{matchError}</p>}
-            </div>
-            <PasswordStrength password={newPass} />
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={handleClose}
-                className="rounded-full px-4 py-2 text-sm text-ink-muted hover:bg-cream transition">
-                Cancel
+              <button
+                type="submit"
+                disabled={otp.length !== 6 || loading || secondsLeft === 0 || otpStatus === "locked"}
+                className="mt-6 w-full rounded-xl bg-[#e8541a] py-3 text-sm font-semibold text-white transition hover:bg-[#d14a16] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Verifying…" : "Continue"}
               </button>
-              <button type="submit"
-                disabled={!newPass || !confirm || !!policyError || !!matchError || loading}
-                className="btn-primary px-5 text-sm disabled:opacity-50">
-                {loading ? "Saving…" : "Set new password"}
-              </button>
-            </div>
-          </motion.form>
-        )}
-
-        {/* ── Step 4: Done ── */}
-        {step === "done" && (
-          <motion.div key="done" {...fade} className="space-y-4 py-2 text-center">
-            <div className="text-4xl">🔒</div>
-            <div>
-              <p className="font-semibold text-lg">Password reset!</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-                Sign in with your new password.
-              </p>
-            </div>
-            <button onClick={handleClose} className="btn-primary w-full">Done</button>
-          </motion.div>
-        )}
-
-      </AnimatePresence>
+              <BackToSignIn onClick={handleClose} />
+            </motion.form>
+          )}
+        </AnimatePresence>
+      </div>
     </Modal>
   );
 }
 
+function OtpSubtitle({ email }: { email: string }) {
+  return (
+    <ResetPageHeader
+      title="Enter verification code"
+      subtitle={
+        <>
+          Code sent to <span className="text-white">{email}</span>
+        </>
+      }
+    />
+  );
+}

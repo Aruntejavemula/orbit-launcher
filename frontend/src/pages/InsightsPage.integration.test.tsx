@@ -44,7 +44,7 @@ describe("InsightsPage integration", () => {
     );
     renderInsights();
     await waitFor(() => {
-      expect(screen.getByText("Claude")).toBeInTheDocument();
+      expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
     });
   });
 
@@ -58,7 +58,7 @@ describe("InsightsPage integration", () => {
     );
     renderInsights();
     await waitFor(() => {
-      expect(screen.getByText("Claude")).toBeInTheDocument();
+      expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
     });
   });
 
@@ -73,7 +73,7 @@ describe("InsightsPage integration", () => {
     );
     renderInsights();
     await waitFor(() => {
-      expect(screen.getByText("Claude")).toBeInTheDocument();
+      expect(screen.getAllByText("Claude").length).toBeGreaterThan(0);
     });
   });
 

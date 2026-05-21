@@ -110,13 +110,13 @@ class TestUsageStats:
 
 
 class TestRenewals:
-    async def test_returns_apps_expiring_within_30_days(self, int_client, db_session):
+    async def test_returns_apps_expiring_within_7_days(self, int_client, db_session):
         user = await seed_user(db_session)
         soon = await seed_app(db_session, user.id, slug="soon", plan="paid")
-        soon.expires_at = datetime.now(timezone.utc) + timedelta(days=10)
+        soon.expires_at = datetime.now(timezone.utc) + timedelta(days=5)
 
         far = await seed_app(db_session, user.id, slug="far", plan="paid")
-        far.expires_at = datetime.now(timezone.utc) + timedelta(days=60)
+        far.expires_at = datetime.now(timezone.utc) + timedelta(days=14)
 
         await db_session.commit()
 
@@ -136,19 +136,19 @@ class TestRenewals:
     async def test_days_until_calculated(self, int_client, db_session):
         user = await seed_user(db_session)
         app = await seed_app(db_session, user.id, slug="expiring")
-        app.expires_at = datetime.now(timezone.utc) + timedelta(days=15)
+        app.expires_at = datetime.now(timezone.utc) + timedelta(days=3)
         await db_session.commit()
 
         resp = await int_client.get("/api/insights/renewals", cookies=make_auth_cookie(user.id))
         data = resp.json()
-        assert data[0]["days_until"] >= 14
+        assert data[0]["days_until"] >= 2
 
     async def test_ordered_by_expires_at(self, int_client, db_session):
         user = await seed_user(db_session)
         later = await seed_app(db_session, user.id, slug="later", plan="paid")
-        later.expires_at = datetime.now(timezone.utc) + timedelta(days=20)
+        later.expires_at = datetime.now(timezone.utc) + timedelta(days=6)
         sooner = await seed_app(db_session, user.id, slug="sooner", plan="paid")
-        sooner.expires_at = datetime.now(timezone.utc) + timedelta(days=5)
+        sooner.expires_at = datetime.now(timezone.utc) + timedelta(days=2)
         await db_session.commit()
 
         resp = await int_client.get("/api/insights/renewals", cookies=make_auth_cookie(user.id))

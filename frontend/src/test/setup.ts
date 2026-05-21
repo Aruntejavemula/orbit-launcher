@@ -9,6 +9,21 @@ import axios from "axios";
 // api.ts instance picks it up as an absolute URL (required for Node fetch).
 axios.defaults.adapter = "fetch";
 
+// jsdom has no matchMedia (used by AppGrid mobile/desktop layout)
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
 // Stub Notification API (not available in jsdom)
 Object.defineProperty(globalThis, "Notification", {
   value: {

@@ -7,6 +7,7 @@ import { formatCurrency } from "../utils/countryData";
 import BrandIcon from "../components/BrandIcon";
 import { relativeTime } from "../utils/time";
 import { hexToRgb } from "../utils/color";
+import { isUpcomingRenewal } from "../utils/sidebarData";
 
 const CAT_COLORS: Record<string, string> = {
   ai: "#6B8F71",
@@ -42,10 +43,8 @@ export default function InsightsPage() {
       }));
     const totalCat = Math.max(1, byCategory.reduce((s, c) => s + c.count, 0));
 
-    // Renewals in next 30 days
     const now = Date.now();
-    const in30 = now + 30 * 86_400_000;
-    const renewingSoon = apps.filter((a) => a.expiresAt && a.expiresAt > now && a.expiresAt <= in30);
+    const renewingSoon = apps.filter((a) => isUpcomingRenewal(a, undefined, now));
 
     // Spend breakdown — only apps where user entered a real price
     const paidApps = apps.filter((a) => a.plan === "paid");
@@ -92,7 +91,7 @@ export default function InsightsPage() {
           label="Total apps"
           value={stats.total}
           style={isDark
-            ? { background: "#1a2e1a", border: "1px solid #2a4a2a", color: "#ffffff", labelColor: "#8aab8a" }
+            ? { background: "var(--surface)", border: "1px solid var(--line)", color: "var(--text)", labelColor: "var(--text-muted)" }
             : { background: "#D4E3D2" }
           }
         />
@@ -175,9 +174,9 @@ export default function InsightsPage() {
       </section>
 
       {/* Renewals soon */}
-      <Card title="Renewing in the next 30 days">
+      <Card title="Renewing in the next 7 days">
         {stats.renewingSoon.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No renewals in the next 30 days.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No renewals in the next 7 days.</p>
         ) : (
           <ul className="space-y-3">
             {stats.renewingSoon.map((a) => {

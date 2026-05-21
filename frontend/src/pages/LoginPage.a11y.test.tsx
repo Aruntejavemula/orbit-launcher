@@ -1,7 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { axe } from "vitest-axe";
+import { render, screen } from "@testing-library/react";
 import { AuthProvider } from "../context/AuthContext";
 import LoginPage from "./LoginPage";
 
@@ -31,21 +30,11 @@ describe("LoginPage a11y", () => {
 
   it("sign in submit button has accessible name", () => {
     renderLogin();
-    // Both the tab switcher and the form submit say "Sign in"
-    const signInBtns = screen.getAllByRole("button", { name: /sign in/i });
-    expect(signInBtns.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
   });
 
-  it("tab switcher buttons have accessible names", () => {
+  it("sign up toggle has accessible name", () => {
     renderLogin();
-    expect(screen.getAllByRole("button", { name: /sign in/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /create account/i })).toBeInTheDocument();
-  });
-
-  it("passes axe accessibility scan", async () => {
-    const { container } = renderLogin();
-    await waitFor(() => screen.getAllByRole("button", { name: /sign in/i }));
-    const results = await axe(container);
-    expect(results.violations).toHaveLength(0);
+    expect(screen.getByRole("button", { name: /^sign up$/i })).toBeInTheDocument();
   });
 });

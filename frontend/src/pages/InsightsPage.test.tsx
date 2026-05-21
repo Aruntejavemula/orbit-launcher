@@ -93,7 +93,7 @@ describe("InsightsPage", () => {
   it("shows renewing soon section", async () => {
     renderInsights();
     await waitFor(() => {
-      expect(screen.getByText(/renewing in the next 30 days/i)).toBeInTheDocument();
+      expect(screen.getByText(/renewing in the next 7 days/i)).toBeInTheDocument();
     });
   });
 
@@ -133,13 +133,13 @@ describe("InsightsPage", () => {
     });
   });
 
-  it("shows no renewals when none in next 30 days", async () => {
+  it("shows no renewals when none in next 7 days", async () => {
     mockAppsState.apps = [
       { id: "a1", name: "Figma", slug: "figma", color: "ff5500", url: "https://figma.com", category: "design", plan: "paid", createdAt: Date.now(), lastOpened: null, expiresAt: Date.now() + 60 * 86_400_000 },
     ];
     renderInsights();
     await waitFor(() => {
-      expect(screen.getByText(/no renewals in the next 30 days/i)).toBeInTheDocument();
+      expect(screen.getByText(/no renewals in the next 7 days/i)).toBeInTheDocument();
     });
   });
 

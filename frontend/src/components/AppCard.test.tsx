@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import AppCard from "./AppCard";
 import type { AppItem } from "../types";
 
+vi.mock("./BrandIcon", () => ({
+  default: () => <span data-testid="brand-icon" />,
+}));
+
 const mockApp: AppItem = {
   id: "app-1",
   name: "Figma",
@@ -48,7 +52,7 @@ describe("AppCard", () => {
 
     it("displays last opened time", () => {
       render(<AppCard {...defaultProps} />);
-      expect(screen.getByText(/Opened/)).toBeInTheDocument();
+      expect(screen.getByText(/ago|just now|Never/)).toBeInTheDocument();
     });
 
     it("shows 'Never' for null lastOpened", () => {
@@ -67,19 +71,19 @@ describe("AppCard", () => {
 
     it("shows renewal info for paid plan with expiry", () => {
       const app = { ...mockApp, plan: "paid" as const, expiresAt: Date.now() + 5 * 86400000 };
-      render(<AppCard {...defaultProps} app={app} />);
+      render(<AppCard {...defaultProps} app={app} showLastOpened={false} />);
       expect(screen.getByText(/Renews in 5d/)).toBeInTheDocument();
     });
 
-    it("shows trial end for trial plan", () => {
+    it("shows expiry warning when within 7 days", () => {
       const app = { ...mockApp, plan: "trial" as const, expiresAt: Date.now() + 3 * 86400000 };
       render(<AppCard {...defaultProps} app={app} />);
-      expect(screen.getByText(/Trial ends in 3d/)).toBeInTheDocument();
+      expect(screen.getByText(/Expires in 3d/)).toBeInTheDocument();
     });
 
     it("shows 'Expired' when past expiry", () => {
       const app = { ...mockApp, plan: "paid" as const, expiresAt: Date.now() - 86400000 };
-      render(<AppCard {...defaultProps} app={app} />);
+      render(<AppCard {...defaultProps} app={app} showLastOpened={false} />);
       expect(screen.getByText(/Expired/)).toBeInTheDocument();
     });
   });

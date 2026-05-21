@@ -24,7 +24,14 @@ export default defineConfig({
         "src/main.tsx",
         "src/sw.ts",
         "src/types.ts",
+        "src/mocks/**",
       ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        statements: 80,
+        branches: 78,
+      },
     },
   },
 });

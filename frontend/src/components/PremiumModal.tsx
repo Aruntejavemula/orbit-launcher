@@ -8,7 +8,7 @@ interface Props {
 
 const features = [
   { icon: Zap, label: "Unlimited apps", desc: "Track every tool you use." },
-  { icon: BarChart3, label: "Advanced analytics", desc: "Deep insights on spend & usage." },
+  { icon: BarChart3, label: "Advanced analytics", desc: "Deep insights on spend & activity." },
   { icon: ShieldCheck, label: "Priority support", desc: "24/7 help when you need it." },
   { icon: Palette, label: "Custom themes", desc: "Brand your dashboard." },
 ];
