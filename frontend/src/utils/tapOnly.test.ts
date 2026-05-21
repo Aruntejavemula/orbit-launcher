@@ -39,6 +39,15 @@ describe("tapOnlyHandlers", () => {
     expect(onTap).not.toHaveBeenCalled();
   });
 
+  it("ignores move and up from a different pointer", () => {
+    const onTap = vi.fn();
+    const h = tapOnlyHandlers(onTap);
+    h.onPointerDown(ptr({ clientX: 10, clientY: 10, pointerId: 1 }));
+    h.onPointerMove(ptr({ clientX: 50, clientY: 10, pointerId: 2 }));
+    h.onPointerUp(ptr({ clientX: 10, clientY: 10, pointerId: 2 }));
+    expect(onTap).not.toHaveBeenCalled();
+  });
+
   it("onClick always prevents default", () => {
     const onTap = vi.fn();
     const h = tapOnlyHandlers(onTap);

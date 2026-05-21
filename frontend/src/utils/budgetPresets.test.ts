@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { detectDefaultCountryCode, formatBudgetAmount, getBudgetPresets } from "./budgetPresets";
 
 describe("getBudgetPresets", () => {
@@ -30,8 +30,23 @@ describe("formatBudgetAmount", () => {
 });
 
 describe("detectDefaultCountryCode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns a valid country code", () => {
     const code = detectDefaultCountryCode("US");
     expect(code.length).toBe(2);
+  });
+
+  it("falls back to US when fallback is unknown", () => {
+    expect(detectDefaultCountryCode("ZZ")).toBe("US");
+  });
+
+  it("returns fallback when Intl is unavailable", () => {
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+      throw new Error("no Intl");
+    });
+    expect(detectDefaultCountryCode("GB")).toBe("GB");
   });
 });

@@ -5,6 +5,7 @@ import {
   pathForPageId,
   isPackagedFile,
   appPathname,
+  appSearch,
   navigateAppRoot,
 } from "./navigation";
 
@@ -62,5 +63,22 @@ describe("navigation", () => {
     const loc = mockLocation({ protocol: "https:" });
     navigateAppRoot("?x=1");
     expect(loc.replace).toHaveBeenCalledWith("/?x=1");
+  });
+
+  it("appSearch returns location search", () => {
+    mockLocation({ protocol: "https:", search: "?tab=legal" });
+    expect(appSearch()).toBe("?tab=legal");
+  });
+
+  it("navigateAppRoot with empty search on https", () => {
+    const loc = mockLocation({ protocol: "https:" });
+    navigateAppRoot("");
+    expect(loc.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("navigateAppRoot adds ? when search omits it", () => {
+    const loc = mockLocation({ protocol: "https:" });
+    navigateAppRoot("tab=legal");
+    expect(loc.replace).toHaveBeenCalledWith("/?tab=legal");
   });
 });

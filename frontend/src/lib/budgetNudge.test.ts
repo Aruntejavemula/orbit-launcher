@@ -17,6 +17,7 @@ describe("budgetNudge", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("shows when onboarding done and budget unset", () => {
@@ -35,6 +36,23 @@ describe("budgetNudge", () => {
     snoozeBudgetNudge(USER);
     expect(getBudgetNudgeAt(USER)).not.toBeNull();
     clearBudgetNudge(USER);
+    expect(getBudgetNudgeAt(USER)).toBeNull();
+  });
+
+  it("shows when budget is zero or negative", () => {
+    expect(shouldShowBudgetNudge(0, true)).toBe(true);
+    expect(shouldShowBudgetNudge(-1, true)).toBe(true);
+  });
+
+  it("getBudgetNudgeAt returns null for invalid stored value", () => {
+    localStorage.setItem("remio_budget_nudge_at_user-1", "not-a-number");
+    expect(getBudgetNudgeAt(USER)).toBeNull();
+  });
+
+  it("getBudgetNudgeAt returns null when storage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
     expect(getBudgetNudgeAt(USER)).toBeNull();
   });
 });
