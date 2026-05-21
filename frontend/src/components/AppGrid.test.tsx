@@ -40,6 +40,22 @@ function makeApp(id: string, name: string): AppItem {
   };
 }
 
+function mockMatchMedia(desktop: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches: desktop && query.includes("min-width"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+  );
+}
+
 describe("AppGrid", () => {
   const onOpenApp = vi.fn();
   const onClearSearch = vi.fn();
@@ -48,6 +64,7 @@ describe("AppGrid", () => {
     onOpenApp.mockReset();
     onClearSearch.mockReset();
     mockReorder.mockReset();
+    mockMatchMedia(false);
   });
 
   describe("empty states", () => {
@@ -113,6 +130,13 @@ describe("AppGrid", () => {
   });
 
   describe("rendering apps", () => {
+    it("renders mobile list rows below md breakpoint", () => {
+      const apps = [makeApp("1", "Figma")];
+      render(<AppGrid apps={apps} totalApps={1} onOpenApp={onOpenApp} />);
+      expect(screen.getByTestId("app-grid-mobile")).toBeInTheDocument();
+      expect(screen.queryByTestId("app-grid-desktop")).not.toBeInTheDocument();
+    });
+
     it("renders app cards", () => {
       const apps = [makeApp("1", "Figma"), makeApp("2", "Slack")];
       render(<AppGrid apps={apps} totalApps={2} onOpenApp={onOpenApp} />);
@@ -129,6 +153,10 @@ describe("AppGrid", () => {
   });
 
   describe("drag and drop", () => {
+    beforeEach(() => {
+      mockMatchMedia(true);
+    });
+
     it("calls reorder when an item is dropped on another", () => {
       const apps = [makeApp("1", "Figma"), makeApp("2", "Slack")];
       render(<AppGrid apps={apps} totalApps={2} onOpenApp={onOpenApp} />);

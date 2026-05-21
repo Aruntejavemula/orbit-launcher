@@ -21,6 +21,7 @@ export function toClientSafeUser(user: User): User {
     name: user.name,
     email: user.email,
     avatar_url: user.avatar_url,
+    remember_device: user.remember_device ?? false,
   };
 }
 

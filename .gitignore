@@ -4,6 +4,8 @@ dist-ssr
 frontend/release/
 frontend/release-*/
 frontend/electron/store.appx.json
+frontend/electron/store-update/bin/
+frontend/electron/store-update/obj/
 *.local
 .DS_Store
 .vscode/*
@@ -22,6 +24,8 @@ backend/backups/
 .coverage
 coverage/
 frontend/coverage/
+frontend/build/
+frontend/.jscpd-tmp/
 test-results/
 *.tsbuildinfo
 

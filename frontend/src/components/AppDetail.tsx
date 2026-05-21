@@ -1,18 +1,16 @@
 import { useState } from "react";
 import {
   ArrowLeft,
-  ExternalLink,
   Settings as SettingsIcon,
   Info,
   Trash2,
-  Clock,
   CalendarDays,
 } from "lucide-react";
 import type { AppItem } from "../types";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
 import ConfirmModal from "./ConfirmModal";
-import { relativeTime } from "../utils/time";
+import AppActivitySection from "./AppActivitySection";
 import { hexToRgb } from "../utils/color";
 import { useApps } from "../context/AppsContext";
 
@@ -22,7 +20,7 @@ interface Props {
 }
 
 export default function AppDetail({ app, onBack }: Props) {
-  const { launch, removeApp } = useApps();
+  const { launch, removeApp, history } = useApps();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const tileBg = `rgba(${hexToRgb(app.color)}, 0.18)`;
   const shadow = `0 12px 28px rgba(${hexToRgb(app.color)}, 0.35)`;
@@ -64,8 +62,6 @@ export default function AppDetail({ app, onBack }: Props) {
             <Badge plan={app.plan} />
             <span>·</span>
             <span className="capitalize">{app.category}</span>
-            <span>·</span>
-            <span>{relativeTime(app.lastOpened)}</span>
           </div>
         </div>
 
@@ -77,9 +73,9 @@ export default function AppDetail({ app, onBack }: Props) {
         </button>
       </section>
 
+      <AppActivitySection app={app} history={history} />
+
       <section className="rounded-2xl shadow-card" style={{ background: "var(--surface)" }}>
-        <Row icon={ExternalLink} label="Visit Website" hint={app.url} onClick={() => window.open(app.url, "_blank")} />
-        <Divider />
         <Row icon={SettingsIcon} label="Manage App" hint="Edit name, category, and plan" />
         <Divider />
         <Row icon={Info} label="Details" hint={`Added ${new Date(app.createdAt).toLocaleDateString()}`} />
@@ -101,10 +97,11 @@ export default function AppDetail({ app, onBack }: Props) {
         onCancel={() => setConfirmRemove(false)}
       />
 
-      <section className="grid grid-cols-2 gap-4">
-        <Tile icon={Clock} label="Time this week" value={fmtMins(app.weeklyMinutes ?? 0)} />
-        <Tile icon={CalendarDays} label="Subscription" value={expiryLabel} />
-      </section>
+      {app.plan !== "free" && (
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Tile icon={CalendarDays} label="Subscription" value={expiryLabel} />
+        </section>
+      )}
     </div>
   );
 }
@@ -115,32 +112,44 @@ function Row({
   hint,
   onClick,
   danger,
+  iconColor,
 }: {
-  icon: typeof ExternalLink;
+  icon: typeof SettingsIcon;
   label: string;
   hint?: string;
   onClick?: () => void;
   danger?: boolean;
+  iconColor?: string;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-cream/40"
-    >
-      <Icon size={18} className={danger ? "text-red-600" : "text-sage-ink"} />
+  const className = `flex w-full items-center gap-3 px-5 py-4 text-left ${onClick ? "transition hover:bg-cream/40" : ""}`;
+  const inner = (
+    <>
+      <Icon
+        size={18}
+        className={danger ? "text-red-600" : iconColor ? "" : "text-sage-ink"}
+        style={iconColor && !danger ? { color: iconColor } : undefined}
+      />
       <div className="flex-1 min-w-0">
         <div className={`text-sm font-semibold ${danger ? "text-red-600" : ""}`}>{label}</div>
         {hint && <div className="truncate text-xs" style={{ color: "var(--text-muted)" }}>{hint}</div>}
       </div>
-    </button>
+    </>
   );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 function Divider() {
   return <div className="mx-5 h-px" style={{ background: "var(--line)" }} />;
 }
 
-function Tile({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+function Tile({ icon: Icon, label, value }: { icon: typeof CalendarDays; label: string; value: string }) {
   return (
     <div className="rounded-2xl p-4 shadow-card" style={{ background: "var(--surface)" }}>
       <Icon size={16} className="text-sage-ink" />
@@ -152,10 +161,3 @@ function Tile({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
   );
 }
 
-
-function fmtMins(m: number): string {
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r === 0 ? `${h}h` : `${h}h ${r}m`;
-}

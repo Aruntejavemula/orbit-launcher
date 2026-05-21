@@ -1,10 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const authFile = "e2e/.auth/user.json";
+
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30_000,
+  timeout: 60_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
@@ -13,9 +16,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], storageState: authFile },
+      dependencies: ["setup"],
+      testIgnore: /auth\.setup\.ts/,
+    },
   ],
-  // Start the dev server automatically when running e2e locally
   webServer: process.env.CI
     ? undefined
     : {

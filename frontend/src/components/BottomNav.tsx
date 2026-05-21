@@ -19,12 +19,12 @@ export default function BottomNav({ page, onNavigate, onAdd }: Props) {
         <button
           onClick={onAdd}
           aria-label="Add"
-          className="absolute -top-6 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-sage-dark text-paper shadow-fab"
+          className="fab-add absolute -top-6 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full shadow-fab"
         >
           <Plus size={22} strokeWidth={2.5} />
         </button>
         <span className="w-12" aria-hidden />
-        <Item icon={Timer} label="Usage" active={page === "usage"} onClick={() => onNavigate("usage")} />
+        <Item icon={Timer} label="Activity" active={page === "activity"} onClick={() => onNavigate("activity")} />
         <Item icon={Settings} label="Settings" active={page === "settings"} onClick={() => onNavigate("settings")} />
       </div>
     </nav>

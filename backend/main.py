@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, DatabaseError, IntegrityError, TimeoutError as SATimeoutError
 from dotenv import load_dotenv
-from database import get_db, pool_status
+from database import get_db
 import logging
 import logging.config
 import os

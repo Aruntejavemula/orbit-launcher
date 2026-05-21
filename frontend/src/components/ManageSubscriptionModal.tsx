@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Modal from "./Modal";
 import { useApps } from "../context/AppsContext";
 import api from "../api";
+import { pageTransition, pageVariants } from "../lib/motion";
 
 const CANCEL_REASONS = [
   "Too expensive",
@@ -80,7 +81,15 @@ export default function ManageSubscriptionModal({ open, onClose }: Props) {
     <Modal open={open} onClose={handleClose} title="Manage Subscription" width={480}>
       <AnimatePresence mode="wait">
         {step === "overview" && (
-          <motion.div key="overview" {...fade} className="space-y-5">
+          <motion.div
+            key="overview"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="space-y-5"
+          >
             {/* Status badge */}
             <div className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: "#6B8F71", background: "var(--hero)" }}>
               <div>
@@ -129,7 +138,15 @@ export default function ManageSubscriptionModal({ open, onClose }: Props) {
         )}
 
         {step === "reason" && (
-          <motion.div key="reason" {...fade} className="space-y-4">
+          <motion.div
+            key="reason"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="space-y-4"
+          >
             <div className="flex items-center gap-2">
               <button onClick={() => setStep("overview")} className="text-ink-muted hover:text-ink transition-colors">
                 <X size={16} />
@@ -167,7 +184,15 @@ export default function ManageSubscriptionModal({ open, onClose }: Props) {
         )}
 
         {step === "offer" && (
-          <motion.div key="offer" {...fade} className="space-y-4">
+          <motion.div
+            key="offer"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="space-y-4"
+          >
             <div className="flex items-center gap-2">
               <button onClick={() => setStep("reason")} className="text-ink-muted hover:text-ink transition-colors">
                 <X size={16} />
@@ -213,7 +238,15 @@ export default function ManageSubscriptionModal({ open, onClose }: Props) {
         )}
 
         {step === "done" && (
-          <motion.div key="done" {...fade} className="space-y-4 text-center py-4">
+          <motion.div
+            key="done"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="space-y-4 text-center py-4"
+          >
             <div className="text-4xl">👋</div>
             <div>
               <h3 className="font-semibold text-lg">Subscription cancelled</h3>
@@ -243,10 +276,3 @@ function Stat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
-
-const fade = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
-  transition: { duration: 0.2 },
-};

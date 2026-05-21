@@ -4,6 +4,7 @@ import {
   timezoneForCountry,
   currencyForCountry,
   formatCurrency,
+  formatBudgetAmount,
   currencySymbol,
   COUNTRY_TIMEZONE,
   COUNTRIES,
@@ -58,9 +59,23 @@ describe("formatCurrency", () => {
     expect(formatted).toContain("1,234.50");
   });
 
+  it("uses rupee symbol for India", () => {
+    expect(formatCurrency(200, "IN")).toMatch(/₹|INR/);
+    expect(formatCurrency(200, "IN")).toContain("200");
+  });
+
   it("handles fallback for invalid currency gracefully", () => {
     const formatted = formatCurrency(100, "ZZ");
     expect(formatted).toBe("$100.00");
+  });
+});
+
+describe("formatBudgetAmount", () => {
+  it("formats whole rupees for India without decimals", () => {
+    const formatted = formatBudgetAmount(200, "IN");
+    expect(formatted).toMatch(/₹/);
+    expect(formatted).not.toContain(".00");
+    expect(formatted).toContain("200");
   });
 });
 

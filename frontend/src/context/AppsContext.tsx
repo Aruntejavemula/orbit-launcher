@@ -34,7 +34,6 @@ interface AppApiResponse {
   frequency: string | null;
   pending_unsubscribe_at: string | null;
   monthly_cost: number | null;
-  weeklyMinutes?: number;
 }
 
 interface LaunchApiResponse {
@@ -61,7 +60,6 @@ function toAppItem(raw: AppApiResponse): AppItem {
       ? new Date(raw.pending_unsubscribe_at).getTime()
       : null,
     monthlyCost: raw.monthly_cost != null ? Number(raw.monthly_cost) : null,
-    weeklyMinutes: raw.weeklyMinutes,
   };
 }
 

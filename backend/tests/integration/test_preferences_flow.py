@@ -111,6 +111,39 @@ class TestUpdatePreferences:
         assert data["show_last_opened"] is False
         assert data["reminder_days"] == 30
 
+    async def test_patch_monthly_budget_persists(self, int_client, db_session):
+        user = await seed_user(db_session)
+        prefs = await seed_preferences(db_session, user.id)
+        await db_session.commit()
+
+        resp = await int_client.patch(
+            "/api/preferences",
+            json={"monthly_budget": 500},
+            cookies=make_auth_cookie(user.id),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["monthly_budget"] == 500
+
+        await db_session.refresh(prefs)
+        assert prefs.monthly_budget == 500
+
+        get_resp = await int_client.get("/api/preferences", cookies=make_auth_cookie(user.id))
+        assert get_resp.json()["monthly_budget"] == 500
+
+    async def test_patch_monthly_budget_clear(self, int_client, db_session):
+        user = await seed_user(db_session)
+        prefs = await seed_preferences(db_session, user.id)
+        prefs.monthly_budget = 300
+        await db_session.commit()
+
+        resp = await int_client.patch(
+            "/api/preferences",
+            json={"monthly_budget": None},
+            cookies=make_auth_cookie(user.id),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["monthly_budget"] is None
+
     async def test_partial_update_leaves_other_fields(self, int_client, db_session):
         user = await seed_user(db_session)
         await seed_preferences(db_session, user.id)

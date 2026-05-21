@@ -1,36 +1,25 @@
-import { test, expect } from "./fixtures";
-
-async function setupUser(page: import("@playwright/test").Page) {
-  const email = `e2e-sidebar-${Date.now()}@test.remio.app`;
-  await page.goto("/");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.getByPlaceholder("Your name").fill("Sidebar Tester");
-  await page.getByPlaceholder("you@example.com").fill(email);
-  await page.locator('input[type="password"]').fill("SidebarTest1!");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/(home|$)/, { timeout: 15_000 });
-}
+import { test, expect, openAuthenticatedHome, ensureAppReady } from "./fixtures";
 
 test.describe("Sidebar navigation", () => {
+  test.beforeEach(async ({ page }) => {
+    await openAuthenticatedHome(page);
+    await ensureAppReady(page);
+  });
+
   test("clicking Insights nav goes to /insights", async ({ page }) => {
-    await setupUser(page);
-    await page.getByRole("link", { name: /insights/i }).click();
-    await page.waitForURL(/insights/, { timeout: 8000 });
-    await expect(page).toHaveURL(/insights/);
+    await page.getByRole("button", { name: "Insights" }).click();
+    await expect(page.getByRole("heading", { name: "Insights" })).toBeVisible({ timeout: 8000 });
   });
 
   test("clicking Settings nav goes to /settings", async ({ page }) => {
-    await setupUser(page);
-    await page.getByRole("link", { name: /settings/i }).click();
-    await page.waitForURL(/settings/, { timeout: 8000 });
-    await expect(page).toHaveURL(/settings/);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 8000 });
   });
 
   test("clicking Home nav goes back to home", async ({ page }) => {
-    await setupUser(page);
-    await page.goto("/settings");
-    await page.getByRole("link", { name: /home|apps/i }).first().click();
-    await page.waitForURL(/\/(home|$)/, { timeout: 8000 });
-    await expect(page).not.toHaveURL(/settings/);
+    await page.getByRole("button", { name: "Insights" }).click();
+    await ensureAppReady(page);
+    await page.getByRole("button", { name: "All Apps" }).click();
+    await expect(page.getByPlaceholder(/search and launch/i)).toBeVisible({ timeout: 8000 });
   });
 });
