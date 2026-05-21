@@ -204,6 +204,7 @@ def make_preferences(
     prefs.reminder_email = True
     prefs.reminder_push = False
     prefs.onboarding_completed = onboarding_completed
+    prefs.monthly_budget = None
     prefs.country = ""
     prefs.created_at = datetime.now(timezone.utc)
     prefs.updated_at = datetime.now(timezone.utc)

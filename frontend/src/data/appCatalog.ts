@@ -206,4 +206,5 @@ export const appCatalog: CatalogApp[] = [
   { name: "Formula 1 TV Pro", slug: "f1tvpro", color: "E10600", category: "sports", url: "https://f1tv.formula1.com" },
   { name: "MotoGP VideoPass", slug: "motogpvideopass", color: "000000", category: "sports", url: "https://video.motogp.com" },
   { name: "FanCode", slug: "fancode", color: "000000", category: "sports", url: "https://fancode.com" },
+  { name: "Willow", slug: "willow", color: "1B4332", category: "sports", url: "https://www.willow.tv" },
 ];

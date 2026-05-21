@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/sw.ts!",
+    "src/pages/PrivacyPolicyPage.tsx!",
+    "src/pages/TermsPage.tsx!",
+    "src/pages/EulaPage.tsx!",
+    "src/pages/LicensesPage.tsx!",
+    "electron/preload.cjs!",
+    "e2e/**/*.ts!",
+    "scripts/electron-store-build.cjs!",
+    "electron-builder.config.cjs!",
+    "electron-builder.pack.config.cjs!",
+    "electron-builder.ci.config.cjs!"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "e2e/**/*.ts",
+    "electron/**/*.cjs",
+    "scripts/**/*.{cjs,mjs}",
+    "electron-builder*.config.cjs"
+  ]
+}

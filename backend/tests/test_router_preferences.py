@@ -211,3 +211,30 @@ class TestUpdatePreferences:
 
         resp = await client.patch("/api/preferences", json={"theme": theme})
         assert resp.status_code == 200
+
+    @pytest.mark.parametrize("monthly_budget,expected_status", [
+        (0, 422),
+        (100_001, 422),
+        (500, 200),
+    ])
+    async def test_monthly_budget_validation(
+        self, client, mock_db, monthly_budget, expected_status
+    ):
+        prefs = make_preferences()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = prefs
+        mock_db.execute.return_value = result_mock
+        mock_db.refresh = AsyncMock(return_value=None)
+
+        resp = await client.patch("/api/preferences", json={"monthly_budget": monthly_budget})
+        assert resp.status_code == expected_status
+
+    async def test_country_uppercased_on_patch(self, client, mock_db):
+        prefs = make_preferences()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = prefs
+        mock_db.execute.return_value = result_mock
+        mock_db.refresh = AsyncMock(return_value=None)
+
+        resp = await client.patch("/api/preferences", json={"country": "gb"})
+        assert resp.status_code == 200

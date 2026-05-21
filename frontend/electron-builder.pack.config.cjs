@@ -1,6 +1,7 @@
 const path = require("path");
 
-const appIcon = path.join(__dirname, "public", "icon-512x512.png");
+const { resolveAppIcon } = require("./electron/resolve-app-icon.cjs");
+const appIcon = resolveAppIcon(__dirname);
 
 /** Local dev — unsigned folder at release/win-unpacked/Remio.exe */
 module.exports = {
@@ -14,7 +15,7 @@ module.exports = {
   win: {
     target: [{ target: "dir", arch: ["x64"] }],
     icon: appIcon,
-    signAndEditExecutable: true,
+    signAndEditExecutable: false,
     signDlls: false,
     verifyUpdateCodeSignature: false,
   },

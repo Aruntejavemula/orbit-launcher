@@ -1,13 +1,21 @@
 import { memo } from "react";
-import { GripVertical, AlertTriangle, RefreshCw, Infinity as InfinityIcon } from "lucide-react";
+import { GripVertical } from "lucide-react";
 import type { AppItem } from "../types";
-import { relativeTime } from "../utils/time";
-import { hexToRgb } from "../utils/color";
+import { cardBrandBackground, iconTileBrandBackground } from "../utils/color";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
+import {
+  EXPIRY_WARN_COLOR,
+  cardExpiryWarning,
+  cardExpiryWarningUrgent,
+  cardMetaRight,
+  cardPriceLabel,
+  cardTimeAgo,
+} from "../utils/appCardFormat";
 
 interface Props {
   app: AppItem;
+  countryCode?: string;
   compact?: boolean;
   showLastOpened?: boolean;
   onOpen: (id: string) => void;
@@ -17,10 +25,12 @@ interface Props {
   onDragOver: (id: string) => void;
   onDragEnd: () => void;
   onDrop: (id: string) => void;
+  uiDark?: boolean;
 }
 
 export default memo(function AppCard({
   app,
+  countryCode = "",
   compact = false,
   showLastOpened = true,
   onOpen,
@@ -30,11 +40,16 @@ export default memo(function AppCard({
   onDragOver,
   onDragEnd,
   onDrop,
+  uiDark = false,
 }: Props) {
-  const rgb = hexToRgb(app.color);
-  const cardBg = `rgba(${rgb}, 0.14)`;
-  const cardBorder = `rgba(${rgb}, 0.22)`;
-  const tileBg = "#fff";
+  const cardBg = cardBrandBackground(app.color, uiDark);
+  const iconTileBg = iconTileBrandBackground(app.color, uiDark);
+  const timeAgo = showLastOpened ? cardTimeAgo(app.lastOpened) : cardMetaRight(app, false);
+  const price = cardPriceLabel(app, countryCode);
+  const expiryWarn = cardExpiryWarning(app);
+  const expiryUrgent = cardExpiryWarningUrgent(app);
+  const iconSize = compact ? 18 : 22;
+  const tileSize = compact ? "1.75rem" : "2.25rem";
 
   return (
     <div
@@ -58,45 +73,53 @@ export default memo(function AppCard({
         onDrop(app.id);
       }}
       className={`app-card group relative flex cursor-pointer flex-col text-left ${
-        compact ? "rounded-xl p-2.5" : "rounded-2xl p-4 max-sm:rounded-xl max-sm:p-2.5"
+        compact ? "gap-2 rounded-xl p-2.5" : "gap-2.5 rounded-2xl p-3.5 max-sm:rounded-xl max-sm:p-2.5"
       } ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}`}
-      style={{
-        background: cardBg,
-        border: `1px solid ${cardBorder}`,
-      }}
+      style={{ background: cardBg }}
+      title={app.name}
     >
-      <span
-        className={`grid place-items-center rounded-lg shadow-sm ${
-          compact ? "h-7 w-7" : "h-9 w-9 max-sm:h-7 max-sm:w-7"
-        }`}
-        style={{ background: tileBg }}
-      >
-        <BrandIcon
-          slug={app.slug}
-          color={app.color}
-          size={compact ? 16 : 20}
-          iconKey={app.iconKey}
-        />
-      </span>
-
-      <div
-        className={`truncate font-semibold ${
-          compact ? "mt-2 text-sm" : "mt-3 text-[15px] max-sm:mt-2 max-sm:text-sm"
-        }`}
-      >
-        {app.name}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span
+          className="app-card-icon-tile"
+          style={{ width: tileSize, height: tileSize, background: iconTileBg }}
+        >
+          <BrandIcon
+            slug={app.slug}
+            color={app.color}
+            size={iconSize}
+            iconKey={app.iconKey}
+            preserveBrandColor
+          />
+        </span>
+        <span className={`app-card-title min-w-0 flex-1 truncate font-semibold ${compact ? "text-sm" : "text-[15px]"}`}>
+          {app.name}
+        </span>
       </div>
 
-      <div className={`flex items-center justify-between gap-2 ${compact ? "mt-2" : "mt-3 max-sm:mt-2"}`}>
+      <div className="flex items-center justify-between gap-2">
         <Badge plan={app.plan} />
-        {showLastOpened && (
-          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-            {shortRelative(app.lastOpened)}
+        {timeAgo ? (
+          <span className={`app-card-subtle shrink-0 truncate ${compact ? "text-[10px]" : "text-[11px]"}`}>
+            {timeAgo}
           </span>
-        )}
+        ) : null}
       </div>
 
-      <ExpiryLine app={app} />
+      <div className="flex items-center justify-between gap-2">
+        <span className={`app-card-subtle font-medium tabular-nums ${compact ? "text-xs" : "text-sm"}`}>
+          {price}
+        </span>
+        {expiryWarn ? (
+          <span
+            className={`truncate font-medium ${compact ? "text-[10px]" : "text-[11px]"}`}
+            style={{ color: expiryUrgent ? EXPIRY_WARN_COLOR : "var(--card-subtle, var(--text-muted))" }}
+          >
+            {expiryWarn}
+          </span>
+        ) : app.plan === "free" ? (
+          <span className={`app-card-subtle ${compact ? "text-[10px]" : "text-[11px]"}`}>Free forever</span>
+        ) : null}
+      </div>
 
       <span
         aria-hidden
@@ -109,49 +132,3 @@ export default memo(function AppCard({
     </div>
   );
 });
-
-function ExpiryLine({ app }: { app: AppItem }) {
-  if (app.plan === "free") {
-    return (
-      <div
-        className="mt-2 flex items-center gap-1 text-[10px] font-medium max-sm:mt-1.5 sm:text-[11px]"
-        style={{ color: "var(--text-muted)" }}
-      >
-        <InfinityIcon size={11} />
-        <span>Free forever</span>
-      </div>
-    );
-  }
-  if (!app.expiresAt) return <div className="mt-2 h-[14px] max-sm:mt-1.5 max-sm:h-[12px]" />;
-  const days = Math.ceil((app.expiresAt - Date.now()) / 86_400_000);
-  const expired = days < 0;
-  const urgent = days <= 7;
-  const date = new Date(app.expiresAt).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
-  const label = expired
-    ? `Expired ${date}`
-    : app.plan === "trial"
-    ? days === 0
-      ? `Trial ends today`
-      : `Trial ends in ${days}d · ${date}`
-    : days === 0
-    ? `Renews today`
-    : `Renews in ${days}d · ${date}`;
-  return (
-    <div
-      className="mt-2 flex items-center gap-1 truncate text-[10px] font-semibold max-sm:mt-1.5 sm:text-[11px]"
-      style={{ color: urgent ? "#B5651D" : "var(--text-muted)" }}
-    >
-      {urgent ? <AlertTriangle size={11} /> : <RefreshCw size={11} />}
-      <span className="truncate">{label}</span>
-    </div>
-  );
-}
-
-
-function shortRelative(ts: number | null): string {
-  if (!ts) return "Never";
-  return relativeTime(ts);
-}

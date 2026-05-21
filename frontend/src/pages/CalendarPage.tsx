@@ -21,6 +21,7 @@ import BrandIcon from "../components/BrandIcon";
 import ConfirmModal from "../components/ConfirmModal";
 import type { AppItem, ReminderMethod } from "../types";
 import { subscribeToPush, unsubscribeFromPush } from "../utils/pushSubscription";
+import { isUpcomingRenewal, daysUntilRenewal } from "../utils/sidebarData";
 
 const REMINDER_PRESETS = [1, 3, 7, 14, 30];
 const DAYS_OPTIONS = [1, 3, 7, 14, 30];
@@ -70,12 +71,9 @@ export default function CalendarPage() {
   const upcoming = useMemo(() => {
     const now = Date.now();
     return apps
-      .filter((a) => a.expiresAt)
+      .filter((a) => isUpcomingRenewal(a, undefined, now))
       .sort((a, b) => (a.expiresAt ?? 0) - (b.expiresAt ?? 0))
-      .map((a) => {
-        const days = Math.ceil(((a.expiresAt ?? now) - now) / 86_400_000);
-        return { app: a, days };
-      });
+      .map((a) => ({ app: a, days: daysUntilRenewal(a.expiresAt!, now) }));
   }, [apps]);
 
   const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -222,12 +220,13 @@ export default function CalendarPage() {
             <h2 className="font-display text-lg font-semibold">Reminders</h2>
           </div>
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-            Get notified before any trial or subscription expires.
+            Automatic email and push at 3 and 1 days before each renewal (when enabled below). Add per-app
+            reminders for custom timing.
           </p>
 
           <div className="mt-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              Default notify me
+              Default for new reminders
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {REMINDER_PRESETS.map((d) => {

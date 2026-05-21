@@ -42,7 +42,7 @@ describe("SplashScreen", () => {
     expect(screen.getByText("Remio")).toBeInTheDocument();
   });
 
-  it("renders app icon", () => {
+  it("renders hero icon", () => {
     const onComplete = vi.fn();
     render(<SplashScreen onComplete={onComplete} />);
     expect(screen.getByAltText("Remio")).toBeInTheDocument();

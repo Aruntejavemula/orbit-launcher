@@ -210,7 +210,7 @@ async def set_remember_device(
     db: AsyncSession = Depends(get_db),
 ):
     user = await get_or_404(db, select(User).where(User.id == user_id), "Account not found.")
-    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_device else None
+    expire = _REMEMBER_EXPIRE_MINUTES if body.remember_device else _SESSION_EXPIRE_MINUTES
     token = create_access_token(
         str(user.id),
         token_version=user.token_version,
@@ -320,7 +320,7 @@ async def desktop_session(body: DesktopSessionRequest, db: AsyncSession = Depend
         select(User).where(User.id == user_id),
         "Account not found. Please sign in again.",
     )
-    expire = _REMEMBER_EXPIRE_MINUTES if remember_device else None
+    expire = _REMEMBER_EXPIRE_MINUTES if remember_device else _SESSION_EXPIRE_MINUTES
     token = create_access_token(
         str(user.id),
         token_version=user.token_version,

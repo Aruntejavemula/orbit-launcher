@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  ExternalLink,
   Trash2,
   Calendar,
   Repeat,
@@ -15,11 +14,11 @@ import {
   Heart,
   Tag,
 } from "lucide-react";
+import AppActivitySection from "./AppActivitySection";
 import type { AppItem } from "../types";
 import Badge from "./Badge";
 import BrandIcon from "./BrandIcon";
 import ConfirmModal from "./ConfirmModal";
-import { relativeTime } from "../utils/time";
 import { hexToRgb } from "../utils/color";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
@@ -33,7 +32,7 @@ interface Props {
 
 
 export default function AppDetailModal({ app, onClose }: Props) {
-  const { launch, removeApp, updateApp } = useApps();
+  const { launch, removeApp, updateApp, history } = useApps();
   const { prefs } = usePrefs();
   const country = prefs.country ?? "";
   const symb = currencySymbol(country);
@@ -92,7 +91,6 @@ export default function AppDetailModal({ app, onClose }: Props) {
 
   if (!app) return null;
   const rgb = hexToRgb(app.color);
-
   const expiryStr = app.expiresAt
     ? new Date(app.expiresAt).toLocaleDateString(undefined, {
         weekday: "short",
@@ -125,7 +123,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        className="modal-panel relative w-full max-w-md rounded-3xl shadow-pop overflow-y-auto pointer-events-auto"
+        className="modal-panel modal-panel-scroll relative w-full max-w-md rounded-3xl shadow-pop overflow-y-auto pointer-events-auto"
         style={{ background: "var(--modal-bg)", maxHeight: "calc(100vh - 48px)" }}
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -168,10 +166,6 @@ export default function AppDetailModal({ app, onClose }: Props) {
               </span>
             )}
           </div>
-          <div className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-            {relativeTime(app.lastOpened)}
-          </div>
-
           <button
             onClick={() => {
               launch(app.id);
@@ -220,10 +214,9 @@ export default function AppDetailModal({ app, onClose }: Props) {
           </div>
         )}
 
-        <div className="mt-5 overflow-hidden rounded-2xl" style={{ background: "var(--bg-deep)" }}>
-          <Row icon={ExternalLink} label="Visit Website" hint={app.url} onClick={() => window.open(app.url, "_blank", "noopener,noreferrer")} />
-          <Divider />
+        <AppActivitySection app={app} history={history} className="mt-5" />
 
+        <div className="mt-5 overflow-hidden rounded-2xl" style={{ background: "var(--bg-deep)" }}>
           <button
             onClick={() => setManageMode((m) => !m)}
             className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-cream/40"
@@ -374,8 +367,22 @@ export default function AppDetailModal({ app, onClose }: Props) {
               </div>
             </div>
           )}
+        </div>
 
-
+        <div
+          className="mt-4 overflow-hidden rounded-2xl"
+          style={{
+            background: "var(--bg-deep)",
+            border: "1px solid rgba(220, 80, 60, 0.22)",
+          }}
+        >
+          <p
+            className="px-4 pb-2 pt-3 text-[10px] font-bold uppercase tracking-wide"
+            style={{ color: "rgba(220, 80, 60, 0.85)" }}
+          >
+            Danger zone
+          </p>
+          <Divider />
           <Row
             icon={Trash2}
             label="Remove App"
@@ -405,19 +412,23 @@ function Row({
   hint,
   onClick,
   danger,
+  iconColor,
 }: {
-  icon: typeof ExternalLink;
+  icon: typeof Calendar;
   label: string;
   hint?: string;
   onClick?: () => void;
   danger?: boolean;
+  iconColor?: string;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-cream/40"
-    >
-      <Icon size={16} className={danger ? "text-red-600" : "text-sage-ink"} />
+  const className = `flex w-full items-center gap-3 px-4 py-3 text-left ${onClick ? "transition hover:bg-cream/40" : ""}`;
+  const inner = (
+    <>
+      <Icon
+        size={16}
+        className={danger ? "text-red-600" : iconColor ? "" : "text-sage-ink"}
+        style={iconColor && !danger ? { color: iconColor } : undefined}
+      />
       <div className="flex-1 min-w-0">
         <div className={`text-sm font-semibold ${danger ? "text-red-600" : ""}`}>{label}</div>
         {hint && (
@@ -426,8 +437,16 @@ function Row({
           </div>
         )}
       </div>
-    </button>
+    </>
   );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 function Divider() {

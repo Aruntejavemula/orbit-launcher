@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { hexToRgb, isDark } from "./color";
+import {
+  hexToRgb,
+  isDark,
+  needsMutedIconOnDark,
+  iconColorForTheme,
+  DARK_UI_ICON_ON_TILE,
+  HERO_ICON_TILE_BG,
+  cardBrandBackground,
+  iconTileBrandBackground,
+  brandAccentColor,
+  DARK_UI_CARD_LIFT,
+  DARK_UI_ACCENT_FALLBACK,
+} from "./color";
 
 describe("hexToRgb", () => {
   it("converts hex with hash", () => {
@@ -68,5 +80,47 @@ describe("isDark", () => {
 
   it("works without hash", () => {
     expect(isDark("000000")).toBe(true);
+  });
+});
+
+describe("needsMutedIconOnDark", () => {
+  it("true for near-black brands", () => {
+    expect(needsMutedIconOnDark("000000")).toBe(true);
+    expect(needsMutedIconOnDark("181717")).toBe(true);
+  });
+
+  it("false for saturated brands", () => {
+    expect(needsMutedIconOnDark("E50914")).toBe(false);
+    expect(needsMutedIconOnDark("1DB954")).toBe(false);
+  });
+});
+
+describe("iconColorForTheme", () => {
+  it("mutes only near-black on dark UI", () => {
+    expect(iconColorForTheme("000000", true)).toBe(DARK_UI_ICON_ON_TILE);
+    expect(iconColorForTheme("E50914", true)).toBe("E50914");
+  });
+
+  it("keeps brand color in light UI", () => {
+    expect(iconColorForTheme("000000", false)).toBe("000000");
+  });
+});
+
+describe("dark brand surfaces", () => {
+  it("lifts near-black cards on dark UI", () => {
+    expect(cardBrandBackground("000000", true)).toBe("#141414");
+    expect(iconTileBrandBackground("000000", true)).toBe(HERO_ICON_TILE_BG);
+    expect(iconTileBrandBackground("E50914", true)).toBe(HERO_ICON_TILE_BG);
+    expect(brandAccentColor("000000", true)).toBe(DARK_UI_ACCENT_FALLBACK);
+  });
+
+  it("keeps brand rgba tints in light UI", () => {
+    expect(cardBrandBackground("000000", false)).toBe("rgba(0, 0, 0, 0.14)");
+    expect(iconTileBrandBackground("E50914", false)).toBe("rgba(229, 9, 20, 0.22)");
+  });
+
+  it("keeps saturated brand colors on dark UI", () => {
+    expect(cardBrandBackground("E50914", true)).toBe("rgba(229, 9, 20, 0.14)");
+    expect(brandAccentColor("E50914", true)).toBe("#E50914");
   });
 });

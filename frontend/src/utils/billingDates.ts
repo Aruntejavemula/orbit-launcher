@@ -26,7 +26,7 @@ export function addCalendarMonths(from: Date, months: number): Date {
   return new Date(year, month, Math.min(day, lastDay));
 }
 
-export function addTrialDays(from: Date, days: number): Date {
+function addTrialDays(from: Date, days: number): Date {
   const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   d.setDate(d.getDate() + Math.max(1, days));
   return d;

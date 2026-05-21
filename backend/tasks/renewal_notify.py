@@ -24,6 +24,9 @@ logger = logging.getLogger("orbit.renewal_notify")
 
 Channel = Literal["email", "push"]
 
+# Default automated reminders when the user has no per-app reminder for that offset.
+DEFAULT_AUTOMATED_REMINDER_DAYS = (3, 1)
+
 
 @dataclass(frozen=True)
 class PendingDelivery:
@@ -124,8 +127,7 @@ async def collect_pending_deliveries(db: AsyncSession, today: date) -> list[Pend
         if matched_explicit or not prefs:
             continue
 
-        default_days = prefs.reminder_days
-        if days_left != default_days:
+        if days_left not in DEFAULT_AUTOMATED_REMINDER_DAYS:
             continue
 
         if prefs.reminder_email:

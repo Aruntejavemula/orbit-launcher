@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "./test/server";
 import { fakePrefs } from "./test/handlers";
@@ -97,14 +97,14 @@ describe("App routing and shell", () => {
     );
   }, 20000);
 
-  it("returns null for unknown path when logged out", async () => {
+  it("shows auth loading for unknown path when logged out", async () => {
     window.history.replaceState({}, "", "/unknown-path");
     server.use(
       http.get(`${BASE}/auth/me`, () => new HttpResponse(null, { status: 401 }))
     );
-    const { container } = renderApp();
+    renderApp();
     await waitFor(
-      () => expect(container.firstChild).toBeNull(),
+      () => expect(screen.getByLabelText(/signing in/i)).toBeInTheDocument(),
       { timeout: 8000 }
     );
   }, 20000);
@@ -131,7 +131,8 @@ describe("App routing and shell", () => {
     const addBtn = screen.getByRole("button", { name: /add a new app/i });
     fireEvent.click(addBtn);
     await waitFor(() => screen.getByText(/add a tool/i));
-    const closeBtn = screen.getByRole("button", { name: /close/i });
+    const dialog = screen.getByRole("dialog");
+    const closeBtn = within(dialog).getByRole("button", { name: /close/i });
     fireEvent.click(closeBtn);
     await waitFor(() => {
       expect(screen.queryByText(/add a tool/i)).not.toBeInTheDocument();

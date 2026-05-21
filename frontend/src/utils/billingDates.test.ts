@@ -38,6 +38,16 @@ describe("billingDates", () => {
     expect(ymd(end.getTime())).toBe("2025-2-28");
   });
 
+  it("subtracts calendar months across year boundary", () => {
+    const start = parseStartDate("2026-05-15");
+    const end = addCalendarMonths(start, -6);
+    expect(ymd(end.getTime())).toBe("2025-11-15");
+  });
+
+  it("free plan has no expiry", () => {
+    expect(computeSubscriptionExpiryMs("free", "2026-02-01")).toBeNull();
+  });
+
   it("trial still uses day count", () => {
     const expiry = computeSubscriptionExpiryMs("trial", "2026-02-01", {
       trialDays: 14,

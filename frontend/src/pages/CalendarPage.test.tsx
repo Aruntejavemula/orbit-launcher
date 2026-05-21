@@ -60,7 +60,7 @@ describe("CalendarPage", () => {
       ).toBeInTheDocument()
     );
     expect(screen.getByText(/^reminders$/i)).toBeInTheDocument();
-    expect(screen.getByText(/default notify me/i)).toBeInTheDocument();
+    expect(screen.getByText(/default for new reminders/i)).toBeInTheDocument();
   });
 
   it("renders day-before preset buttons", async () => {
@@ -225,7 +225,7 @@ describe("CalendarPage", () => {
       })
     );
     renderCalendar();
-    await waitFor(() => screen.getByText(/default notify me/i));
+    await waitFor(() => screen.getByText(/default for new reminders/i));
 
     fireEvent.click(screen.getByRole("button", { name: /14 days before/i }));
     await waitFor(() => expect(patched).toBe(true));
@@ -276,9 +276,9 @@ describe("CalendarPage", () => {
     await waitFor(() => screen.getByText(/what's expiring next/i));
     await waitFor(() => {
       expect(screen.getByText("UrgentApp")).toBeInTheDocument();
-      expect(screen.getByText("StaleApp")).toBeInTheDocument();
-      expect(screen.getByText("FarApp")).toBeInTheDocument();
     });
+    expect(screen.queryByText("StaleApp")).not.toBeInTheDocument();
+    expect(screen.queryByText("FarApp")).not.toBeInTheDocument();
   });
 
   it("toggles 'Show banner before expiration' switch", async () => {

@@ -5,12 +5,23 @@ export interface SessionFetchResult {
   ok: boolean;
 }
 
+export type StoreUpdateResult = {
+  ok: boolean;
+  status: string;
+  count?: number;
+  mandatory?: boolean;
+  message?: string;
+};
+
 export interface RemioDesktopBridge {
   isDesktop: boolean;
   platform: string;
   version: string;
   startGoogleSignIn: () => Promise<void>;
+  clearGoogleSignInSession?: () => Promise<void>;
   sessionFetch?: (path: string, init?: { method?: string; body?: unknown }) => Promise<SessionFetchResult>;
+  isStoreInstall?: () => Promise<boolean>;
+  checkStoreUpdates?: () => Promise<StoreUpdateResult>;
 }
 
 export function getRemioDesktop(): RemioDesktopBridge | undefined {

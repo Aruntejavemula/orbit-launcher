@@ -14,6 +14,7 @@ const user: User = {
   name: "Test",
   email: "t@e.com",
   avatar_url: null,
+  remember_device: false,
 };
 
 describe("authSession", () => {
@@ -52,5 +53,12 @@ describe("authSession", () => {
     saveCachedUser(user, true);
     clearCachedUser();
     expect(getCachedUser()).toBeNull();
+  });
+
+  it("returns null when cached user JSON is invalid", () => {
+    localStorage.setItem("remio_auth_user", "{not-json");
+    localStorage.setItem("remio_auth_expires", String(Date.now() + 999_999));
+    expect(getCachedUser()).toBeNull();
+    expect(localStorage.getItem("remio_auth_user")).toBeNull();
   });
 });

@@ -440,26 +440,69 @@ export function currencyForCountry(countryCode: string): string {
   return COUNTRY_CURRENCY[countryCode] ?? "USD";
 }
 
-/** Format a monetary amount using the user's country currency. */
-export function formatCurrency(amount: number, countryCode: string): string {
-  const currency = currencyForCountry(countryCode);
+const LOCALE_FOR_COUNTRY: Record<string, string> = {
+  IN: "en-IN",
+  US: "en-US",
+  GB: "en-GB",
+  AU: "en-AU",
+  CA: "en-CA",
+  BR: "pt-BR",
+  JP: "ja-JP",
+  MX: "es-MX",
+  DE: "de-DE",
+  FR: "fr-FR",
+  AE: "en-AE",
+  SG: "en-SG",
+  NZ: "en-NZ",
+  ZA: "en-ZA",
+  KR: "ko-KR",
+};
+
+/** BCP 47 locale for Intl currency formatting (symbol + grouping). */
+function localeForCountry(countryCode: string): string {
+  return LOCALE_FOR_COUNTRY[countryCode] ?? "en-US";
+}
+
+function formatMoney(
+  amount: number,
+  countryCode: string,
+  fractionDigits: 0 | 2,
+): string {
+  const code = countryCode.trim().toUpperCase();
+  const currency = currencyForCountry(code);
+  const locale = code ? localeForCountry(code) : "en-US";
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
     }).format(amount);
   } catch {
-    return `$${amount.toFixed(2)}`;
+    const sym = currencySymbol(code);
+    return fractionDigits === 2
+      ? `${sym}${amount.toFixed(2)}`
+      : `${sym}${Math.round(amount).toLocaleString(locale)}`;
   }
+}
+
+/** Subscription / spend line items (may include cents). */
+export function formatCurrency(amount: number, countryCode: string): string {
+  return formatMoney(amount, countryCode, 2);
+}
+
+/** Budget totals and dashboard hero (whole units, local symbol). */
+export function formatBudgetAmount(amount: number, countryCode: string): string {
+  return formatMoney(amount, countryCode, 0);
 }
 
 /** Currency symbol only (e.g. "₹", "$", "£"). */
 export function currencySymbol(countryCode: string): string {
-  const currency = currencyForCountry(countryCode);
+  const code = countryCode.trim().toUpperCase();
+  const currency = currencyForCountry(code);
+  const locale = code ? localeForCountry(code) : "en-US";
   try {
-    const parts = new Intl.NumberFormat(undefined, { style: "currency", currency })
+    const parts = new Intl.NumberFormat(locale, { style: "currency", currency })
       .formatToParts(0);
     return parts.find((p) => p.type === "currency")?.value ?? "$";
   } catch {
