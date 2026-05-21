@@ -1,0 +1,15 @@
+---
+description: Write only the code required for the task — no extras
+alwaysApply: true
+---
+
+# Minimal, focused changes
+
+- Implement **only** what the task asks for. Do not add features, refactors, or "improvements" outside scope.
+- **No drive-by edits**: unrelated files, formatting-only churn, comment/doc dumps, or defensive layers the task did not need.
+- **Reuse** existing functions and patterns instead of reimplementing or wrapping unnecessarily.
+- Prefer the **smallest diff** that solves the problem. A short, clear change beats a large "cleanup."
+- Skip verbose comments, extra abstractions, duplicate code paths, and speculative error handling unless the task requires them.
+- Do **not** add markdown/docs, tests, or config the user did not ask for unless they are required to complete the request.
+
+When unsure whether something is in scope, **do less** and ask rather than expand the change.

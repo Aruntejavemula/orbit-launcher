@@ -24,7 +24,7 @@ _env_file = os.path.join(os.path.dirname(__file__), f".env.{_APP_ENV}")
 if os.path.isfile(_env_file):
     load_dotenv(_env_file, override=True)
 load_dotenv()
-
+#sentry for error tracking
 _SENTRY_DSN = os.getenv("SENTRY_DSN")
 if _SENTRY_DSN:
     sentry_sdk.init(
@@ -344,8 +344,8 @@ async def health(db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(text("SELECT 1"))
         db_reachable = True
-    except OperationalError:
-        logger.error("Health check: DB unreachable")
+    except Exception as exc:
+        logger.error("Health check: DB unreachable: %s", exc)
         db_reachable = False
 
     redis_reachable = False
@@ -357,10 +357,12 @@ async def health(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    healthy = db_reachable
-    status_code = 200 if healthy else 503
-    return JSONResponse(status_code=status_code, content={
-        "status": "ok" if healthy else "degraded",
-        "db": "reachable" if db_reachable else "unreachable",
-        "redis": "reachable" if redis_reachable else "unreachable",
-    })
+    # Railway liveness: return 200 when the process is up (DB status is in the body).
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "ok" if db_reachable else "degraded",
+            "db": "reachable" if db_reachable else "unreachable",
+            "redis": "reachable" if redis_reachable else "unreachable",
+        },
+    )

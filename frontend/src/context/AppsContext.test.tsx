@@ -4,6 +4,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useApps } from "./AppsContext";
 import { createMockQueryClient } from "../test/helpers";
+import { clearOfflineDataCache } from "../utils/offlineDataCache";
 import type { AppItem } from "../types";
 
 const mockApi = vi.hoisted(() => ({
@@ -93,6 +94,7 @@ function setupDefaultMocks() {
 
 describe("AppsContext - useApps", () => {
   beforeEach(() => {
+    clearOfflineDataCache();
     mockApi.get.mockReset();
     mockApi.post.mockReset();
     mockApi.patch.mockReset();
@@ -350,6 +352,7 @@ describe("AppsContext - useApps", () => {
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
+        expect(result.current.apps).toHaveLength(1);
       });
 
       expect(result.current.apps[0]).toEqual(expected);
@@ -475,6 +478,7 @@ describe("AppsContext - useApps", () => {
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
+        expect(result.current.history).toHaveLength(1);
       });
 
       expect(result.current.history[0]).toEqual(expected);

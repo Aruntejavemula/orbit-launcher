@@ -1,10 +1,17 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
 import { smartLaunch } from "../utils/launch";
 import api from "../api";
 import { useAuth } from "./AuthContext";
 import { toast } from "../components/Toast";
+import {
+  readAppsCache,
+  writeAppsCache,
+  readLaunchesCache,
+  writeLaunchesCache,
+} from "../utils/offlineDataCache";
 
 export interface OpenEvent {
   appId: string;
@@ -66,17 +73,56 @@ export function useApps() {
   const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
 
-  const { data: apps = [], isLoading: appsLoading } = useQuery({
+  const fetchApps = useCallback(async (): Promise<AppItem[]> => {
+    try {
+      const r = await api.get("/apps");
+      const items = r.data.map(toAppItem) as AppItem[];
+      writeAppsCache(items);
+      return items;
+    } catch (err) {
+      if (axios.isAxiosError(err) && !err.response) {
+        const cached = readAppsCache();
+        if (cached) return cached;
+      }
+      throw err;
+    }
+  }, []);
+
+  const fetchLaunches = useCallback(async (): Promise<OpenEvent[]> => {
+    try {
+      const r = await api.get("/launches");
+      const items = r.data.map(toOpenEvent) as OpenEvent[];
+      writeLaunchesCache(items);
+      return items;
+    } catch (err) {
+      if (axios.isAxiosError(err) && !err.response) {
+        const cached = readLaunchesCache();
+        if (cached) return cached;
+      }
+      throw err;
+    }
+  }, []);
+
+  const { data: apps = [], isLoading: appsLoading, isError: appsError } = useQuery({
     queryKey: ["apps"],
-    queryFn: () => api.get("/apps").then((r) => r.data.map(toAppItem) as AppItem[]),
+    queryFn: fetchApps,
     enabled: !!user,
+    placeholderData: () => readAppsCache() ?? undefined,
   });
 
   const { data: history = [], isLoading: historyLoading } = useQuery({
     queryKey: ["launches"],
-    queryFn: () => api.get("/launches").then((r) => r.data.map(toOpenEvent) as OpenEvent[]),
+    queryFn: fetchLaunches,
     enabled: !!user,
+    placeholderData: () => readLaunchesCache() ?? undefined,
   });
+
+  const appsErrorShown = useRef(false);
+  useEffect(() => {
+    if (!appsError || appsErrorShown.current) return;
+    appsErrorShown.current = true;
+    toast("Could not load your apps. Try refreshing the page.", "error");
+  }, [appsError]);
 
   // loading = true while auth resolving OR while queries are fetching
   const loading = authLoading || appsLoading || historyLoading;
@@ -187,6 +233,7 @@ export function useApps() {
     apps,
     history,
     loading,
+    appsLoading,
     addApp: addMutation.mutateAsync,
     removeApp: removeMutation.mutateAsync,
     updateApp: (id: string, patch: Partial<AppItem>) =>

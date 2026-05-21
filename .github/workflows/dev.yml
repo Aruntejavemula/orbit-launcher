@@ -5,16 +5,18 @@ on:
     branches: [dev]
   pull_request:
     branches: [dev]
+  workflow_dispatch:
 
 jobs:
-  build-and-test:
+  ci-1-test:
+    name: CI 1 — Test & web build
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,7 +29,7 @@ jobs:
         run: npm install
         working-directory: frontend
 
-      - name: Build frontend
+      - name: Build frontend (PWA / web)
         run: npm run build
         working-directory: frontend
 
@@ -68,3 +70,58 @@ jobs:
       - name: Cleanup
         if: always()
         run: sudo rm -rf .scannerwork
+
+  ci-2-desktop-pack:
+    name: CI 2 — Desktop pack (${{ matrix.platform }})
+    needs: ci-1-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            pack_flag: --win
+          - os: macos-latest
+            platform: macos
+            pack_flag: --mac
+          - os: ubuntu-latest
+            platform: linux
+            pack_flag: --linux
+
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build desktop UI
+        run: npm run electron:build:ui
+
+      - name: Pack desktop app
+        run: npx electron-builder --config electron-builder.ci.config.cjs ${{ matrix.pack_flag }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          WIN_CSC_LINK: ""
+          WIN_CSC_KEY_PASSWORD: ""
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remio-desktop-${{ matrix.platform }}
+          path: frontend/release-ci/
+          if-no-files-found: error
+          retention-days: 14

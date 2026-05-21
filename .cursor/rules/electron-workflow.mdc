@@ -1,0 +1,31 @@
+---
+description: Electron desktop work — electron branch only, no main until tests pass
+alwaysApply: true
+---
+
+# Electron branch workflow (step 1)
+
+## Branch policy
+
+- **All desktop / Electron work happens on `electron`** (tracks `origin/electron`).
+- **Do not commit or push to `main`** until Vitest + backend tests pass and manual smoke (login, apps load) is done.
+- **`main`** = production web (Vercel + Railway) only. Merge via PR from `electron` when ready.
+- Prefer **small PRs** on `electron`; no drive-by refactors on `main`.
+
+## Security (frontend / desktop shell)
+
+- **Never** put in `frontend/`, `frontend/electron/`, or `VITE_*` env: `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_SECRET`, Resend keys, or any server-only credential.
+- Frontend may use **`VITE_API_URL`** only (e.g. `/api` or public API base). Session auth = **httpOnly cookie** from backend.
+- Google OAuth: **system browser** + backend callback; secrets stay on Railway only.
+- Desktop `electron/config.cjs`: **public URLs only** (e.g. `APP_URL`), no API keys.
+
+## Microsoft Store only
+
+- Ship **MSIX (appx)** via Partner Center — **no** NSIS/exe sideload, no Mac/Linux store targets.
+- **Do not** buy/use external code-signing certs; Microsoft signs on Store submission.
+- Local test: `npm run electron:pack` → `release/win-unpacked/Remio.exe` (unsigned, dev only).
+- Store upload: `npm run electron:build:store` → `.appx` in `release/` (fill `electron/store.appx.json` from Partner Center).
+
+## Code size
+
+- Follow `minimal-changes.mdc`: wrapper stays thin; reuse existing React app and API.

@@ -73,7 +73,11 @@ async def init_preferences(request: Request, user_id: str = Depends(get_current_
 @router.patch("", response_model=PreferencesResponse)
 @user_limiter.limit("30/minute")
 async def update_preferences(request: Request, body: PreferencesUpdate, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
-    prefs = await get_or_404(db, select(Preferences).where(Preferences.user_id == user_id), "Your preferences could not be found. Please reload the page.")
+    result = await db.execute(select(Preferences).where(Preferences.user_id == user_id))
+    prefs = result.scalar_one_or_none()
+    if not prefs:
+        prefs = Preferences(user_id=user_id)
+        db.add(prefs)
     apply_partial_update(prefs, body.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(prefs)

@@ -1,0 +1,365 @@
+﻿........................................................................ [ 22%]
+...E............................................F....................... [ 45%]
+........................................................................ [ 68%]
+........................................................................ [ 90%]
+.............................                                            [100%]
+=================================== ERRORS ====================================
+________________ ERROR at setup of test_remember_device_toggle ________________
+file D:\clone\orbit-launcher\backend\tests\test_remember_device.py, line 8
+  @pytest.mark.asyncio
+  async def test_remember_device_toggle(int_client: AsyncClient, db_session):
+      user = await seed_user(db_session)
+      await db_session.commit()
+      cookies = make_auth_cookie(user.id, user.token_version)
+
+      me = await int_client.get("/api/auth/me", cookies=cookies)
+      assert me.status_code == 200
+      assert me.json().get("remember_device") is False
+
+      on = await int_client.post(
+          "/api/auth/remember-device",
+          json={"remember_device": True},
+          cookies=cookies,
+      )
+      assert on.status_code == 200
+      assert on.json()["remember_device"] is True
+      new_cookies = dict(on.cookies)
+
+      me2 = await int_client.get("/api/auth/me", cookies=new_cookies)
+      assert me2.status_code == 200
+      assert me2.json()["remember_device"] is True
+E       fixture 'int_client' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, auth_cookies, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, cov, doctest_namespace, event_loop, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, mock_db, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, test_app, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\clone\orbit-launcher\backend\tests\test_remember_device.py:8
+================================== FAILURES ===================================
+______ TestUpdatePreferences.test_creates_preferences_if_not_initialized ______
+
+self = <tests.test_router_preferences.TestUpdatePreferences object at 0x00000259E24863F0>
+client = <httpx.AsyncClient object at 0x00000259E2378410>
+mock_db = <AsyncMock id='2585093117600'>
+
+    async def test_creates_preferences_if_not_initialized(self, client, mock_db):
+        """PATCH creates default preferences when none exist yet."""
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = result_mock
+    
+        resp = await client.patch("/api/preferences", json={"theme": "dark"})
+>       assert resp.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests\test_router_preferences.py:146: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-05-18T13:27:12 ERROR    orbit  Unhandled error escaped middleware: PATCH /api/preferences
+Traceback (most recent call last):
+  File "D:\clone\orbit-launcher\backend\main.py", line 118, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+                                   ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py", line 87, in collapse_excgroups
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\clone\orbit-launcher\backend\main.py", line 231, in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 120, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 695, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 300, in serialize_response
+    raise ResponseValidationError(
+    ...<3 lines>...
+    )
+fastapi.exceptions.ResponseValidationError: 9 validation errors:
+  {'type': 'bool_type', 'loc': ('response', 'start_week_on_monday'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'compact_cards'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'show_last_opened'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'notify_expirations'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'int_type', 'loc': ('response', 'reminder_days'), 'msg': 'Input should be a valid integer', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'reminder_email'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'reminder_push'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'onboarding_completed'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'string_type', 'loc': ('response', 'country'), 'msg': 'Input should be a valid string', 'input': None}
+
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\slowapi\extension.py", line 73, in update_preferences
+    PATCH /api/preferences
+2026-05-18T13:27:12 INFO     orbit.access  [973ae6c9] "PATCH /api/preferences" 500 29ms
+2026-05-18T13:27:12 INFO     httpx  HTTP Request: PATCH http://testserver/api/preferences "HTTP/1.1 500 Internal Server Error"
+------------------------------ Captured log call ------------------------------
+ERROR    orbit:main.py:122 Unhandled error escaped middleware: PATCH /api/preferences
+Traceback (most recent call last):
+  File "D:\clone\orbit-launcher\backend\main.py", line 118, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+                                   ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_utils.py", line 87, in collapse_excgroups
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\clone\orbit-launcher\backend\main.py", line 231, in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 120, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 695, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 300, in serialize_response
+    raise ResponseValidationError(
+    ...<3 lines>...
+    )
+fastapi.exceptions.ResponseValidationError: 9 validation errors:
+  {'type': 'bool_type', 'loc': ('response', 'start_week_on_monday'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'compact_cards'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'show_last_opened'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'notify_expirations'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'int_type', 'loc': ('response', 'reminder_days'), 'msg': 'Input should be a valid integer', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'reminder_email'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'reminder_push'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'bool_type', 'loc': ('response', 'onboarding_completed'), 'msg': 'Input should be a valid boolean', 'input': None}
+  {'type': 'string_type', 'loc': ('response', 'country'), 'msg': 'Input should be a valid string', 'input': None}
+
+  File "C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\slowapi\extension.py", line 73, in update_preferences
+    PATCH /api/preferences
+INFO     orbit.access:main.py:254 [973ae6c9] "PATCH /api/preferences" 500 29ms
+INFO     httpx:_client.py:1740 HTTP Request: PATCH http://testserver/api/preferences "HTTP/1.1 500 Internal Server Error"
+============================== warnings summary ===============================
+schemas\auth.py:36
+  D:\clone\orbit-launcher\backend\schemas\auth.py:36: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class UserResponse(BaseModel):
+
+C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\slowapi\extension.py:717: 8 warnings
+tests/test_google_oauth_platform.py: 8 warnings
+tests/test_router_apps.py: 34 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\slowapi\extension.py:717: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:156: 9596 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:156: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj)
+
+schemas\app.py:77
+  D:\clone\orbit-launcher\backend\schemas\app.py:77: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class AppResponse(BaseModel):
+
+tests/test_remember_device.py: 1 warning
+tests/test_router_apps.py: 26 warnings
+tests/test_router_catalog.py: 5 warnings
+tests/test_router_launches.py: 7 warnings
+tests/test_router_preferences.py: 19 warnings
+tests/test_router_subscriptions.py: 12 warnings
+tests/test_utils.py: 3 warnings
+tests/integration/test_api_keys_flow.py: 15 warnings
+tests/integration/test_apps_flow.py: 27 warnings
+tests/integration/test_auth_flow.py: 19 warnings
+tests/integration/test_catalog_flow.py: 9 warnings
+tests/integration/test_insights_flow.py: 14 warnings
+tests/integration/test_launches_flow.py: 8 warnings
+tests/integration/test_preferences_flow.py: 19 warnings
+tests/integration/test_push_flow.py: 10 warnings
+tests/integration/test_reminders_flow.py: 16 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:560: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+
+tests/test_remember_device.py: 1 warning
+tests/test_router_apps.py: 26 warnings
+tests/test_router_catalog.py: 5 warnings
+tests/test_router_launches.py: 7 warnings
+tests/test_router_preferences.py: 19 warnings
+tests/test_router_subscriptions.py: 12 warnings
+tests/test_utils.py: 3 warnings
+tests/integration/test_api_keys_flow.py: 15 warnings
+tests/integration/test_apps_flow.py: 27 warnings
+tests/integration/test_auth_flow.py: 19 warnings
+tests/integration/test_catalog_flow.py: 9 warnings
+tests/integration/test_insights_flow.py: 14 warnings
+tests/integration/test_launches_flow.py: 8 warnings
+tests/integration/test_preferences_flow.py: 19 warnings
+tests/integration/test_push_flow.py: 10 warnings
+tests/integration/test_reminders_flow.py: 16 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:392: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_remember_device.py: 1 warning
+tests/test_router_apps.py: 26 warnings
+tests/test_router_catalog.py: 5 warnings
+tests/test_router_launches.py: 7 warnings
+tests/test_router_preferences.py: 19 warnings
+tests/test_router_subscriptions.py: 12 warnings
+tests/test_utils.py: 3 warnings
+tests/integration/test_api_keys_flow.py: 15 warnings
+tests/integration/test_apps_flow.py: 27 warnings
+tests/integration/test_auth_flow.py: 19 warnings
+tests/integration/test_catalog_flow.py: 9 warnings
+tests/integration/test_insights_flow.py: 14 warnings
+tests/integration/test_launches_flow.py: 8 warnings
+tests/integration/test_preferences_flow.py: 19 warnings
+tests/integration/test_push_flow.py: 10 warnings
+tests/integration/test_reminders_flow.py: 16 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:437: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_remember_device.py: 1 warning
+tests/test_router_apps.py: 26 warnings
+tests/test_router_catalog.py: 5 warnings
+tests/test_router_launches.py: 7 warnings
+tests/test_router_preferences.py: 19 warnings
+tests/test_router_subscriptions.py: 12 warnings
+tests/test_utils.py: 3 warnings
+tests/integration/test_api_keys_flow.py: 15 warnings
+tests/integration/test_apps_flow.py: 27 warnings
+tests/integration/test_auth_flow.py: 19 warnings
+tests/integration/test_catalog_flow.py: 9 warnings
+tests/integration/test_insights_flow.py: 14 warnings
+tests/integration/test_launches_flow.py: 8 warnings
+tests/integration/test_preferences_flow.py: 19 warnings
+tests/integration/test_push_flow.py: 10 warnings
+tests/integration/test_reminders_flow.py: 16 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:458: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_router_apps.py::TestListApps::test_returns_empty_list_when_no_apps
+  D:\clone\orbit-launcher\backend\routers\launches.py:17: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class LaunchEventResponse(BaseModel):
+
+tests/test_router_apps.py::TestListApps::test_returns_empty_list_when_no_apps
+  D:\clone\orbit-launcher\backend\routers\usage.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class UsageResponse(BaseModel):
+
+tests/test_router_apps.py::TestListApps::test_returns_empty_list_when_no_apps
+  D:\clone\orbit-launcher\backend\routers\reminders.py:30: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class ReminderResponse(BaseModel):
+
+tests/test_router_apps.py::TestListApps::test_returns_empty_list_when_no_apps
+  D:\clone\orbit-launcher\backend\routers\preferences.py:17: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class PreferencesResponse(BaseModel):
+
+tests/test_router_apps.py::TestListApps::test_returns_empty_list_when_no_apps
+  D:\clone\orbit-launcher\backend\routers\api_keys.py:22: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class ApiKeyResponse(BaseModel):
+
+tests/integration/test_api_keys_flow.py: 4 warnings
+tests/integration/test_apps_flow.py: 5 warnings
+tests/integration/test_auth_flow.py: 2 warnings
+tests/integration/test_insights_flow.py: 13 warnings
+tests/integration/test_launches_flow.py: 4 warnings
+tests/integration/test_preferences_flow.py: 3 warnings
+tests/integration/test_reminders_flow.py: 2 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1768: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+tests/integration/test_api_keys_flow.py: 7 warnings
+tests/integration/test_apps_flow.py: 14 warnings
+tests/integration/test_auth_flow.py: 3 warnings
+tests/integration/test_preferences_flow.py: 4 warnings
+tests/integration/test_push_flow.py: 7 warnings
+tests/integration/test_reminders_flow.py: 7 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1859: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+tests/integration/test_api_keys_flow.py: 4 warnings
+tests/integration/test_apps_flow.py: 4 warnings
+tests/integration/test_launches_flow.py: 3 warnings
+tests/integration/test_reminders_flow.py: 4 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1966: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+tests/integration/test_apps_flow.py: 5 warnings
+tests/integration/test_auth_flow.py: 2 warnings
+tests/integration/test_preferences_flow.py: 14 warnings
+tests/integration/test_reminders_flow.py: 4 warnings
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\httpx\_client.py:1933: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return await self.request(
+
+tests/integration/test_auth_flow.py::TestRegister::test_register_weak_password_rejected
+  C:\Users\sunny\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\slowapi\extension.py:734: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    response = await func(*args, **kwargs)  # type: ignore
+
+tests/integration/test_push_flow.py::TestUnsubscribe::test_unsubscribe_removes_record
+  D:\clone\orbit-launcher\backend\tests\integration\test_push_flow.py:114: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    resp = await int_client.request(
+
+tests/integration/test_push_flow.py::TestUnsubscribe::test_unsubscribe_nonexistent_is_noop
+  D:\clone\orbit-launcher\backend\tests\integration\test_push_flow.py:131: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    resp = await int_client.request(
+
+tests/integration/test_push_flow.py::TestUnsubscribe::test_only_removes_own_subscription
+  D:\clone\orbit-launcher\backend\tests\integration\test_push_flow.py:151: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    await int_client.request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_router_preferences.py::TestUpdatePreferences::test_creates_preferences_if_not_initialized
+ERROR tests/test_remember_device.py::test_remember_device_toggle
+1 failed, 315 passed, 10612 warnings, 1 error in 48.14s

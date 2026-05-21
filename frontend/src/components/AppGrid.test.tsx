@@ -10,6 +10,14 @@ vi.mock("../context/AppsContext", () => ({
   useApps: () => ({ reorder: mockReorder }),
 }));
 
+vi.mock("../context/PreferencesContext", () => ({
+  usePrefs: () => ({
+    prefs: { compactCards: false, showLastOpened: true },
+    prefsFetched: true,
+    update: vi.fn(),
+  }),
+}));
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock("framer-motion", () => ({
   motion: {

@@ -1,9 +1,14 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute } from "workbox-precaching";
+import { precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
+import { registerRoute, NavigationRoute } from "workbox-routing";
 
 declare const self: ServiceWorkerGlobalScope;
 
 precacheAndRoute(self.__WB_MANIFEST);
+
+// SPA shell only — do not cache /api/* here (avoids persisting auth or secrets in SW cache).
+const navigationHandler = createHandlerBoundToURL("/index.html");
+registerRoute(new NavigationRoute(navigationHandler));
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;

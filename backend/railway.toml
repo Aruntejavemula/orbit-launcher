@@ -1,0 +1,8 @@
+# Use this when the Railway service "Root Directory" is set to backend/.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300

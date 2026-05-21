@@ -130,6 +130,30 @@ describe("PreferencesContext - usePrefs", () => {
     expect(result.current.prefs.onboardingCompleted).toBe(false);
   });
 
+  it("update retries with POST /preferences/init when PATCH returns 404", async () => {
+    setupDefaultMocks();
+    const err404 = new Error("Not found") as Error & { response?: { status: number } };
+    err404.response = { status: 404 };
+    mockApi.patch
+      .mockRejectedValueOnce(err404)
+      .mockResolvedValueOnce({ data: { ...fakePrefsApiResponse, compact_cards: true } });
+    mockApi.post.mockResolvedValueOnce({ data: fakePrefsApiResponse });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    act(() => {
+      result.current.update({ compactCards: true });
+    });
+
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith("/preferences/init");
+      expect(mockApi.patch).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("update calls PATCH /preferences with partial data and updates cache optimistically", async () => {
     setupDefaultMocks();
 

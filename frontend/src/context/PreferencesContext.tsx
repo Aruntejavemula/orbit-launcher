@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Preferences, ApiKey } from "../types";
 import api from "../api";
+import { toast } from "../components/Toast";
 import { useAuth } from "./AuthContext";
 
 const DEFAULTS: Preferences = {
@@ -53,6 +54,35 @@ function toPrefs(raw: PrefsApiResponse): Preferences {
   };
 }
 
+function prefsPatchBody(patch: Partial<Preferences>): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (patch.theme !== undefined) body.theme = patch.theme;
+  if (patch.startWeekOnMonday !== undefined) body.start_week_on_monday = patch.startWeekOnMonday;
+  if (patch.compactCards !== undefined) body.compact_cards = patch.compactCards;
+  if (patch.showLastOpened !== undefined) body.show_last_opened = patch.showLastOpened;
+  if (patch.notifyExpirations !== undefined) body.notify_expirations = patch.notifyExpirations;
+  if (patch.reminderDays !== undefined) body.reminder_days = patch.reminderDays;
+  if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
+  if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
+  if (patch.onboardingCompleted !== undefined) body.onboarding_completed = patch.onboardingCompleted;
+  if (patch.country !== undefined) body.country = patch.country;
+  return body;
+}
+
+async function patchPreferences(patch: Partial<Preferences>): Promise<Preferences> {
+  const body = prefsPatchBody(patch);
+  try {
+    const r = await api.patch("/preferences", body);
+    return toPrefs(r.data);
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status !== 404) throw err;
+    await api.post("/preferences/init");
+    const r = await api.patch("/preferences", body);
+    return toPrefs(r.data);
+  }
+}
+
 function toApiKey(raw: ApiKeyApiResponse): ApiKey {
   return {
     id: raw.id,
@@ -94,28 +124,19 @@ export function usePrefs() {
 
   const updateMutation = useMutation({
     scope: { id: "preferences-update" },
-    mutationFn: (patch: Partial<Preferences>) => {
-      const body: Record<string, unknown> = {};
-      if (patch.theme !== undefined) body.theme = patch.theme;
-      if (patch.startWeekOnMonday !== undefined) body.start_week_on_monday = patch.startWeekOnMonday;
-      if (patch.compactCards !== undefined) body.compact_cards = patch.compactCards;
-      if (patch.showLastOpened !== undefined) body.show_last_opened = patch.showLastOpened;
-      if (patch.notifyExpirations !== undefined) body.notify_expirations = patch.notifyExpirations;
-      if (patch.reminderDays !== undefined) body.reminder_days = patch.reminderDays;
-      if (patch.reminderEmail !== undefined) body.reminder_email = patch.reminderEmail;
-      if (patch.reminderPush !== undefined) body.reminder_push = patch.reminderPush;
-      if (patch.onboardingCompleted !== undefined) body.onboarding_completed = patch.onboardingCompleted;
-      if (patch.country !== undefined) body.country = patch.country;
-      return api.patch("/preferences", body).then((r) => toPrefs(r.data));
-    },
+    mutationFn: (patch: Partial<Preferences>) => patchPreferences(patch),
     onMutate: async (patch) => {
       await qc.cancelQueries({ queryKey: ["preferences"] });
       const prev = qc.getQueryData<Preferences>(["preferences"]);
       qc.setQueryData<Preferences>(["preferences"], (old = DEFAULTS) => ({ ...old, ...patch }));
       return { prev };
     },
+    onSuccess: (data) => {
+      qc.setQueryData(["preferences"], data);
+    },
     onError: (_err, _patch, ctx) => {
       if (ctx?.prev) qc.setQueryData(["preferences"], ctx.prev);
+      toast("Could not save preferences. Please try again.", "error");
     },
   });
 
