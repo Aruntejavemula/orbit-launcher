@@ -8,7 +8,11 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // SPA shell only — do not cache /api/* here (avoids persisting auth or secrets in SW cache).
 const navigationHandler = createHandlerBoundToURL("/index.html");
-registerRoute(new NavigationRoute(navigationHandler));
+registerRoute(
+  new NavigationRoute(navigationHandler, {
+    denylist: [/^\/api\//],
+  }),
+);
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;
