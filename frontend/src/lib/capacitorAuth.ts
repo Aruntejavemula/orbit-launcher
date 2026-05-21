@@ -16,7 +16,8 @@ function parseRemioCallback(url: string): { code: string } | { error: true } | n
     return null;
   }
   if (parsed.protocol !== "remio:") return null;
-  const path = parsed.pathname.replace(/\/$/, "") || "/";
+  const pathOnly = parsed.pathname.replace(/\/$/, "") || "/";
+  const path = parsed.host ? `/${parsed.host}${pathOnly === "/" ? "" : pathOnly}` : pathOnly;
   if (path !== "/auth/callback") return null;
   if (parsed.searchParams.get("error")) return { error: true };
   const code = parsed.searchParams.get("code");
