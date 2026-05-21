@@ -15,6 +15,10 @@ const storeUpdateResources = fs.existsSync(storeHelperExe)
 /** Microsoft Store MSIX — signing happens in Partner Center, not locally. */
 module.exports = {
   ...build,
+  directories: {
+    ...build.directories,
+    buildResources: "build",
+  },
   icon: appIcon,
   forceCodeSigning: false,
   win: {

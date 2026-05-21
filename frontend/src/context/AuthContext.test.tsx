@@ -21,6 +21,15 @@ vi.mock("../queryClient", () => ({
   queryClient: { clear: mockQueryClientClear },
 }));
 
+const mockClearGoogleSignInSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("../lib/desktop", () => ({
+  isRemioDesktop: () => true,
+  getRemioDesktop: () => ({
+    isDesktop: true,
+    clearGoogleSignInSession: mockClearGoogleSignInSession,
+  }),
+}));
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const fakeUser: User = {
@@ -131,6 +140,7 @@ describe("AuthContext", () => {
 
     expect(result.current.user).toBeNull();
     expect(mockQueryClientClear).toHaveBeenCalled();
+    expect(mockClearGoogleSignInSession).toHaveBeenCalled();
     expect(localStorage.getItem("persist-key")).toBe("value");
     expect(sessionStorage.getItem("session-key")).toBeNull();
     const { getCachedUser } = await import("../utils/authSession");

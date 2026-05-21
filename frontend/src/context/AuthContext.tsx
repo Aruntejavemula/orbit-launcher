@@ -17,6 +17,8 @@ import {
   clearCachedUser,
 } from "../utils/authSession";
 import { clearOfflineDataCache } from "../utils/offlineDataCache";
+import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
+import { clearPendingRememberPrompt } from "../lib/rememberDevicePrompt";
 
 interface AuthCtx {
   user: User | null;
@@ -87,6 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     api.post("/auth/logout").catch(() => {});
+    clearPendingRememberPrompt();
+    if (isRemioDesktop()) {
+      void getRemioDesktop()?.clearGoogleSignInSession?.();
+    }
     setUser(null);
     setOffline(false);
     queryClient.clear();

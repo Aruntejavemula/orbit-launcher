@@ -508,6 +508,11 @@ const SLUG_OVERRIDES: Record<string, CatalogPlanPricing> = {
     GB: { monthly: 10, yearly: 120 },
     DEFAULT: { monthly: 10 },
   }),
+  willow: p(false, {
+    US: { monthly: 10, yearly: 100 },
+    IN: { monthly: 299, yearly: 2990 },
+    DEFAULT: { monthly: 10 },
+  }),
 };
 
 function buildCatalogPlanPricing(): Record<string, CatalogPlanPricing> {

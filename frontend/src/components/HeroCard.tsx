@@ -6,7 +6,7 @@ import { usePrefs } from "../context/PreferencesContext";
 import type { AppItem } from "../types";
 import { greeting } from "../utils/time";
 import { formatBudgetAmount, timezoneForCountry } from "../utils/countryData";
-import { monthlySpend, budgetUsagePercent } from "../utils/subscriptionSpend";
+import { budgetUsagePercent, monthlySpend } from "../utils/subscriptionSpend";
 
 const MS_PER_DAY = 86_400_000;
 const BANNER_HORIZON_DAYS = 3;
@@ -42,7 +42,13 @@ export default function HeroCard({ query, onQuery }: Props) {
   const soonest = expiring[0];
   const country = prefs.country ?? "";
   const budget = prefs.monthlyBudget;
+  const spendLabel = formatBudgetAmount(Math.round(spend), country);
+  const budgetCap =
+    budget != null && budget > 0
+      ? `${formatBudgetAmount(budget, country)}/month`
+      : "Budget not set";
   const budgetPct = budgetUsagePercent(spend, budget);
+  const hasBudget = budget != null && budget > 0;
 
   const expiryAlert = soonest
     ? (() => {
@@ -70,23 +76,24 @@ export default function HeroCard({ query, onQuery }: Props) {
         )}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:flex-row sm:items-center sm:gap-4">
-        <div className="flex shrink-0 items-baseline gap-1">
-          <span className="dashboard-hero-text text-3xl font-bold tracking-tight sm:text-4xl">
-            {formatBudgetAmount(Math.round(spend), country)}
-          </span>
-          <span className="dashboard-hero-muted text-sm">/month</span>
-        </div>
-        {budget != null && budget > 0 && (
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="dashboard-hero-bar" aria-hidden>
-              <div className="dashboard-hero-bar-fill" style={{ width: `${budgetPct}%` }} />
+      <div className="dashboard-hero-spend mt-4 w-full max-w-xl sm:mt-5">
+        <div className="dashboard-hero-spend-row">
+          <span className="dashboard-hero-spend-value dashboard-hero-text">{spendLabel}</span>
+          <div className="dashboard-hero-spend-rail">
+            <div className="dashboard-hero-spend-track" aria-hidden>
+              <div
+                className={`dashboard-hero-spend-track-bg${hasBudget ? "" : " dashboard-hero-spend-track-accent"}`}
+              />
+              {hasBudget && (
+                <div
+                  className="dashboard-hero-spend-track-fill"
+                  style={{ width: `${budgetPct}%` }}
+                />
+              )}
             </div>
-            <span className="dashboard-hero-muted shrink-0 whitespace-nowrap text-xs sm:text-sm">
-              of {formatBudgetAmount(budget, country)} budget
-            </span>
+            <span className="dashboard-hero-budget-cap dashboard-hero-muted">{budgetCap}</span>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">

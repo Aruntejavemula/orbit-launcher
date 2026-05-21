@@ -62,19 +62,26 @@ export default function SettingsPage() {
     }
   };
 
-  const saveBudget = async () => {
+  const saveBudgetValue = async (amount: number | null) => {
     if (budgetSaving) return;
-    const digits = budgetDraft.replace(/\D/g, "");
-    const parsed = digits ? parseInt(digits, 10) : null;
-    const value = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    const value = amount != null && amount > 0 ? amount : null;
     setBudgetSaving(true);
     try {
       await updateAsync({ monthlyBudget: value });
       setBudgetSaved(true);
       setTimeout(() => setBudgetSaved(false), 2000);
+    } catch {
+      /* budget still stored locally when API cannot persist */
     } finally {
       setBudgetSaving(false);
     }
+  };
+
+  const saveBudget = async () => {
+    const digits = budgetDraft.replace(/\D/g, "");
+    const parsed = digits ? parseInt(digits, 10) : null;
+    const value = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    await saveBudgetValue(value);
   };
 
   const save = async (e: React.FormEvent) => {
@@ -211,7 +218,10 @@ export default function SettingsPage() {
                 <button
                   key={amount}
                   type="button"
-                  onClick={() => setBudgetDraft(String(amount))}
+                  onClick={() => {
+                    setBudgetDraft(String(amount));
+                    void saveBudgetValue(amount);
+                  }}
                   className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
                     budgetDraft === String(amount)
                       ? "border-[var(--accent)] bg-[var(--accent)]/15"

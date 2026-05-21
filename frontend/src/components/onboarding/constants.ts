@@ -1,15 +1,15 @@
 export const ONBOARDING_TOTAL_STEPS = 6;
 
 export const FEATURED_ONBOARDING_SLUGS = [
-  "claude",
-  "figma",
+  "netflix",
+  "primevideo",
+  "playstationplus",
+  "willow",
   "spotify",
-  "openai",
-  "linear",
   "notion",
-  "framer",
   "slack",
-  "vercel",
+  "figma",
+  "linear",
 ] as const;
 
 export const ONBOARDING_QUOTE = {

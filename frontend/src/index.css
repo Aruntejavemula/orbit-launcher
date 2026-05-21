@@ -236,19 +236,72 @@ select {
 .dashboard-hero-text {
   color: var(--dashboard-text);
 }
-.dashboard-hero-bar {
+.dashboard-hero-spend-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  width: 100%;
+}
+.dashboard-hero-spend-value {
+  flex-shrink: 0;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  /* Sit on the line: lower half of digits crosses the orange rule */
+  transform: translateY(0.14em);
+  padding-right: 0.15rem;
+}
+@media (min-width: 640px) {
+  .dashboard-hero-spend-value {
+    font-size: 2.25rem;
+  }
+}
+.dashboard-hero-spend-rail {
   flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
   min-width: 0;
+  padding-bottom: 0.2em;
+}
+.dashboard-hero-spend-track {
+  position: relative;
+  flex: 1;
+  min-width: 3rem;
+  height: 0.75rem;
+  align-self: flex-end;
+}
+.dashboard-hero-spend-track-bg,
+.dashboard-hero-spend-track-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   height: 6px;
   border-radius: 9999px;
-  background: var(--dashboard-bar-track);
-  overflow: hidden;
 }
-.dashboard-hero-bar-fill {
-  height: 100%;
-  border-radius: 9999px;
+.dashboard-hero-spend-track-bg {
+  right: 0;
+  background: var(--dashboard-bar-track);
+}
+.dashboard-hero-spend-track-accent {
+  background: var(--accent);
+}
+.dashboard-hero-spend-track-fill {
   background: var(--accent);
   transition: width 280ms ease;
+}
+.dashboard-hero-budget-cap {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translateY(0.05em);
+}
+@media (min-width: 640px) {
+  .dashboard-hero-budget-cap {
+    font-size: 1rem;
+  }
 }
 .dashboard-hero-search {
   background: var(--dashboard-chip);

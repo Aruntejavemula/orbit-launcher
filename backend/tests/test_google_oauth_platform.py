@@ -53,6 +53,6 @@ def test_web_and_desktop_configs(monkeypatch):
     web_url = google_mod.get_google_auth_url("state123", platform="web")
     desktop_url = google_mod.get_google_auth_url("state123", platform="desktop")
     assert "client_id=web-id" in web_url
-    assert "prompt=select_account" not in web_url
+    assert "prompt=select_account" in web_url
     assert "client_id=desktop-id" in desktop_url
     assert "prompt=select_account" in desktop_url

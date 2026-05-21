@@ -18,6 +18,7 @@ export interface RemioDesktopBridge {
   platform: string;
   version: string;
   startGoogleSignIn: () => Promise<void>;
+  clearGoogleSignInSession?: () => Promise<void>;
   sessionFetch?: (path: string, init?: { method?: string; body?: unknown }) => Promise<SessionFetchResult>;
   isStoreInstall?: () => Promise<boolean>;
   checkStoreUpdates?: () => Promise<StoreUpdateResult>;

@@ -71,9 +71,8 @@ def get_google_auth_url(state: str, platform: OAuthPlatform = "web") -> str:
         "scope": "openid email profile",
         "access_type": "offline",
         "state": state,
+        "prompt": "select_account",
     }
-    if platform == "desktop":
-        params["prompt"] = "select_account"
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 

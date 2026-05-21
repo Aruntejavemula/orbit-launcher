@@ -211,7 +211,7 @@ describe("OnboardingOverlay", () => {
 
     await waitFor(() => screen.getByText("Add your first apps"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Claude" }));
+    fireEvent.click(screen.getByRole("button", { name: "Netflix" }));
 
     expect(screen.getByText(/1 selected/)).toBeInTheDocument();
 
@@ -325,7 +325,7 @@ describe("OnboardingOverlay", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Claude" }));
+    fireEvent.click(screen.getByRole("button", { name: "Netflix" }));
 
     fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
 

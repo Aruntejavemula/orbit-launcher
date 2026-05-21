@@ -318,7 +318,32 @@ app.on("open-url", (event, url) => {
   completeDesktopOAuth(url);
 });
 
+const GOOGLE_COOKIE_DOMAINS = ["google.com", "googleapis.com"];
+
+function isGoogleOAuthCookie(cookie) {
+  const domain = (cookie.domain || "").toLowerCase();
+  return GOOGLE_COOKIE_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`));
+}
+
+async function clearGoogleSignInSession() {
+  const ses = session.fromPartition(SESSION_PARTITION);
+  const cookies = await ses.cookies.get({});
+  await Promise.all(
+    cookies.filter(isGoogleOAuthCookie).map(async (cookie) => {
+      const domain = cookie.domain.startsWith(".") ? cookie.domain.slice(1) : cookie.domain;
+      const scheme = cookie.secure ? "https" : "http";
+      const url = `${scheme}://${domain}${cookie.path || "/"}`;
+      try {
+        await ses.cookies.remove(url, cookie.name);
+      } catch (err) {
+        console.warn("[Remio] could not remove Google cookie:", cookie.name, err);
+      }
+    }),
+  );
+}
+
 ipcMain.handle("google-sign-in", () => openGoogleOAuthWindow());
+ipcMain.handle("remio-clear-google-session", () => clearGoogleSignInSession());
 
 ipcMain.handle("remio-check-store-updates", async () => {
   const win = mainWindow ?? BrowserWindow.getAllWindows()[0];

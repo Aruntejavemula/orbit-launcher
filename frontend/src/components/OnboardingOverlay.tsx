@@ -263,7 +263,7 @@ export default function OnboardingOverlay() {
   const [finishing, setFinishing] = useState(false);
   const [budgetError, setBudgetError] = useState(false);
 
-  const [draftTheme, setDraftTheme] = useState<Theme>("light");
+  const [draftTheme, setDraftTheme] = useState<Theme>("dark");
 
   const [draftCompact, setDraftCompact] = useState(false);
 
@@ -289,13 +289,11 @@ export default function OnboardingOverlay() {
 
     if (step === 5) {
 
-      setDraftTheme(prefs.theme);
-
       setDraftCompact(prefs.compactCards);
 
     }
 
-  }, [step, prefs.theme, prefs.compactCards]);
+  }, [step, prefs.compactCards]);
 
 
 
@@ -580,7 +578,7 @@ export default function OnboardingOverlay() {
 
               >
 
-                Add manually instead
+                Add later
 
               </GhostButton>
 
@@ -997,20 +995,6 @@ export default function OnboardingOverlay() {
 
               <PrefCard
 
-                label="Light"
-
-                icon={Sun}
-
-                active={draftTheme === "light"}
-
-                onClick={() => setDraftTheme("light")}
-
-                t={t}
-
-              />
-
-              <PrefCard
-
                 label="Dark"
 
                 icon={Moon}
@@ -1018,6 +1002,20 @@ export default function OnboardingOverlay() {
                 active={draftTheme === "dark"}
 
                 onClick={() => setDraftTheme("dark")}
+
+                t={t}
+
+              />
+
+              <PrefCard
+
+                label="Light"
+
+                icon={Sun}
+
+                active={draftTheme === "light"}
+
+                onClick={() => setDraftTheme("light")}
 
                 t={t}
 
@@ -1127,7 +1125,7 @@ export default function OnboardingOverlay() {
 
 
 
-        {step === 5 && (
+        {step === 6 && (
 
           <div className="text-center">
 

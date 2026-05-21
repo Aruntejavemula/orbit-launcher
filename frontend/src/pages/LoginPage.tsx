@@ -100,6 +100,7 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
+    markPendingRememberPrompt();
     if (isRemioDesktop()) {
       void getRemioDesktop()?.startGoogleSignIn();
       return;

@@ -13,6 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "public");
 const buildDir = path.join(__dirname, "..", "build");
 const storeAssetsDir = path.join(buildDir, "store-assets");
+const appxAssetsDir = path.join(buildDir, "appx");
 
 const SOURCE_CANDIDATES = ["app-hero-icon.jpeg", "icon-512x512.png", "app-hero-icon.svg"];
 
@@ -33,6 +34,20 @@ async function pngBuffer(size, source) {
   return canvas.toBuffer("image/png");
 }
 
+/** MSIX wide tile: 310×150 (cover crop, centered). */
+async function widePngBuffer(width, height, source) {
+  const img = await loadImage(source);
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+  const scale = Math.max(width / img.width, height / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  const x = (width - w) / 2;
+  const y = (height - h) / 2;
+  ctx.drawImage(img, x, y, w, h);
+  return canvas.toBuffer("image/png");
+}
+
 async function writePng(size, filename, dir, source) {
   const buf = await pngBuffer(size, source);
   const out = path.join(dir, filename);
@@ -41,11 +56,19 @@ async function writePng(size, filename, dir, source) {
   return buf;
 }
 
+async function writeWidePng(filename, dir, source) {
+  const buf = await widePngBuffer(310, 150, source);
+  const out = path.join(dir, filename);
+  fs.writeFileSync(out, buf);
+  console.log("wrote", out);
+}
+
 const source = resolveSource();
 console.log("icon source:", source);
 
 fs.mkdirSync(buildDir, { recursive: true });
 fs.mkdirSync(storeAssetsDir, { recursive: true });
+fs.mkdirSync(appxAssetsDir, { recursive: true });
 
 const pwaSizes = [16, 24, 32, 48, 64, 128, 192, 256, 512];
 for (const size of pwaSizes) {
@@ -66,7 +89,7 @@ const icon512Path = path.join(buildDir, "icon.png");
 fs.writeFileSync(icon512Path, await pngBuffer(512, source));
 console.log("wrote", icon512Path);
 
-/** Partner Center / MSIX reference tiles (electron-builder also derives from build.icon). */
+/** Partner Center reference tiles. */
 const storeTiles = [
   [44, "Square44x44Logo.png"],
   [50, "Square50x50Logo.png"],
@@ -77,5 +100,17 @@ const storeTiles = [
 for (const [size, name] of storeTiles) {
   await writePng(size, name, storeAssetsDir, source);
 }
+
+/** electron-builder MSIX manifest assets (build/appx — exact names and pixel sizes). */
+const appxTiles = [
+  [44, "Square44x44Logo.png"],
+  [50, "StoreLogo.png"],
+  [150, "Square150x150Logo.png"],
+  [310, "LargeTile.png"],
+];
+for (const [size, name] of appxTiles) {
+  await writePng(size, name, appxAssetsDir, source);
+}
+await writeWidePng("Wide310x150Logo.png", appxAssetsDir, source);
 
 console.log("Done. Remio mark only — do not substitute Electron default icons.");

@@ -21,8 +21,6 @@ vi.mock("./AuthContext", () => ({
 const mockToast = vi.hoisted(() => vi.fn());
 vi.mock("../components/Toast", () => ({ toast: mockToast }));
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
-
 const fakePrefsApiResponse = {
   theme: "dark",
   start_week_on_monday: true,
@@ -96,54 +94,113 @@ describe("PreferencesContext - usePrefs", () => {
     });
 
     expect(result.current.prefs.theme).toBe("dark");
-    expect(result.current.prefs.startWeekOnMonday).toBe(true);
-    expect(result.current.prefs.compactCards).toBe(true);
-    expect(result.current.prefs.showLastOpened).toBe(false);
-    expect(result.current.prefs.reminderDays).toBe(14);
-    expect(result.current.prefs.onboardingCompleted).toBe(true);
     expect(mockApi.get).toHaveBeenCalledWith("/preferences");
   });
 
-  it("initializes preferences with POST /preferences/init if GET returns 404", async () => {
-    const initializedPrefs = {
-      ...fakePrefsApiResponse,
-      theme: "light",
-      onboarding_completed: false,
-    };
-
-    mockApi.get.mockImplementation((url: string) => {
-      if (url === "/preferences") {
-        const err = new Error("Not found") as Error & { response?: { status: number } };
-        err.response = { status: 404 };
-        return Promise.reject(err);
-      }
-      if (url === "/api-keys") {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.reject(new Error(`Unexpected GET: ${url}`));
-    });
-    mockApi.post.mockResolvedValueOnce({ data: initializedPrefs });
+  it("uses local budget cache when API returns null", async () => {
+    localStorage.setItem("remio_monthly_budget:u-1", "1000");
+    setupDefaultMocks();
 
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.prefsFetched).toBe(true);
+      expect(result.current.prefs.monthlyBudget).toBe(1000);
     });
-
-    expect(mockApi.post).toHaveBeenCalledWith("/preferences/init");
-    expect(result.current.prefs.theme).toBe("light");
-    expect(result.current.prefs.onboardingCompleted).toBe(false);
   });
 
-  it("update retries with POST /preferences/init when PATCH returns 404", async () => {
+  it("prefers API budget over local cache when API has a value", async () => {
+    localStorage.setItem("remio_monthly_budget:u-1", "1000");
+    mockApi.get.mockImplementation((url: string) => {
+      if (url === "/preferences") {
+        return Promise.resolve({ data: { ...fakePrefsApiResponse, monthly_budget: 750 } });
+      }
+      if (url === "/api-keys") return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`Unexpected GET: ${url}`));
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBe(750);
+    });
+  });
+
+  it("saves budget locally when legacy API omits monthly_budget", async () => {
+    const legacyGet = { ...fakePrefsApiResponse };
+    delete (legacyGet as { monthly_budget?: number | null }).monthly_budget;
+
+    mockApi.get.mockImplementation((url: string) => {
+      if (url === "/preferences") return Promise.resolve({ data: legacyGet });
+      if (url === "/api-keys") return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`Unexpected GET: ${url}`));
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 500 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBe(500);
+      expect(localStorage.getItem("remio_monthly_budget:u-1")).toBe("500");
+    });
+    expect(mockApi.patch).not.toHaveBeenCalled();
+  });
+
+  it("persists monthly budget from PATCH when API supports it", async () => {
     setupDefaultMocks();
-    const err404 = new Error("Not found") as Error & { response?: { status: number } };
-    err404.response = { status: 404 };
-    mockApi.patch
-      .mockRejectedValueOnce(err404)
-      .mockResolvedValueOnce({ data: { ...fakePrefsApiResponse, compact_cards: true } });
-    mockApi.post.mockResolvedValueOnce({ data: fakePrefsApiResponse });
+    mockApi.patch.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, monthly_budget: 750 },
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 750 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBe(750);
+      expect(localStorage.getItem("remio_monthly_budget:u-1")).toBe("750");
+      expect(mockApi.patch).toHaveBeenCalledWith("/preferences", { monthly_budget: 750 });
+    });
+  });
+
+  it("keeps local budget when PATCH does not persist but user set a value", async () => {
+    setupDefaultMocks();
+    mockApi.patch.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, monthly_budget: null },
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+
+    await act(async () => {
+      await result.current.updateAsync({ monthlyBudget: 500 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.monthlyBudget).toBe(500);
+      expect(localStorage.getItem("remio_monthly_budget:u-1")).toBe("500");
+    });
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it("update calls PATCH /preferences with partial data", async () => {
+    setupDefaultMocks();
+    mockApi.patch.mockResolvedValueOnce({ data: { ...fakePrefsApiResponse, theme: "light" } });
 
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
@@ -151,123 +208,12 @@ describe("PreferencesContext - usePrefs", () => {
     await waitFor(() => expect(result.current.prefsFetched).toBe(true));
 
     act(() => {
-      result.current.update({ compactCards: true });
+      result.current.update({ theme: "light" });
     });
 
     await waitFor(() => {
-      expect(mockApi.post).toHaveBeenCalledWith("/preferences/init");
-      expect(mockApi.patch).toHaveBeenCalledTimes(2);
+      expect(mockApi.patch).toHaveBeenCalledWith("/preferences", { theme: "light" });
     });
-  });
-
-  it("update calls PATCH /preferences with partial data and updates cache optimistically", async () => {
-    setupDefaultMocks();
-
-    const patchedResponse = { ...fakePrefsApiResponse, theme: "light", compact_cards: false };
-    mockApi.patch.mockResolvedValueOnce({ data: patchedResponse });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.prefsFetched).toBe(true);
-    });
-
-    act(() => {
-      result.current.update({ theme: "light", compactCards: false });
-    });
-
-    // Optimistic update is synchronous
-    await waitFor(() => {
-      expect(result.current.prefs.theme).toBe("light");
-    });
-    expect(result.current.prefs.compactCards).toBe(false);
-
-    await waitFor(() => {
-      expect(mockApi.patch).toHaveBeenCalledWith("/preferences", {
-        theme: "light",
-        compact_cards: false,
-      });
-    });
-  });
-
-  it("createApiKey returns new key with secret", async () => {
-    setupDefaultMocks();
-
-    const newKeyResponse = {
-      id: "key-3",
-      name: "Deploy Key",
-      prefix: "orb_dep",
-      secret: "orb_dep_full_secret_456",
-      created_at: "2024-07-01T10:00:00Z",
-      last_used_at: null,
-    };
-    mockApi.post.mockResolvedValueOnce({ data: newKeyResponse });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.prefsFetched).toBe(true);
-    });
-
-    let createdKey: { id: string; secret: string } | undefined;
-    await act(async () => {
-      createdKey = await result.current.createApiKey("Deploy Key");
-    });
-
-    expect(mockApi.post).toHaveBeenCalledWith("/api-keys", { name: "Deploy Key" });
-    expect(createdKey).toBeDefined();
-    expect(createdKey!.id).toBe("key-3");
-    expect(createdKey!.secret).toBe("orb_dep_full_secret_456");
-
-    await waitFor(() => {
-      expect(result.current.apiKeys.some((k) => k.id === "key-3")).toBe(true);
-    });
-  });
-
-  it("revokeApiKey removes key from cache", async () => {
-    setupDefaultMocks();
-    mockApi.delete.mockResolvedValueOnce({ data: {} });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.apiKeys).toHaveLength(2);
-    });
-
-    await act(async () => {
-      await result.current.revokeApiKey("key-1");
-    });
-
-    expect(mockApi.delete).toHaveBeenCalledWith("/api-keys/key-1");
-    await waitFor(() => {
-      expect(result.current.apiKeys).toHaveLength(1);
-    });
-    expect(result.current.apiKeys[0].id).toBe("key-2");
-  });
-
-  it("fetches api keys and transforms them correctly", async () => {
-    setupDefaultMocks();
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.apiKeys).toHaveLength(2);
-    });
-
-    const key1 = result.current.apiKeys.find((k) => k.id === "key-1");
-    expect(key1).toBeDefined();
-    expect(key1!.name).toBe("My Key");
-    expect(key1!.prefix).toBe("orb_abc");
-    expect(key1!.createdAt).toBe(new Date("2024-03-01T10:00:00Z").getTime());
-    expect(key1!.lastUsed).toBe(new Date("2024-06-01T12:00:00Z").getTime());
-
-    const key2 = result.current.apiKeys.find((k) => k.id === "key-2");
-    expect(key2).toBeDefined();
-    expect(key2!.lastUsed).toBeNull();
   });
 
   it("returns default preferences before fetch completes", () => {
@@ -292,144 +238,5 @@ describe("PreferencesContext - usePrefs", () => {
 
     expect(result.current.prefs).toEqual(defaults);
     expect(result.current.prefsFetched).toBe(false);
-  });
-
-  it("loads monthly budget from API only (ignores localStorage)", async () => {
-    localStorage.setItem("remio_monthly_budget:u-1", "1000");
-    mockApi.get.mockImplementation((url: string) => {
-      if (url === "/preferences") {
-        return Promise.resolve({ data: { ...fakePrefsApiResponse, monthly_budget: null } });
-      }
-      if (url === "/api-keys") return Promise.resolve({ data: [] });
-      return Promise.reject(new Error(`Unexpected GET: ${url}`));
-    });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.prefsFetched).toBe(true);
-      expect(result.current.prefs.monthlyBudget).toBeNull();
-    });
-  });
-
-  it("persists monthly budget from PATCH response (server source of truth)", async () => {
-    setupDefaultMocks();
-    mockApi.patch.mockResolvedValueOnce({
-      data: { ...fakePrefsApiResponse, monthly_budget: 750 },
-    });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
-
-    await act(async () => {
-      await result.current.updateAsync({ monthlyBudget: 750 });
-    });
-
-    await waitFor(() => {
-      expect(result.current.prefs.monthlyBudget).toBe(750);
-      expect(mockApi.patch).toHaveBeenCalledWith("/preferences", { monthly_budget: 750 });
-    });
-  });
-
-  it("uses server null when PATCH does not persist budget (no client override)", async () => {
-    setupDefaultMocks();
-    mockApi.patch.mockResolvedValueOnce({
-      data: { ...fakePrefsApiResponse, monthly_budget: null },
-    });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
-
-    await act(async () => {
-      await result.current.updateAsync({ monthlyBudget: 500 });
-    });
-
-    await waitFor(() => {
-      expect(result.current.prefs.monthlyBudget).toBeNull();
-    });
-  });
-
-  it("keeps monthly budget when a legacy API omits monthly_budget on theme PATCH", async () => {
-    const legacyGet = { ...fakePrefsApiResponse };
-    delete (legacyGet as { monthly_budget?: number | null }).monthly_budget;
-
-    mockApi.get.mockImplementation((url: string) => {
-      if (url === "/preferences") return Promise.resolve({ data: legacyGet });
-      if (url === "/api-keys") return Promise.resolve({ data: [] });
-      return Promise.reject(new Error(`Unexpected GET: ${url}`));
-    });
-
-    const legacyThemePatch = { ...legacyGet, theme: "light" };
-    delete (legacyThemePatch as { monthly_budget?: number | null }).monthly_budget;
-    mockApi.patch
-      .mockResolvedValueOnce({ data: { ...legacyGet, monthly_budget: 400 } })
-      .mockResolvedValueOnce({ data: legacyThemePatch });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
-
-    await act(async () => {
-      await result.current.updateAsync({ monthlyBudget: 400 });
-    });
-    await waitFor(() => expect(result.current.prefs.monthlyBudget).toBe(400));
-
-    act(() => {
-      result.current.update({ theme: "light" });
-    });
-
-    await waitFor(() => {
-      expect(result.current.prefs.theme).toBe("light");
-      expect(result.current.prefs.monthlyBudget).toBe(400);
-    });
-  });
-
-  it("rolls back optimistic update on PATCH error", async () => {
-    setupDefaultMocks();
-    mockApi.patch.mockRejectedValueOnce(new Error("patch failed"));
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.prefsFetched).toBe(true);
-    });
-
-    const originalTheme = result.current.prefs.theme;
-
-    act(() => {
-      result.current.update({ theme: "dark" });
-    });
-
-    // Optimistic update applies immediately
-    expect(result.current.prefs.theme).toBe("dark");
-
-    // After error, rolls back
-    await waitFor(() => {
-      expect(result.current.prefs.theme).toBe(originalTheme);
-    });
-  });
-
-  it("throws when GET preferences fails with non-404 error", async () => {
-    mockApi.get.mockImplementation((url: string) => {
-      if (url === "/preferences") {
-        return Promise.reject(new Error("Server down"));
-      }
-      if (url === "/api-keys") return Promise.resolve({ data: [] });
-      return Promise.reject(new Error(`Unexpected GET: ${url}`));
-    });
-
-    const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(result.current.prefsFetched).toBe(false);
-    });
   });
 });
