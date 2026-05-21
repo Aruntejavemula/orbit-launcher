@@ -25,39 +25,7 @@ describe("smartLaunch", () => {
     expect(mockOpen).not.toHaveBeenCalled();
   });
 
-  it("attempts deep link for known slug (figma)", () => {
-    vi.useFakeTimers();
-    smartLaunch({ slug: "figma", url: "https://figma.com/file/123" });
-    expect(mockOpen).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it("attempts deep link for known slug (slack)", () => {
-    vi.useFakeTimers();
-    smartLaunch({ slug: "slack", url: "https://slack.com/workspace" });
-    expect(mockOpen).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it("falls back to browser after 2s when app not opened", () => {
-    vi.useFakeTimers();
-    smartLaunch({ slug: "discord", url: "https://discord.com" });
-    expect(mockOpen).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(2000);
-    expect(mockOpen).toHaveBeenCalledWith("https://discord.com", "_blank", "noopener,noreferrer");
-    vi.useRealTimers();
-  });
-
-  it("does NOT fall back to browser when blur fires before timeout", () => {
-    vi.useFakeTimers();
-    smartLaunch({ slug: "zoom", url: "https://zoom.us" });
-    window.dispatchEvent(new Event("blur"));
-    vi.advanceTimersByTime(2000);
-    expect(mockOpen).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it("figma deep link href replaces figma.com domain", () => {
+  it("opens figma:// deep link for figma slug", () => {
     vi.useFakeTimers();
     const anchors: HTMLAnchorElement[] = [];
     const origCreate = document.createElement.bind(document);
@@ -67,12 +35,12 @@ describe("smartLaunch", () => {
       return el;
     });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    smartLaunch({ slug: "figma", url: "https://www.figma.com/file/abc" });
+    smartLaunch({ slug: "figma", url: "https://figma.com/file/123" });
     expect(anchors[0]?.href).toContain("figma://");
     vi.useRealTimers();
   });
 
-  it("notion deep link href uses notion:// scheme", () => {
+  it("opens slack:// deep link for slack slug", () => {
     vi.useFakeTimers();
     const anchors: HTMLAnchorElement[] = [];
     const origCreate = document.createElement.bind(document);
@@ -82,12 +50,63 @@ describe("smartLaunch", () => {
       return el;
     });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    smartLaunch({ slug: "notion", url: "https://notion.so/page" });
-    expect(anchors[0]?.href).toContain("notion://");
+    smartLaunch({ slug: "slack", url: "https://slack.com/workspace" });
+    expect(anchors[0]?.href).toContain("slack://");
     vi.useRealTimers();
   });
 
-  it("registers and removes blur listener for known slugs", () => {
+  it("opens discord:// deep link for discord slug", () => {
+    vi.useFakeTimers();
+    const anchors: HTMLAnchorElement[] = [];
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === "a") anchors.push(el as HTMLAnchorElement);
+      return el;
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    smartLaunch({ slug: "discord", url: "https://discord.com" });
+    expect(anchors[0]?.href).toContain("discord://");
+    vi.useRealTimers();
+  });
+
+  it("opens zoommtg:// for zoom slug", () => {
+    vi.useFakeTimers();
+    const anchors: HTMLAnchorElement[] = [];
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === "a") anchors.push(el as HTMLAnchorElement);
+      return el;
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    smartLaunch({ slug: "zoom", url: "https://zoom.us" });
+    expect(anchors[0]?.href).toContain("zoommtg://");
+    vi.useRealTimers();
+  });
+
+  it("falls back to browser when app does not open (no blur)", () => {
+    vi.useFakeTimers();
+    smartLaunch({ slug: "figma", url: "https://www.figma.com/file/abc" });
+    vi.advanceTimersByTime(2000);
+    expect(mockOpen).toHaveBeenCalledWith("https://www.figma.com/file/abc", "_blank", "noopener,noreferrer");
+    vi.useRealTimers();
+  });
+
+  it("does not fall back to browser when window blurs (app opened)", () => {
+    vi.useFakeTimers();
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+    smartLaunch({ slug: "notion", url: "https://notion.so/page" });
+    const blurHandler = addSpy.mock.calls.find((c) => c[0] === "blur")?.[1] as () => void;
+    blurHandler?.();
+    vi.advanceTimersByTime(2000);
+    expect(mockOpen).not.toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalledWith("blur", expect.any(Function));
+    vi.useRealTimers();
+  });
+
+  it("registers and removes blur listener", () => {
     vi.useFakeTimers();
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");

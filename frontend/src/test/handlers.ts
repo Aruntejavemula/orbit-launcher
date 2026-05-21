@@ -13,6 +13,7 @@ export const fakeUser = {
   name: "Test User",
   email: "test@example.com",
   avatar_url: null,
+  remember_device: false,
 };
 
 export const fakePrefs = {
@@ -92,6 +93,10 @@ export const handlers = [
   http.get(`${BASE}/auth/me`, () => HttpResponse.json(fakeUser)),
   http.post(`${BASE}/auth/logout`, () => new HttpResponse(null, { status: 204 })),
   http.patch(`${BASE}/auth/me`, () => HttpResponse.json(fakeUser)),
+  http.post(`${BASE}/auth/remember-device`, async ({ request }) => {
+    const body = (await request.json()) as { remember_device?: boolean };
+    return HttpResponse.json({ remember_device: Boolean(body.remember_device) });
+  }),
 
   // Launches
   http.get(`${BASE}/launches`, () => HttpResponse.json([])),
@@ -108,7 +113,10 @@ export const handlers = [
   // Preferences
   http.get(`${BASE}/preferences`, () => HttpResponse.json(fakePrefs)),
   http.post(`${BASE}/preferences/init`, () => HttpResponse.json(fakePrefs, { status: 201 })),
-  http.patch(`${BASE}/preferences`, () => HttpResponse.json(fakePrefs)),
+  http.patch(`${BASE}/preferences`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ ...fakePrefs, ...body });
+  }),
 
   // Reminders
   http.get(`${BASE}/reminders`, () => HttpResponse.json([])),

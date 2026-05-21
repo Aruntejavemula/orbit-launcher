@@ -18,9 +18,18 @@ COOKIE_NAME = "orbit_session"
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def create_access_token(user_id: str, token_version: int = 0, expire_minutes: int | None = None) -> str:
+def create_access_token(
+    user_id: str,
+    token_version: int = 0,
+    expire_minutes: int | None = None,
+    *,
+    remember: bool = False,
+) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes or EXPIRE_MINUTES)
-    return jwt.encode({"sub": user_id, "tv": token_version, "exp": expire}, SECRET, algorithm=ALGORITHM)
+    payload: dict = {"sub": user_id, "tv": token_version, "exp": expire}
+    if remember:
+        payload["rm"] = 1
+    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
@@ -29,7 +38,11 @@ def decode_token(token: str) -> dict:
         user_id: Optional[str] = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Your session has expired. Please sign in again.")
-        return {"user_id": user_id, "token_version": payload.get("tv", 0)}
+        return {
+            "user_id": user_id,
+            "token_version": payload.get("tv", 0),
+            "remember_device": bool(payload.get("rm")),
+        }
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Your session has expired. Please sign in again.")
 
@@ -46,4 +59,5 @@ def get_current_user_id(
     claims = decode_token(token)
     request.state.user_id = claims["user_id"]
     request.state.token_version = claims["token_version"]
+    request.state.remember_device = claims.get("remember_device", False)
     return claims["user_id"]

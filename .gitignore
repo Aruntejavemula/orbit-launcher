@@ -1,6 +1,9 @@
 node_modules
 dist
 dist-ssr
+frontend/release/
+frontend/release-*/
+frontend/electron/store.appx.json
 *.local
 .DS_Store
 .vscode/*
@@ -14,9 +17,20 @@ __pycache__
 .env
 .env.*
 !.env.example
+!.env.electron.example
 backend/backups/
 .coverage
 coverage/
 frontend/coverage/
 test-results/
 *.tsbuildinfo
+
+# Electron builds (local pack, CI, Store)
+frontend/release/
+frontend/release-ci/
+frontend/release-store/
+*.dll
+*.dat
+*.pak
+*.asar
+*.bin
