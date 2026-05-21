@@ -21,7 +21,13 @@
     "electron:pack": "npm run electron:build:ui && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.pack.config.cjs --win --x64 --publish never",
     "electron:pack:ci": "npm run electron:build:ui && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.ci.config.cjs --publish never",
     "electron:build:store": "node scripts/electron-store-build.cjs",
-    "electron:build:store:helper": "dotnet publish electron/store-update/Remio.StoreUpdate.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o electron/store-update/bin"
+    "electron:build:store:helper": "dotnet publish electron/store-update/Remio.StoreUpdate.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o electron/store-update/bin",
+    "cap:build": "npm run icons:generate && cross-env VITE_API_URL=https://www.remiolauncher.com/api tsc -b && vite build --mode capacitor",
+    "cap:sync": "npm run cap:build && npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:run:android": "npm run cap:sync && npx cap run android",
+    "cap:run:ios": "npm run cap:sync && npx cap run ios"
   },
   "build": {
     "appId": "com.remiolauncher.app",
@@ -40,6 +46,12 @@
     }
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@tanstack/react-query": "^5.100.9",
     "axios": "^1.16.0",
     "framer-motion": "^12.38.0",

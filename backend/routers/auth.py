@@ -153,6 +153,19 @@ def _set_auth_cookie(response: Response, token: str, remember: bool = False) -> 
     )
 
 
+def _auth_ok_response(
+    token: str,
+    *,
+    remember: bool = False,
+    body: dict | None = None,
+) -> JSONResponse:
+    """Cookie for web; access_token for Capacitor/Electron WebViews that cannot send cross-site cookies."""
+    payload = {**(body or {"ok": True}), "access_token": token}
+    response = JSONResponse(payload)
+    _set_auth_cookie(response, token, remember=remember)
+    return response
+
+
 def _clear_auth_cookie(response: Response) -> None:
     response.delete_cookie(
         key=COOKIE_NAME,
@@ -182,9 +195,7 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
         token_version=user.token_version,
         expire_minutes=_SESSION_EXPIRE_MINUTES,
     )
-    response = JSONResponse(content={"ok": True})
-    _set_auth_cookie(response, token, remember=False)
-    return response
+    return _auth_ok_response(token, remember=False)
 
 
 @router.post("/login")
@@ -196,9 +207,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     expire = _REMEMBER_EXPIRE_MINUTES if body.remember_me else _SESSION_EXPIRE_MINUTES
     token = create_access_token(str(user.id), token_version=user.token_version, expire_minutes=expire)
-    response = JSONResponse(content={"ok": True})
-    _set_auth_cookie(response, token, remember=body.remember_me)
-    return response
+    return _auth_ok_response(token, remember=body.remember_me)
 
 
 @router.post("/remember-device")
@@ -217,9 +226,11 @@ async def set_remember_device(
         expire_minutes=expire,
         remember=body.remember_device,
     )
-    response = JSONResponse({"remember_device": body.remember_device})
-    _set_auth_cookie(response, token, remember=body.remember_device)
-    return response
+    return _auth_ok_response(
+        token,
+        remember=body.remember_device,
+        body={"remember_device": body.remember_device},
+    )
 
 
 @router.post("/logout", status_code=204)
@@ -268,6 +279,8 @@ async def google_callback(request: Request, code: str, state: str | None = None,
         guser = await exchange_code_for_user(code, platform=oauth_platform)
     except Exception as exc:
         logger.warning("Google OAuth exchange failed: %s", exc)
+        if remio_handoff:
+            return RedirectResponse("remio://auth/callback?error=1", status_code=302)
         if _IS_PROD:
             return RedirectResponse(f"{FRONTEND_URL}/?google_error=1", status_code=302)
         detail = "Google sign-in failed. Please try again."
@@ -297,13 +310,19 @@ async def google_callback(request: Request, code: str, state: str | None = None,
             await db.commit()
             await db.refresh(user)
 
+    if remio_handoff:
+        exchange = _create_desktop_exchange_code(str(user.id), remember=remember_device)
+        redirect = RedirectResponse(f"remio://auth/callback?code={exchange}", status_code=302)
+        redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth")
+        return redirect
+
     token = create_access_token(
         str(user.id),
         token_version=user.token_version,
         expire_minutes=_SESSION_EXPIRE_MINUTES,
     )
     redirect = RedirectResponse(f"{FRONTEND_URL}/auth/callback", status_code=302)
-    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth/google")
+    redirect.delete_cookie(key=_GOOGLE_STATE_COOKIE, path="/api/auth")
     _set_auth_cookie(redirect, token, remember=False)
     return redirect
 
@@ -327,9 +346,7 @@ async def desktop_session(body: DesktopSessionRequest, db: AsyncSession = Depend
         expire_minutes=expire,
         remember=remember_device,
     )
-    response = JSONResponse({"ok": True})
-    _set_auth_cookie(response, token, remember=remember_device)
-    return response
+    return _auth_ok_response(token, remember=remember_device)
 
 
 @router.get("/me", response_model=UserResponse)

@@ -98,14 +98,13 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
           initial="initial"
           animate="animate"
         >
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="sync">
             {page.map((a) => (
               <motion.div
                 key={a.id}
                 variants={cardVariants}
-                initial="initial"
+                initial={false}
                 animate="animate"
-                exit={{ opacity: 0, y: 12 }}
                 transition={cardTransition}
               >
                 <AppListRow
@@ -127,14 +126,13 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
           initial="initial"
           animate="animate"
         >
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="sync">
             {page.map((a) => (
               <motion.div
                 key={a.id}
                 variants={cardVariants}
-                initial="initial"
+                initial={false}
                 animate="animate"
-                exit={{ opacity: 0, y: 12 }}
                 transition={cardTransition}
               >
                 <AppCard

@@ -216,6 +216,30 @@ describe("PreferencesContext - usePrefs", () => {
     });
   });
 
+  it("keeps onboardingCompleted true after finish when server still returns false", async () => {
+    setupDefaultMocks();
+    mockApi.get.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, onboarding_completed: false },
+    });
+    mockApi.patch.mockResolvedValueOnce({
+      data: { ...fakePrefsApiResponse, onboarding_completed: false },
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => usePrefs(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.prefsFetched).toBe(true));
+    expect(result.current.prefs.onboardingCompleted).toBe(false);
+
+    await act(async () => {
+      await result.current.updateAsync({ onboardingCompleted: true });
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefs.onboardingCompleted).toBe(true);
+    });
+  });
+
   it("returns default preferences before fetch completes", () => {
     mockApi.get.mockImplementation(() => new Promise(() => {}));
 
