@@ -5,8 +5,10 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const electronBuild = mode === "electron";
+  const capacitorBuild = mode === "capacitor";
+  const nativeShellBuild = electronBuild || capacitorBuild;
   const plugins = [react()];
-  if (!electronBuild) {
+  if (!nativeShellBuild) {
     plugins.push(
       VitePWA({
         strategies: "injectManifest",
@@ -22,7 +24,7 @@ export default defineConfig(({ mode }) => {
     );
   }
   return {
-    base: electronBuild ? "./" : "/",
+    base: nativeShellBuild ? "./" : "/",
     plugins,
     build: {
       rollupOptions: {

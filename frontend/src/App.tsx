@@ -47,6 +47,9 @@ import {
   markPendingRememberPrompt,
 } from "./lib/rememberDevicePrompt";
 import { shouldShowBudgetNudge } from "./lib/budgetNudge";
+import { isCapacitorNative } from "./lib/capacitor";
+import { registerCapacitorOAuthListener } from "./lib/capacitorAuth";
+import { saveCapacitorTokenFromAuthBody } from "./lib/capacitorSession";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
 import { appleSpringDrawer, appleSpringGentle, fadeUpVariants } from "./lib/motion";
@@ -88,6 +91,7 @@ export default function App() {
   const [showBudgetNudge, setShowBudgetNudge] = useState(false);
   const { apps } = useApps();
   const { prefs, prefsFetched, update } = usePrefs();
+  const showOnboarding = prefsFetched && !prefs.onboardingCompleted;
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const [page, setPage] = useState<PageId>("home");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -128,6 +132,18 @@ export default function App() {
   }, [isAuthCallback, authLoading, user]);
 
   useEffect(() => {
+    if (!isCapacitorNative()) return;
+    registerCapacitorOAuthListener({
+      onSuccess: async () => {
+        await signIn(false);
+      },
+      onError: () => {
+        navigateAppRoot("?google_error=1");
+      },
+    });
+  }, [signIn]);
+
+  useEffect(() => {
     if (!user || authLoading) return;
     if (consumePendingRememberPrompt() && !user.remember_device) {
       setShowRememberPrompt(true);
@@ -150,7 +166,8 @@ export default function App() {
     async (remember: boolean) => {
       setShowRememberPrompt(false);
       try {
-        await api.post("/auth/remember-device", { remember_device: remember });
+        const res = await api.post("/auth/remember-device", { remember_device: remember });
+        if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(res.data);
         await refreshUser();
         await signIn(remember);
       } catch {
@@ -161,8 +178,9 @@ export default function App() {
   );
 
   useEffect(() => {
+    if (showOnboarding) return;
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");
-  }, [prefs.theme]);
+  }, [prefs.theme, showOnboarding]);
 
   useEffect(() => {
     const currentId = user?.id ?? null;
@@ -311,6 +329,7 @@ export default function App() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.32, ease: [0.25, 0.1, 0.25, 1] }}
     >
+      {!showOnboarding ? (
       <header
         className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center border-b px-4 md:hidden"
         style={{ background: "var(--bg)", borderColor: "var(--line)" }}
@@ -326,9 +345,10 @@ export default function App() {
           <Menu size={22} />
         </button>
       </header>
+      ) : null}
 
       <AnimatePresence>
-        {mobileNavOpen ? (
+        {mobileNavOpen && !showOnboarding ? (
           <>
             <motion.div
               key="mobile-nav-overlay"
@@ -362,47 +382,53 @@ export default function App() {
         ) : null}
       </AnimatePresence>
 
-      {isDesktop ? <Sidebar page={page} onNavigate={handleNavigate} /> : null}
+      {!showOnboarding && isDesktop ? <Sidebar page={page} onNavigate={handleNavigate} /> : null}
       <main
         className={`relative flex-1 overflow-x-hidden md:min-h-0 md:overflow-y-auto${mobileNavOpen ? " max-md:pointer-events-none" : ""}`}
       >
-        <div className="absolute right-5 top-[4.25rem] z-10 md:right-10 md:top-8">
-          <button
-            onClick={() => update({ theme: prefs.theme === "dark" ? "light" : "dark" })}
-            className="grid h-9 w-9 place-items-center rounded-full shadow-card transition-all hover:scale-[1.08] active:scale-[0.93]"
-            style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--line)" }}
-            aria-label="Toggle theme"
-          >
-            {prefs.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
-        <div className="mx-auto max-w-[1240px] px-5 pb-32 pt-20 md:px-10 md:pt-10">
-          {offline && (
-            <p
-              className="mb-4 rounded-xl border px-4 py-2 text-sm"
-              style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--text-muted)" }}
-              role="status"
-            >
-              Offline mode — showing your last saved data. Changes sync when you&apos;re back online.
-            </p>
-          )}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={page}
-              variants={fadeUpVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={appleSpringGentle}
-            >
-              <Suspense fallback={null}>{renderPage()}</Suspense>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-        <FloatingAddButton onClick={() => setShowAdd(true)} />
+        {!showOnboarding ? (
+          <>
+            <div className="absolute right-5 top-[4.25rem] z-10 md:right-10 md:top-8">
+              <button
+                onClick={() => update({ theme: prefs.theme === "dark" ? "light" : "dark" })}
+                className="grid h-9 w-9 place-items-center rounded-full shadow-card transition-all hover:scale-[1.08] active:scale-[0.93]"
+                style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--line)" }}
+                aria-label="Toggle theme"
+              >
+                {prefs.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+            </div>
+            <div className="mx-auto max-w-[1240px] px-5 pb-32 pt-20 md:px-10 md:pt-10">
+              {offline && (
+                <p
+                  className="mb-4 rounded-xl border px-4 py-2 text-sm"
+                  style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--text-muted)" }}
+                  role="status"
+                >
+                  Offline mode — showing your last saved data. Changes sync when you&apos;re back online.
+                </p>
+              )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={page}
+                  variants={fadeUpVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={appleSpringGentle}
+                >
+                  <Suspense fallback={null}>{renderPage()}</Suspense>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            <FloatingAddButton onClick={() => setShowAdd(true)} />
+          </>
+        ) : null}
       </main>
-      <BottomNav page={page} onNavigate={handleNavigate} onAdd={() => setShowAdd(true)} />
-      <AddAppModal open={showAdd} onClose={() => setShowAdd(false)} />
+      {!showOnboarding ? (
+        <BottomNav page={page} onNavigate={handleNavigate} onAdd={() => setShowAdd(true)} />
+      ) : null}
+      {!showOnboarding ? <AddAppModal open={showAdd} onClose={() => setShowAdd(false)} /> : null}
       <AnimatePresence>
         {openApp && (
           <AppDetailModal app={openApp} onClose={() => setOpenAppId(null)} />
@@ -414,7 +440,7 @@ export default function App() {
         open={showBudgetNudge && !showRememberPrompt}
         onSaved={() => setShowBudgetNudge(false)}
       />
-      {prefsFetched && !prefs.onboardingCompleted && <OnboardingOverlay />}
+      {showOnboarding && <OnboardingOverlay />}
     </motion.div>
   );
 }

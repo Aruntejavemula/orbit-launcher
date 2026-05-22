@@ -8,6 +8,10 @@ import {
   resolveMonthlyBudget,
   writeBudgetCache,
 } from "../lib/budgetLocalCache";
+import {
+  resolveOnboardingCompleted,
+  writeOnboardingCache,
+} from "../lib/onboardingLocalCache";
 
 const DEFAULTS: Preferences = {
   theme: "light",
@@ -68,7 +72,7 @@ function toPrefs(
     reminderDays: raw.reminder_days ?? 7,
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
-    onboardingCompleted: raw.onboarding_completed ?? false,
+    onboardingCompleted: resolveOnboardingCompleted(raw.onboarding_completed, userId),
     monthlyBudget,
     country: raw.country ?? "",
   };
@@ -214,7 +218,10 @@ export function usePrefs() {
     enabled: !!user,
   });
 
-  const prefs = prefsQuery?.prefs ?? DEFAULTS;
+  const prefs = prefsQuery?.prefs ?? {
+    ...DEFAULTS,
+    onboardingCompleted: resolveOnboardingCompleted(false, userId),
+  };
 
   const { data: apiKeys = [] } = useQuery({
     queryKey: ["api-keys"],
@@ -234,19 +241,29 @@ export function usePrefs() {
       await qc.cancelQueries({ queryKey: prefsQueryKey });
       const cached = qc.getQueryData<PrefsQueryResult>(prefsQueryKey);
       const prev = cached ?? { prefs: DEFAULTS, serverSupportsBudget: false };
+      const optimisticPatch = { ...patch };
+      if (optimisticPatch.onboardingCompleted) {
+        delete optimisticPatch.onboardingCompleted;
+      }
       if (patch.monthlyBudget !== undefined) {
         writeBudgetCache(userId, patch.monthlyBudget ?? null);
       }
       qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
-        prefs: { ...prev.prefs, ...patch },
+        prefs: { ...prev.prefs, ...optimisticPatch },
         serverSupportsBudget: prev.serverSupportsBudget,
       });
       return { prev: cached };
     },
     onSuccess: ({ prefs, raw }, variables, context) => {
+      if (variables.onboardingCompleted) {
+        writeOnboardingCache(userId);
+      }
       const prevCached = context?.prev;
       const prevPrefs = prevCached?.prefs ?? DEFAULTS;
       let next = prefs;
+      if (variables.onboardingCompleted) {
+        next = { ...next, onboardingCompleted: true };
+      }
       if (variables.monthlyBudget === undefined && raw && !apiHasMonthlyBudgetField(raw)) {
         if (prevPrefs.monthlyBudget != null) {
           next = { ...next, monthlyBudget: prevPrefs.monthlyBudget };
@@ -261,17 +278,26 @@ export function usePrefs() {
       });
     },
     onError: async (err, variables) => {
+      const cached = qc.getQueryData<PrefsQueryResult>(prefsQueryKey);
+      const prev = cached?.prefs ?? DEFAULTS;
       if (variables.monthlyBudget !== undefined) {
-        const cached = qc.getQueryData<PrefsQueryResult>(prefsQueryKey);
-        const prev = cached?.prefs ?? DEFAULTS;
         const budget = readBudgetCache(userId) ?? variables.monthlyBudget ?? null;
         qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
-          prefs: { ...prev, monthlyBudget: budget },
+          prefs: {
+            ...prev,
+            monthlyBudget: budget,
+            onboardingCompleted: variables.onboardingCompleted ? false : prev.onboardingCompleted,
+          },
           serverSupportsBudget: cached?.serverSupportsBudget ?? false,
         });
-        return;
+      } else if (variables.onboardingCompleted) {
+        qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
+          prefs: { ...prev, onboardingCompleted: false },
+          serverSupportsBudget: cached?.serverSupportsBudget ?? false,
+        });
+      } else {
+        await qc.invalidateQueries({ queryKey: prefsQueryKey });
       }
-      await qc.invalidateQueries({ queryKey: prefsQueryKey });
       toast(preferencesErrorMessage(err), "error");
     },
   });

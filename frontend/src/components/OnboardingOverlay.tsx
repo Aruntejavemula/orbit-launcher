@@ -31,6 +31,7 @@ import { useAuth } from "../context/AuthContext";
 import { useApps } from "../context/AppsContext";
 
 import { usePrefs } from "../context/PreferencesContext";
+import { toast } from "./Toast";
 
 import { appCatalog, type CatalogApp } from "../data/appCatalog";
 
@@ -298,12 +299,15 @@ export default function OnboardingOverlay() {
 
 
   useEffect(() => {
-
     if (step < 5) return;
-
     document.documentElement.classList.toggle("dark", draftTheme === "dark");
-
   }, [step, draftTheme]);
+
+  useEffect(() => {
+    return () => {
+      document.documentElement.classList.toggle("dark", prefs.theme === "dark");
+    };
+  }, [prefs.theme]);
 
 
 
@@ -354,28 +358,27 @@ export default function OnboardingOverlay() {
 
 
   const finish = async () => {
-
     if (finishing) return;
 
-    const budget = monthlyBudget ?? parseBudget();
+    let budget = monthlyBudget ?? parseBudget();
+    if (budget == null || budget <= 0) {
+      budget = getBudgetPresets(onboardingCountry).defaultAmount;
+    }
     if (budget == null || budget <= 0) {
       setBudgetError(true);
       setStep(4);
+      toast("Set your monthly budget to continue.", "error");
       return;
     }
 
     setFinishing(true);
-
     try {
-
       await updateAsync({ ...buildFinishPatch(), monthlyBudget: budget });
-
+    } catch {
+      toast("Could not save your setup. Check your connection and tap Enter Remio again.", "error");
     } finally {
-
       setFinishing(false);
-
     }
-
   };
 
 
@@ -391,48 +394,37 @@ export default function OnboardingOverlay() {
 
 
 
-  const addSelectedApps = async () => {
-
+  const addSelectedApps = async (): Promise<{ added: string[]; failed: number }> => {
     const toAdd = catalogGrid.filter((a) => selectedSlugs.has(a.slug) && !installedSlugs.has(a.slug));
-
     const startDate = new Date().toISOString().split("T")[0];
-
-    const names: string[] = [];
+    const added: string[] = [];
+    let failed = 0;
 
     for (const app of toAdd) {
-
       const monthlyCost = suggestedMonthlyPrice(app.slug, onboardingCountry) ?? FALLBACK_MONTHLY_COST;
-
       const expiresAt = computeSubscriptionExpiryMs("paid", startDate, { frequency: "monthly" });
-
-      await addApp({
-
-        name: app.name,
-
-        slug: app.slug,
-
-        color: app.color,
-
-        url: resolveAppUrl(app.slug, app.url, onboardingCountry),
-
-        category: app.category,
-
-        plan: "paid",
-
-        monthlyCost,
-
-        frequency: "monthly",
-
-        expiresAt: expiresAt ?? undefined,
-
-      });
-
-      names.push(app.name);
-
+      try {
+        await addApp({
+          name: app.name,
+          slug: app.slug,
+          color: app.color.replace(/^#/, ""),
+          url: resolveAppUrl(app.slug, app.url, onboardingCountry),
+          category: app.category,
+          plan: "paid",
+          monthlyCost,
+          frequency: "monthly",
+          expiresAt: expiresAt ?? undefined,
+        });
+        added.push(app.name);
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 409) continue;
+        failed += 1;
+      }
     }
 
-    setAddedAppNames(names);
-
+    setAddedAppNames(added);
+    return { added, failed };
   };
 
 
@@ -452,23 +444,26 @@ export default function OnboardingOverlay() {
 
 
   const goAppsContinue = async () => {
-
     setSaving(true);
-
     try {
-
-      if (selectedSlugs.size > 0) await addSelectedApps();
-
-      else setAddedAppNames([]);
-
+      if (selectedSlugs.size > 0) {
+        const { added, failed } = await addSelectedApps();
+        if (added.length === 0 && failed > 0) {
+          toast("Could not add apps. Check your connection and try again.", "error");
+          return;
+        }
+        if (failed > 0) {
+          toast("Some apps could not be saved. You can add them later from the dashboard.", "error");
+        }
+      } else {
+        setAddedAppNames([]);
+      }
       setStep(4);
-
+    } catch {
+      toast("Could not add apps. Check your connection and try again.", "error");
     } finally {
-
       setSaving(false);
-
     }
-
   };
 
 
@@ -496,8 +491,12 @@ export default function OnboardingOverlay() {
       return;
     }
     setBudgetError(false);
-    await persistBudget(budget);
-    setStep(5);
+    try {
+      await persistBudget(budget);
+      setStep(5);
+    } catch {
+      toast("Could not save your budget. Check your connection and try again.", "error");
+    }
   };
 
 

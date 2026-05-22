@@ -6,6 +6,9 @@ import { markPendingRememberPrompt } from "../lib/rememberDevicePrompt";
 import HeroLogo from "../components/HeroLogo";
 import api from "../api";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
+import { isCapacitorNative } from "../lib/capacitor";
+import { startCapacitorGoogleSignIn } from "../lib/capacitorAuth";
+import { saveCapacitorTokenFromAuthBody } from "../lib/capacitorSession";
 import { appSearch, navigateAppRoot } from "../lib/navigation";
 import { AuthMarketingBackground, LoginMarketingPanel } from "../components/AuthMarketing";
 import LegalLinks from "../components/LegalLinks";
@@ -84,10 +87,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === "register") {
-        await api.post("/auth/register", { name, email, password });
+        const reg = await api.post("/auth/register", { name, email, password });
+        if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(reg.data);
         await signIn(false);
       } else {
-        await api.post("/auth/login", { email, password, remember_me: false });
+        const login = await api.post("/auth/login", { email, password, remember_me: false });
+        if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(login.data);
         markPendingRememberPrompt();
         await signIn(false);
       }
@@ -103,6 +108,12 @@ export default function LoginPage() {
     markPendingRememberPrompt();
     if (isRemioDesktop()) {
       void getRemioDesktop()?.startGoogleSignIn();
+      return;
+    }
+    if (isCapacitorNative()) {
+      void startCapacitorGoogleSignIn().catch(() => {
+        setError("Google sign-in failed. Please try again.");
+      });
       return;
     }
     window.location.href = "/api/auth/google";

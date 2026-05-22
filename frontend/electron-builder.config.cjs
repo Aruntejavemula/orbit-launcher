@@ -30,7 +30,7 @@ module.exports = {
   },
   appx: {
     ...appx,
-    displayName: "Remio",
+    displayName: "Remio Launcher",
     publish: null,
   },
   extraResources: storeUpdateResources,

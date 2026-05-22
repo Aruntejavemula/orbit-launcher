@@ -29,7 +29,10 @@ async def test_register_success(client, mock_db):
             json={"name": "New User", "email": "new@example.com", "password": "SecurePass1!"},
         )
     assert resp.status_code in (200, 201)
-    assert resp.json() == {"ok": True}
+    body = resp.json()
+    assert body["ok"] is True
+    assert body.get("access_token")
+    assert "orbit_session" in resp.cookies
 
 
 @pytest.mark.asyncio
@@ -59,7 +62,10 @@ async def test_login_success(client, mock_db):
         json={"email": "login@example.com", "password": "SecurePass1!", "remember_me": False},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    body = resp.json()
+    assert body["ok"] is True
+    assert body.get("access_token")
+    assert "orbit_session" in resp.cookies
 
 
 @pytest.mark.asyncio
@@ -89,4 +95,7 @@ async def test_remember_device(client, mock_db):
         json={"remember_device": True},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"remember_device": True}
+    body = resp.json()
+    assert body["remember_device"] is True
+    assert body.get("access_token")
+    assert "orbit_session" in resp.cookies
