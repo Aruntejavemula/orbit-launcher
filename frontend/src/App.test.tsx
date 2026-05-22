@@ -92,9 +92,10 @@ describe("App routing and shell", () => {
     );
     renderApp();
     await waitFor(
-      () => expect(screen.getAllByLabelText(/toggle theme/i).length).toBeGreaterThan(0),
+      () => expect(screen.getByText(/welcome to remio/i)).toBeInTheDocument(),
       { timeout: 8000 }
     );
+    expect(screen.queryByLabelText(/toggle theme/i)).not.toBeInTheDocument();
   }, 20000);
 
   it("shows auth loading for unknown path when logged out", async () => {

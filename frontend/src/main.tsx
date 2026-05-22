@@ -9,7 +9,8 @@ import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 async function bootstrap() {
-  if (import.meta.env.MODE !== "electron") {
+  const webOnly = import.meta.env.MODE !== "electron" && import.meta.env.MODE !== "capacitor";
+  if (webOnly) {
     void import("virtual:pwa-register").then(({ registerSW }) => {
       registerSW({ immediate: true });
     });

@@ -51,5 +51,7 @@ async def test_desktop_session_sets_cookie(client, mock_db):
     code = _create_desktop_exchange_code(TEST_USER_ID, remember=True)
     resp = await client.post("/api/auth/desktop/session", json={"code": code})
     assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    body = resp.json()
+    assert body["ok"] is True
+    assert body.get("access_token")
     assert "orbit_session" in resp.cookies
