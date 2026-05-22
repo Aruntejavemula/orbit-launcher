@@ -17,6 +17,9 @@ import {
   clearCachedUser,
 } from "../utils/authSession";
 import { clearOfflineDataCache } from "../utils/offlineDataCache";
+import { clearOnboardingCache } from "../lib/onboardingLocalCache";
+import { isCapacitorNative } from "../lib/capacitor";
+import { clearCapacitorAccessToken } from "../lib/capacitorSession";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
 import { clearPendingRememberPrompt } from "../lib/rememberDevicePrompt";
 
@@ -97,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOffline(false);
     queryClient.clear();
     clearCachedUser();
+    if (isCapacitorNative()) clearCapacitorAccessToken();
+    clearOnboardingCache(user?.id);
     clearOfflineDataCache();
     sessionStorage.clear();
   }, []);

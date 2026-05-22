@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Remio</string>
+    <string name="title_activity_main">Remio</string>
+    <string name="package_name">com.remiolauncher.app</string>
+    <string name="custom_url_scheme">com.remiolauncher.app</string>
+</resources>

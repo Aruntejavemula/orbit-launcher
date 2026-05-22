@@ -1,5 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { toast } from "./components/Toast";
+import { isCapacitorNative } from "./lib/capacitor";
+import { getCapacitorAccessToken } from "./lib/capacitorSession";
 import { getRemioDesktop, isRemioDesktop } from "./lib/desktop";
 import { appPathname, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
@@ -11,6 +13,16 @@ const api = axios.create({
 });
 
 const AUTH_ENDPOINTS = ["/auth/login", "/auth/register", "/auth/me", "/auth/remember-device"];
+
+if (isCapacitorNative()) {
+  api.interceptors.request.use((config) => {
+    const token = getCapacitorAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+}
 
 function apiPath(config: InternalAxiosRequestConfig): string {
   const base = (config.baseURL || "").replace(/\/$/, "");

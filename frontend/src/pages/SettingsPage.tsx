@@ -11,6 +11,8 @@ import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import ConfirmModal from "../components/ConfirmModal";
 import LegalLinks from "../components/LegalLinks";
 import { LEGAL_COMPANY, LEGAL_OPERATOR } from "../lib/legal";
+import { isCapacitorNative } from "../lib/capacitor";
+import { saveCapacitorTokenFromAuthBody } from "../lib/capacitorSession";
 import { getRemioDesktop, isRemioDesktop } from "../lib/desktop";
 import api from "../api";
 
@@ -53,7 +55,8 @@ export default function SettingsPage() {
     setRememberDevice(value);
     setRememberSaving(true);
     try {
-      await api.post("/auth/remember-device", { remember_device: value });
+      const res = await api.post("/auth/remember-device", { remember_device: value });
+      if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(res.data);
       await signIn(value);
     } catch {
       setRememberDevice(!value);

@@ -1,5 +1,6 @@
 export function hexToRgb(hex: string): string {
-  const h = hex.replace("#", "");
+  const h = hex.replace(/^#/, "");
+  if (!/^[0-9A-Fa-f]{6}$/.test(h)) return "107, 114, 128";
   return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
 }
 
