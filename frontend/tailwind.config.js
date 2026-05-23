@@ -25,8 +25,8 @@ export default {
         amberish: "#C99A4A",
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Fraunces", "Georgia", "serif"],
+        sans: ["ui-sans-serif", "system-ui", "sans-serif", "Inter"],
+        display: ["Georgia", "serif", "Fraunces"],
       },
       boxShadow: {
         card: "0 1px 2px rgba(31,36,33,.04), 0 8px 24px rgba(31,36,33,.06)",

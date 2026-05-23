@@ -40,15 +40,18 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // Firebase (FCM) — BoM keeps versions aligned; required for Capacitor push on Android
+    implementation platform('com.google.firebase:firebase-bom:34.13.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+// Google services plugin must be last — reads app/google-services.json for FCM
+def servicesJSON = file('google-services.json')
+if (servicesJSON.exists() && servicesJSON.getText('UTF-8').trim()) {
+    apply plugin: 'com.google.gms.google-services'
+} else {
+    logger.warn('google-services.json missing — Android push (FCM) will not work')
 }

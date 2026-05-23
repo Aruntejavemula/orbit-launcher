@@ -1,10 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { smartLaunch } from "./launch";
+
+vi.mock("../lib/capacitor", () => ({
+  isCapacitorNative: vi.fn(() => false),
+}));
+
+import {
+  getLaunchFallbackMs,
+  handoffToApp,
+  resetLaunchHandoffState,
+  smartLaunch,
+} from "./launch";
 
 describe("smartLaunch", () => {
   let mockOpen: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    resetLaunchHandoffState();
     mockOpen = vi.fn();
     vi.stubGlobal("open", mockOpen);
     vi.spyOn(document.body, "appendChild").mockImplementation((el) => el);
@@ -85,10 +96,18 @@ describe("smartLaunch", () => {
     vi.useRealTimers();
   });
 
+  it("uses shorter fallback on native", async () => {
+    const { isCapacitorNative } = await import("../lib/capacitor");
+    vi.mocked(isCapacitorNative).mockReturnValue(true);
+    expect(getLaunchFallbackMs()).toBe(400);
+    vi.mocked(isCapacitorNative).mockReturnValue(false);
+    expect(getLaunchFallbackMs()).toBe(2000);
+  });
+
   it("falls back to browser when app does not open (no blur)", () => {
     vi.useFakeTimers();
-    smartLaunch({ slug: "figma", url: "https://www.figma.com/file/abc" });
-    vi.advanceTimersByTime(2000);
+    handoffToApp({ slug: "figma", url: "https://www.figma.com/file/abc" });
+    vi.advanceTimersByTime(getLaunchFallbackMs());
     expect(mockOpen).toHaveBeenCalledWith("https://www.figma.com/file/abc", "_blank", "noopener,noreferrer");
     vi.useRealTimers();
   });
@@ -100,7 +119,7 @@ describe("smartLaunch", () => {
     smartLaunch({ slug: "notion", url: "https://notion.so/page" });
     const blurHandler = addSpy.mock.calls.find((c) => c[0] === "blur")?.[1] as () => void;
     blurHandler?.();
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(getLaunchFallbackMs());
     expect(mockOpen).not.toHaveBeenCalled();
     expect(removeSpy).toHaveBeenCalledWith("blur", expect.any(Function));
     vi.useRealTimers();
@@ -112,7 +131,7 @@ describe("smartLaunch", () => {
     const removeSpy = vi.spyOn(window, "removeEventListener");
     smartLaunch({ slug: "slack", url: "https://slack.com" });
     expect(addSpy).toHaveBeenCalledWith("blur", expect.any(Function));
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(getLaunchFallbackMs());
     expect(removeSpy).toHaveBeenCalledWith("blur", expect.any(Function));
     vi.useRealTimers();
   });

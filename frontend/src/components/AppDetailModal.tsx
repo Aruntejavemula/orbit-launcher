@@ -168,7 +168,7 @@ export default function AppDetailModal({ app, onClose }: Props) {
           </div>
           <button
             onClick={() => {
-              launch(app.id);
+              launch({ id: app.id, slug: app.slug, url: app.url });
               onClose();
             }}
             className="btn-primary mt-5 w-full px-6 py-3 text-base"

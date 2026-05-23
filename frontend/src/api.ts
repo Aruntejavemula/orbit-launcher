@@ -1,21 +1,39 @@
-import axios, { type InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { toast } from "./components/Toast";
+import { getApiBase } from "./lib/apiOrigin";
+import { API_HTML_RESPONSE, assertJsonApiResponse } from "./lib/apiJsonResponse";
 import { isCapacitorNative } from "./lib/capacitor";
 import { getCapacitorAccessToken } from "./lib/capacitorSession";
 import { getRemioDesktop, isRemioDesktop } from "./lib/desktop";
 import { appPathname, isPackagedFile, navigateAppRoot } from "./lib/navigation";
 
+const apiBase = getApiBase();
+
 // Public bundle: only VITE_* env vars are embedded. Secrets and DB config live in backend/.env only.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "/api",
+  baseURL: apiBase,
   withCredentials: true,
   timeout: 10000,
+  headers: { Accept: "application/json" },
 });
 
 const AUTH_ENDPOINTS = ["/auth/login", "/auth/register", "/auth/me", "/auth/remember-device"];
 
 if (isCapacitorNative()) {
+  if (!apiBase.startsWith("http")) {
+    console.error(
+      "[Remio] Capacitor build has relative API base (%s). Run: npm run cap:build",
+      apiBase,
+    );
+  }
   api.interceptors.request.use((config) => {
+    if (!apiBase.startsWith("http")) {
+      return Promise.reject(
+        new Error(
+          "API base URL is not configured for mobile. Rebuild the app with npm run cap:build.",
+        ),
+      );
+    }
     const token = getCapacitorAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -71,14 +89,27 @@ if (isRemioDesktop() && desktop?.sessionFetch) {
 }
 
 api.interceptors.response.use(
-  (r) => r,
+  (r: AxiosResponse) => {
+    assertJsonApiResponse(r);
+    return r;
+  },
   (err) => {
     if (axios.isCancel(err)) return Promise.reject(err);
     const url: string = err.config?.url ?? "";
     const isAuthCall = AUTH_ENDPOINTS.some((p) => url.includes(p));
+    if (err.name === API_HTML_RESPONSE || (err instanceof Error && err.message.includes("HTML instead of JSON"))) {
+      if (!isAuthCall) {
+        toast(
+          "App is calling the wrong server (got a web page, not API data). Rebuild with npm run cap:build.",
+          "error",
+        );
+      }
+      return Promise.reject(err);
+    }
     if (err.response?.status === 401) {
       if (!isAuthCall && appPathname() !== "/") {
-        if (isPackagedFile()) {
+        // Capacitor/file: avoid location.href — full reload drops state and can re-show onboarding.
+        if (isPackagedFile() || isCapacitorNative()) {
           navigateAppRoot();
         } else {
           window.location.href = "/";

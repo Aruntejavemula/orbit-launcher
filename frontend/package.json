@@ -52,6 +52,8 @@
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@capacitor/ios": "^8.3.4",
+    "@capacitor/push-notifications": "^8.1.1",
+    "@lottiefiles/dotlottie-web": "^0.74.0",
     "@tanstack/react-query": "^5.100.9",
     "axios": "^1.16.0",
     "framer-motion": "^12.38.0",

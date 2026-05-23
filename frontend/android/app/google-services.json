@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "393065020495",
+    "project_id": "remio-9fa83",
+    "storage_bucket": "remio-9fa83.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:393065020495:android:4f2f1942967b19a3653e3a",
+        "android_client_info": {
+          "package_name": "com.remiolauncher.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "393065020495-c0a6estf7ue8qi4phtpf163vfiuo58bs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvzN9WkRFx44LNr1Af2zqxoAtRCxw42nE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "393065020495-c0a6estf7ue8qi4phtpf163vfiuo58bs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

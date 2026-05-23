@@ -13,6 +13,13 @@ vi.mock("../api", () => ({ default: mockApi }));
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({ signIn: mockSignIn }),
 }));
+vi.mock("../context/PreferencesContext", () => ({
+  usePrefs: () => ({ update: vi.fn() }),
+}));
+vi.mock("../lib/capacitorPush", () => ({
+  syncNativePushAfterLogin: vi.fn().mockResolvedValue(false),
+}));
+vi.mock("../lib/capacitor", () => ({ isCapacitorNative: () => false }));
 vi.mock("../components/ForgotPasswordModal", () => ({
   default: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
     open ? <div data-testid="forgot-modal"><button onClick={onClose}>Close</button></div> : null,
