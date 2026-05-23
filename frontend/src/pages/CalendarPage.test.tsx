@@ -332,12 +332,6 @@ describe("CalendarPage", () => {
         );
       })
     );
-    // Grant notification permission
-    Object.defineProperty(globalThis, "Notification", {
-      value: { requestPermission: () => Promise.resolve("granted"), permission: "granted" },
-      writable: true,
-      configurable: true,
-    });
     renderCalendar();
     await waitFor(() => screen.getByText(/add reminder/i));
     fireEvent.click(screen.getAllByRole("button", { name: /add reminder/i })[0]);
