@@ -26,7 +26,8 @@ export default defineConfig(({ mode }) => {
         manifest: false,
         injectManifest: {
           globPatterns: ["**/*.{js,css,html,ico,woff2}"],
-          maximumFileSizeToCacheInBytes: 200_000,
+          // Main chunk ~450KB; 200KB caused vite-plugin-pwa to fail CI closeBundle
+          maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         },
       })
     );
