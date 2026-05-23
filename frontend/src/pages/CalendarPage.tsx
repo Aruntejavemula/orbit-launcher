@@ -26,14 +26,6 @@ import { isUpcomingRenewal, daysUntilRenewal } from "../utils/sidebarData";
 const REMINDER_PRESETS = [1, 3, 7, 14, 30];
 const DAYS_OPTIONS = [1, 3, 7, 14, 30];
 
-async function requestPushPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  const result = await Notification.requestPermission();
-  return result === "granted";
-}
-
 export default function CalendarPage() {
   const { apps } = useApps();
   const { prefs, update } = usePrefs();
@@ -400,6 +392,9 @@ export default function CalendarPage() {
             apps={apps}
             defaultDays={prefs.reminderDays}
             onAdd={async (app_id, remind_days_before, method) => {
+              if (method === "push" && !prefs.reminderPush) {
+                update({ reminderPush: true });
+              }
               await addReminder({ app_id, remind_days_before, method });
               setAddOpen(false);
             }}
@@ -444,9 +439,9 @@ function AddReminderSheet({
     setSaving(true);
     try {
       if (method === "push") {
-        const granted = await requestPushPermission();
+        const granted = await subscribeToPush();
         if (!granted) {
-          alert("Push notifications blocked. Allow them in browser settings, or choose Email instead.");
+          alert("Push notifications blocked. Allow them in your settings, or choose Email instead.");
           setSaving(false);
           return;
         }

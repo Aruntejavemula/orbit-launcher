@@ -46,6 +46,11 @@ import {
   consumePendingRememberPrompt,
   markPendingRememberPrompt,
 } from "./lib/rememberDevicePrompt";
+import { isRemioDesktop } from "./lib/desktop";
+import {
+  startElectronNotifications,
+  stopElectronNotifications,
+} from "./lib/electronNotifications";
 import { shouldShowBudgetNudge } from "./lib/budgetNudge";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
@@ -159,6 +164,26 @@ export default function App() {
     },
     [refreshUser, signIn]
   );
+
+  // Auto-start electron notification polling when push is enabled
+  useEffect(() => {
+    if (
+      !isRemioDesktop() ||
+      !user ||
+      !prefsFetched ||
+      !prefs.reminderPush
+    ) {
+      stopElectronNotifications();
+      return;
+    }
+    if (
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      startElectronNotifications();
+    }
+    return () => stopElectronNotifications();
+  }, [user, prefsFetched, prefs.reminderPush]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", prefs.theme === "dark");

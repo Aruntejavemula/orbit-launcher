@@ -1,4 +1,9 @@
 import api from "../api";
+import { isRemioDesktop } from "../lib/desktop";
+import {
+  startElectronNotifications,
+  stopElectronNotifications,
+} from "../lib/electronNotifications";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -10,6 +15,16 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 }
 
 export async function subscribeToPush(): Promise<boolean> {
+  // Electron: no Web Push — use native Notification + client-side polling.
+  if (isRemioDesktop()) {
+    if (!("Notification" in window)) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+    startElectronNotifications();
+    return true;
+  }
+
+  // PWA: standard Web Push via service worker
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
 
   const permission = await Notification.requestPermission();
@@ -39,6 +54,11 @@ export async function subscribeToPush(): Promise<boolean> {
 }
 
 export async function unsubscribeFromPush(): Promise<void> {
+  if (isRemioDesktop()) {
+    stopElectronNotifications();
+    return;
+  }
+
   if (!("serviceWorker" in navigator)) return;
 
   try {
