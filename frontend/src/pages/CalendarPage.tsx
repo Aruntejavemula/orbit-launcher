@@ -393,11 +393,6 @@ export default function CalendarPage() {
             defaultDays={prefs.reminderDays}
             onAdd={async (app_id, remind_days_before, method) => {
               if (method === "push" && !prefs.reminderPush) {
-                const success = await subscribeToPush();
-                if (!success) {
-                  alert("Push notifications were blocked. Please allow them in your browser settings.");
-                  return;
-                }
                 update({ reminderPush: true });
               }
               await addReminder({ app_id, remind_days_before, method });
@@ -443,6 +438,14 @@ function AddReminderSheet({
     if (!appId) return;
     setSaving(true);
     try {
+      if (method === "push") {
+        const granted = await subscribeToPush();
+        if (!granted) {
+          alert("Push notifications blocked. Allow them in your settings, or choose Email instead.");
+          setSaving(false);
+          return;
+        }
+      }
       await onAdd(appId, days, method);
     } finally {
       setSaving(false);
