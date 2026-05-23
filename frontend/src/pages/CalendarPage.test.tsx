@@ -8,6 +8,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../context/AuthContext";
 import CalendarPage from "./CalendarPage";
 
+vi.mock("../utils/pushSubscription", () => ({
+  subscribeToPush: vi.fn(() => Promise.resolve(true)),
+  unsubscribeFromPush: vi.fn(() => Promise.resolve()),
+}));
+
 const BASE = "http://localhost/api";
 
 function renderCalendar() {
@@ -327,12 +332,6 @@ describe("CalendarPage", () => {
         );
       })
     );
-    // Grant notification permission
-    Object.defineProperty(globalThis, "Notification", {
-      value: { requestPermission: () => Promise.resolve("granted"), permission: "granted" },
-      writable: true,
-      configurable: true,
-    });
     renderCalendar();
     await waitFor(() => screen.getByText(/add reminder/i));
     fireEvent.click(screen.getAllByRole("button", { name: /add reminder/i })[0]);
