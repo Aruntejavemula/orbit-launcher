@@ -393,6 +393,9 @@ export default function CalendarPage() {
             apps={apps}
             defaultDays={prefs.reminderDays}
             onAdd={async (app_id, remind_days_before, method) => {
+              if (method === "push" && !prefs.reminderPush) {
+                update({ reminderPush: true });
+              }
               await addReminder({ app_id, remind_days_before, method });
               setAddOpen(false);
             }}
@@ -436,10 +439,14 @@ function AddReminderSheet({
     if (!appId) return;
     setSaving(true);
     try {
-      if (method === "push" && !isCapacitorNative()) {
+      if (method === "push") {
         const granted = await subscribeToPush();
         if (!granted) {
-          alert("Allow notifications in your browser, or choose Email instead.");
+          alert(
+            isCapacitorNative()
+              ? "Notifications are blocked. Enable them in Settings \u2192 Apps \u2192 Remio \u2192 Notifications."
+              : "Allow notifications in your browser, or choose Email instead.",
+          );
           setSaving(false);
           return;
         }
