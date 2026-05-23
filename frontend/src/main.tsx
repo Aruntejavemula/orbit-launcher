@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { Analytics } from "@vercel/analytics/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./index.css";
@@ -27,6 +28,7 @@ async function bootstrap() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <App />
+            {import.meta.env.MODE !== "electron" && <Analytics />}
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
