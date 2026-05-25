@@ -34,7 +34,7 @@ if _SENTRY_DSN:
         send_default_pii=False,
     )
 
-from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push
+from routers import auth, apps, catalog, launches, usage, insights, reminders, preferences, api_keys, subscriptions, push, internal
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -337,6 +337,7 @@ app.include_router(preferences.router, prefix="/api/preferences", tags=["prefere
 app.include_router(api_keys.router, prefix="/api/api-keys", tags=["api-keys"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
 app.include_router(push.router, prefix="/api/push", tags=["push"])
+app.include_router(internal.router, prefix="/api/internal", tags=["internal"])
 
 
 @app.get("/api/health")
