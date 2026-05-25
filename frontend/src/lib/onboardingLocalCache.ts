@@ -1,31 +1,10 @@
 const ONBOARDING_CACHE_PREFIX = "remio_onboarding_done:";
 
-function cacheKey(userId: string): string {
-  return `${ONBOARDING_CACHE_PREFIX}${userId}`;
-}
-
-export function readOnboardingCache(userId: string | undefined): boolean {
-  if (!userId) return false;
-  try {
-    return localStorage.getItem(cacheKey(userId)) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function writeOnboardingCache(userId: string | undefined): void {
-  if (!userId) return;
-  try {
-    localStorage.setItem(cacheKey(userId), "1");
-  } catch {
-    /* private mode / WebView quota */
-  }
-}
-
+/** Remove legacy onboarding bypass keys (no longer read). */
 export function clearOnboardingCache(userId?: string): void {
   try {
     if (userId) {
-      localStorage.removeItem(cacheKey(userId));
+      localStorage.removeItem(`${ONBOARDING_CACHE_PREFIX}${userId}`);
       return;
     }
     const keys: string[] = [];
@@ -37,12 +16,4 @@ export function clearOnboardingCache(userId?: string): void {
   } catch {
     /* ignore */
   }
-}
-
-export function resolveOnboardingCompleted(
-  serverValue: boolean | undefined,
-  userId: string | undefined,
-): boolean {
-  if (serverValue) return true;
-  return readOnboardingCache(userId);
 }

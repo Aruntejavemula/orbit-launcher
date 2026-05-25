@@ -66,7 +66,7 @@ export default function AppDetail({ app, onBack }: Props) {
         </div>
 
         <button
-          onClick={() => launch(app.id)}
+          onClick={() => launch({ id: app.id, slug: app.slug, url: app.url })}
           className="btn-primary mt-2 w-full max-w-xs px-6 py-3 text-base"
         >
           Open App

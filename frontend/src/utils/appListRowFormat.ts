@@ -36,6 +36,7 @@ export function listRowPriceLabel(app: AppItem, countryCode: string): string {
   return `${compact}/mo`;
 }
 
-export function listRowPlanLabel(plan: AppItem["plan"]): string {
-  return plan.toUpperCase();
+export function listRowPlanLabel(plan: AppItem["plan"] | null | undefined): string {
+  if (plan === "paid" || plan === "trial" || plan === "free") return plan.toUpperCase();
+  return "PAID";
 }

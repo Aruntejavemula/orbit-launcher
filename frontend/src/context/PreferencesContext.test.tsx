@@ -216,7 +216,7 @@ describe("PreferencesContext - usePrefs", () => {
     });
   });
 
-  it("rolls back onboardingCompleted when patch fails without budget in patch", async () => {
+  it("keeps onboardingCompleted when finish patch fails with monthlyBudget", async () => {
     setupDefaultMocks();
     mockApi.patch.mockRejectedValueOnce({ response: { status: 500, data: { detail: "fail" } } });
 
@@ -227,14 +227,14 @@ describe("PreferencesContext - usePrefs", () => {
 
     await act(async () => {
       try {
-        await result.current.updateAsync({ onboardingCompleted: true });
+        await result.current.updateAsync({ onboardingCompleted: true, monthlyBudget: 500 });
       } catch {
         /* mutateAsync rejects */
       }
     });
 
     await waitFor(() => {
-      expect(result.current.prefs.onboardingCompleted).toBe(false);
+      expect(result.current.prefs.onboardingCompleted).toBe(true);
     });
     expect(mockToast).toHaveBeenCalled();
   });

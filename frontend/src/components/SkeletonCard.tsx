@@ -28,3 +28,25 @@ export function SkeletonGrid() {
     </div>
   );
 }
+
+/** Mobile list placeholder while apps load */
+export function SkeletonList({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-2" aria-hidden>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="flex h-[4.25rem] items-center gap-3 rounded-2xl px-3"
+          style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+        >
+          <div className="h-11 w-11 shrink-0 rounded-xl shimmer" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-4 w-2/5 max-w-[8rem] shimmer" />
+            <div className="h-3 w-16 shimmer" />
+          </div>
+          <div className="h-11 w-11 shrink-0 rounded-xl shimmer" />
+        </div>
+      ))}
+    </div>
+  );
+}

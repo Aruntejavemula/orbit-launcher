@@ -1,9 +1,8 @@
 import { memo } from "react";
 import { ExternalLink } from "lucide-react";
 import type { AppItem } from "../types";
-import { usePrefs } from "../context/PreferencesContext";
 import BrandIcon from "./BrandIcon";
-import { brandAccentColor } from "../utils/color";
+import { brandAccentColor, normalizeBrandHex } from "../utils/color";
 import {
   daysLeftLabel,
   listRowPlanLabel,
@@ -13,20 +12,19 @@ import {
 interface Props {
   app: AppItem;
   countryCode: string;
+  uiDark: boolean;
   showLastOpened?: boolean;
   onOpen: (id: string) => void;
   onLaunch: (id: string) => void;
 }
 
-function launchButtonColor(color: string): string {
-  const hex = color.replace(/^#/, "").toLowerCase();
+function launchButtonColor(color: string | null | undefined): string {
+  const hex = normalizeBrandHex(color).toLowerCase();
   if (!hex || hex === "000000") return "#6B8F71";
   return `#${hex}`;
 }
 
-function AppListRow({ app, countryCode, onOpen, onLaunch }: Props) {
-  const { prefs } = usePrefs();
-  const uiDark = prefs.theme === "dark";
+function AppListRow({ app, countryCode, uiDark, onOpen, onLaunch }: Props) {
   const daysLeft = daysLeftLabel(app.expiresAt);
   const price = listRowPriceLabel(app, countryCode);
 
@@ -57,6 +55,7 @@ function AppListRow({ app, countryCode, onOpen, onLaunch }: Props) {
             iconKey={app.iconKey}
             size={28}
             preserveBrandColor
+            uiDark={uiDark}
           />
         </span>
         <div className="min-w-0 flex-1">

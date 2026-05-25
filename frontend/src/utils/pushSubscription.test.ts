@@ -8,6 +8,15 @@ vi.mock("../api", () => ({
   },
 }));
 
+vi.mock("../lib/capacitor", () => ({
+  isCapacitorNative: vi.fn(() => false),
+}));
+
+vi.mock("../lib/capacitorPush", () => ({
+  registerNativePush: vi.fn(),
+  unregisterNativePush: vi.fn(),
+}));
+
 import api from "../api";
 import { subscribeToPush, unsubscribeFromPush } from "./pushSubscription";
 
@@ -86,6 +95,7 @@ describe("subscribeToPush", () => {
     expect(result).toBe(true);
     expect(mockApi.get).toHaveBeenCalledWith("/push/vapid-key");
     expect(mockApi.post).toHaveBeenCalledWith("/push/subscribe", {
+      platform: "web",
       endpoint: "https://push.example.com/sub1",
       p256dh: "key123",
       auth: "auth456",
@@ -108,6 +118,19 @@ describe("subscribeToPush", () => {
 
     const result = await subscribeToPush();
     expect(result).toBe(false);
+  });
+});
+
+describe("subscribeToPush native", () => {
+  it("delegates to registerNativePush on Capacitor", async () => {
+    const { isCapacitorNative } = await import("../lib/capacitor");
+    const { registerNativePush } = await import("../lib/capacitorPush");
+    vi.mocked(isCapacitorNative).mockReturnValue(true);
+    vi.mocked(registerNativePush).mockResolvedValue(true);
+
+    const result = await subscribeToPush();
+    expect(result).toBe(true);
+    expect(registerNativePush).toHaveBeenCalled();
   });
 });
 
@@ -147,6 +170,7 @@ describe("unsubscribeFromPush", () => {
     await unsubscribeFromPush();
     expect(mockApi.delete).toHaveBeenCalledWith("/push/unsubscribe", {
       data: {
+        platform: "web",
         endpoint: "https://push.example.com/sub1",
         p256dh: "key123",
         auth: "auth456",

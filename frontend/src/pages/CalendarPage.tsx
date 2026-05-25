@@ -21,18 +21,11 @@ import BrandIcon from "../components/BrandIcon";
 import ConfirmModal from "../components/ConfirmModal";
 import type { AppItem, ReminderMethod } from "../types";
 import { subscribeToPush, unsubscribeFromPush } from "../utils/pushSubscription";
+import { isCapacitorNative } from "../lib/capacitor";
 import { isUpcomingRenewal, daysUntilRenewal } from "../utils/sidebarData";
 
 const REMINDER_PRESETS = [1, 3, 7, 14, 30];
 const DAYS_OPTIONS = [1, 3, 7, 14, 30];
-
-async function requestPushPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  const result = await Notification.requestPermission();
-  return result === "granted";
-}
 
 export default function CalendarPage() {
   const { apps } = useApps();
@@ -78,19 +71,6 @@ export default function CalendarPage() {
 
   const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const selectedExpiries = selected ? expiriesByDay.get(dayKey(selected)) ?? [] : [];
-
-  const handlePushToggle = async () => {
-    if (!prefs.reminderPush) {
-      const success = await subscribeToPush();
-      if (!success) {
-        alert("Push notifications were blocked. Please allow them in your browser settings.");
-        return;
-      }
-    } else {
-      await unsubscribeFromPush();
-    }
-    update({ reminderPush: !prefs.reminderPush });
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -254,13 +234,26 @@ export default function CalendarPage() {
               active={prefs.reminderEmail}
               onToggle={() => update({ reminderEmail: !prefs.reminderEmail })}
             />
-            <ReminderToggle
-              icon={Smartphone}
-              label="Push notifications"
-              description="Server push when a reminder is due (enable permission here)"
-              active={prefs.reminderPush}
-              onToggle={handlePushToggle}
-            />
+            {!isCapacitorNative() && (
+              <ReminderToggle
+                icon={Smartphone}
+                label="Push notifications"
+                description="Browser push when a reminder is due"
+                active={prefs.reminderPush}
+                onToggle={async () => {
+                  if (!prefs.reminderPush) {
+                    const ok = await subscribeToPush();
+                    if (!ok) {
+                      alert("Allow notifications in your browser to enable push reminders.");
+                      return;
+                    }
+                  } else {
+                    await unsubscribeFromPush();
+                  }
+                  update({ reminderPush: !prefs.reminderPush });
+                }}
+              />
+            )}
             <ReminderToggle
               icon={Bell}
               label="Show banner before expiration"
@@ -400,6 +393,9 @@ export default function CalendarPage() {
             apps={apps}
             defaultDays={prefs.reminderDays}
             onAdd={async (app_id, remind_days_before, method) => {
+              if (method === "push" && !prefs.reminderPush) {
+                update({ reminderPush: true });
+              }
               await addReminder({ app_id, remind_days_before, method });
               setAddOpen(false);
             }}
@@ -435,7 +431,7 @@ function AddReminderSheet({
 }) {
   const [appId, setAppId] = useState(apps[0]?.id ?? "");
   const [days, setDays] = useState(defaultDays);
-  const [method, setMethod] = useState<ReminderMethod>("push");
+  const [method, setMethod] = useState<ReminderMethod>(isCapacitorNative() ? "email" : "push");
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -444,9 +440,13 @@ function AddReminderSheet({
     setSaving(true);
     try {
       if (method === "push") {
-        const granted = await requestPushPermission();
+        const granted = await subscribeToPush();
         if (!granted) {
-          alert("Push notifications blocked. Allow them in browser settings, or choose Email instead.");
+          alert(
+            isCapacitorNative()
+              ? "Notifications are blocked. Enable them in Settings \u2192 Apps \u2192 Remio \u2192 Notifications."
+              : "Allow notifications in your browser, or choose Email instead.",
+          );
           setSaving(false);
           return;
         }
@@ -527,8 +527,8 @@ function AddReminderSheet({
             <span className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
               Via
             </span>
-            <div className="grid grid-cols-2 gap-2">
-              {(["push", "email"] as ReminderMethod[]).map((m) => (
+            <div className={`grid gap-2 ${isCapacitorNative() ? "grid-cols-1" : "grid-cols-2"}`}>
+              {((isCapacitorNative() ? ["email"] : ["push", "email"]) as ReminderMethod[]).map((m) => (
                 <button
                   key={m}
                   type="button"

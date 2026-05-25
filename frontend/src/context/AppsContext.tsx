@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppItem } from "../types";
-import { smartLaunch } from "../utils/launch";
+import { resolveCatalogAppFields } from "../data/appCatalog";
+import { handoffToApp, setHandoffCallbacks, type LaunchTarget } from "../utils/launch";
 import api from "../api";
 import { useAuth } from "./AuthContext";
 import { toast } from "../components/Toast";
@@ -41,15 +42,21 @@ interface LaunchApiResponse {
   launched_at: string;
 }
 
+function normalizePlan(plan: string | null | undefined): AppItem["plan"] {
+  if (plan === "paid" || plan === "trial" || plan === "free") return plan;
+  return "paid";
+}
+
 function toAppItem(raw: AppApiResponse): AppItem {
+  const { slug, name } = resolveCatalogAppFields(raw.slug, raw.name, raw.url);
   return {
     id: raw.id,
-    name: raw.name,
-    slug: raw.slug,
-    color: raw.color,
+    name,
+    slug,
+    color: raw.color ?? "6B7280",
     url: raw.url,
     category: raw.category,
-    plan: raw.plan,
+    plan: normalizePlan(raw.plan),
     createdAt: new Date(raw.created_at).getTime(),
     lastOpened: raw.last_opened_at ? new Date(raw.last_opened_at).getTime() : null,
     expiresAt: raw.expires_at ? new Date(raw.expires_at).getTime() : null,
@@ -67,14 +74,34 @@ function toOpenEvent(raw: LaunchApiResponse): OpenEvent {
   return { appId: raw.app_id, ts: new Date(raw.launched_at).getTime() };
 }
 
+export type LaunchPayload = LaunchTarget & { id: string };
+
+function scheduleTrackLaunch(fn: () => void): void {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(fn, { timeout: 3000 });
+  } else {
+    window.setTimeout(fn, 0);
+  }
+}
+
 export function useApps() {
   const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
+  const [launching, setLaunching] = useState(false);
+
+  useEffect(() => {
+    setHandoffCallbacks({
+      onStart: () => setLaunching(true),
+      onEnd: () => setLaunching(false),
+    });
+    return () => setHandoffCallbacks({});
+  }, []);
 
   const fetchApps = useCallback(async (): Promise<AppItem[]> => {
     try {
       const r = await api.get("/apps");
-      const items = r.data.map(toAppItem) as AppItem[];
+      const rows = Array.isArray(r.data) ? r.data : [];
+      const items = rows.map(toAppItem) as AppItem[];
       writeAppsCache(items);
       return items;
     } catch (err) {
@@ -89,7 +116,8 @@ export function useApps() {
   const fetchLaunches = useCallback(async (): Promise<OpenEvent[]> => {
     try {
       const r = await api.get("/launches");
-      const items = r.data.map(toOpenEvent) as OpenEvent[];
+      const rows = Array.isArray(r.data) ? r.data : [];
+      const items = rows.map(toOpenEvent) as OpenEvent[];
       writeLaunchesCache(items);
       return items;
     } catch (err) {
@@ -101,19 +129,38 @@ export function useApps() {
     }
   }, []);
 
-  const { data: apps = [], isLoading: appsLoading, isError: appsError } = useQuery({
+  const { data: appsRaw, isLoading: appsLoading, isError: appsError } = useQuery({
     queryKey: ["apps"],
     queryFn: fetchApps,
     enabled: !!user,
     placeholderData: () => readAppsCache() ?? undefined,
   });
 
-  const { data: history = [], isLoading: historyLoading } = useQuery({
+  const apps = Array.isArray(appsRaw) ? appsRaw : [];
+
+  const [launchesQueryEnabled, setLaunchesQueryEnabled] = useState(false);
+  useEffect(() => {
+    if (!user) {
+      setLaunchesQueryEnabled(false);
+      return;
+    }
+    const run = () => setLaunchesQueryEnabled(true);
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(run, { timeout: 2500 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(run, 0);
+    return () => clearTimeout(t);
+  }, [user]);
+
+  const { data: historyRaw } = useQuery({
     queryKey: ["launches"],
     queryFn: fetchLaunches,
-    enabled: !!user,
+    enabled: !!user && launchesQueryEnabled,
     placeholderData: () => readLaunchesCache() ?? undefined,
   });
+
+  const history = Array.isArray(historyRaw) ? historyRaw : [];
 
   const appsErrorShown = useRef(false);
   useEffect(() => {
@@ -123,7 +170,7 @@ export function useApps() {
   }, [appsError]);
 
   // loading = true while auth resolving OR while queries are fetching
-  const loading = authLoading || appsLoading || historyLoading;
+  const loading = authLoading || appsLoading;
 
   const addMutation = useMutation({
     mutationFn: (data: Omit<AppItem, "id" | "createdAt" | "lastOpened">) =>
@@ -202,15 +249,20 @@ export function useApps() {
   const open = useCallback(
     (id: string) => {
       const ts = Date.now();
-      qc.setQueryData<OpenEvent[]>(["launches"], (prev = []) =>
-        [{ appId: id, ts }, ...prev].slice(0, 200)
-      );
-      const postLaunch = () => api.post(`/apps/${id}/launch`).then((r) => {
-        const updated = toAppItem(r.data);
-        qc.setQueryData<AppItem[]>(["apps"], (prev = []) =>
-          prev.map((a) => (a.id === updated.id ? updated : a))
+      startTransition(() => {
+        qc.setQueryData<OpenEvent[]>(["launches"], (prev = []) =>
+          [{ appId: id, ts }, ...prev].slice(0, 200)
         );
       });
+      const postLaunch = () =>
+        api.post(`/apps/${id}/launch`).then((r) => {
+          const updated = toAppItem(r.data);
+          startTransition(() => {
+            qc.setQueryData<AppItem[]>(["apps"], (prev = []) =>
+              prev.map((a) => (a.id === updated.id ? updated : a))
+            );
+          });
+        });
       postLaunch().catch(() => {
         setTimeout(() => postLaunch().catch(console.error), 2000);
       });
@@ -219,18 +271,18 @@ export function useApps() {
   );
 
   const launch = useCallback(
-    (id: string) => {
-      open(id);
-      const target = apps.find((a) => a.id === id);
-      if (target?.url) smartLaunch({ slug: target.slug, url: target.url });
+    (payload: LaunchPayload) => {
+      handoffToApp({ slug: payload.slug, url: payload.url });
+      scheduleTrackLaunch(() => open(payload.id));
     },
-    [apps, open]
+    [open]
   );
 
   return {
     apps,
     history,
     loading,
+    launching,
     appsLoading,
     addApp: addMutation.mutateAsync,
     removeApp: removeMutation.mutateAsync,

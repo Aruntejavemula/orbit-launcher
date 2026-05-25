@@ -1,18 +1,29 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { AuthProvider } from "../context/AuthContext";
 import LoginPage from "./LoginPage";
 
-
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn().mockResolvedValue({ status: 401, data: null }),
+  post: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+}));
+vi.mock("../api", () => ({ default: mockApi }));
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => ({ signIn: vi.fn() }),
+}));
+vi.mock("../context/PreferencesContext", () => ({
+  usePrefs: () => ({ update: vi.fn() }),
+}));
+vi.mock("../lib/capacitorPush", () => ({
+  syncNativePushAfterLogin: vi.fn().mockResolvedValue(false),
+}));
+vi.mock("../lib/capacitor", () => ({ isCapacitorNative: () => false }));
 vi.mock("../components/SunsetScene", () => ({ default: () => null }));
 
 function renderLogin() {
-  return render(
-    <AuthProvider>
-      <LoginPage />
-    </AuthProvider>
-  );
+  return render(<LoginPage />);
 }
 
 describe("LoginPage a11y", () => {

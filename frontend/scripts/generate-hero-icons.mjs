@@ -63,6 +63,29 @@ async function writeWidePng(filename, dir, source) {
   console.log("wrote", out);
 }
 
+/** Promo / screenshot slots: logo centered on black, aspect-fit (no crop). */
+async function fitContainPngBuffer(width, height, source) {
+  const img = await loadImage(source);
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, width, height);
+  const scale = Math.min(width / img.width, height / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  const x = (width - w) / 2;
+  const y = (height - h) / 2;
+  ctx.drawImage(img, x, y, w, h);
+  return canvas.toBuffer("image/png");
+}
+
+async function writeFitPng(width, height, filename, dir, source) {
+  const buf = await fitContainPngBuffer(width, height, source);
+  const out = path.join(dir, filename);
+  fs.writeFileSync(out, buf);
+  console.log("wrote", out);
+}
+
 const source = resolveSource();
 console.log("icon source:", source);
 
@@ -89,17 +112,23 @@ const icon512Path = path.join(buildDir, "icon.png");
 fs.writeFileSync(icon512Path, await pngBuffer(512, source));
 console.log("wrote", icon512Path);
 
-/** Partner Center reference tiles. */
+/** Partner Center / Store listing logos (square PNG). */
 const storeTiles = [
+  [71, "StoreLogo71x71.png"],
+  [150, "StoreLogo150x150.png"],
+  [300, "StoreLogo300x300.png"],
   [44, "Square44x44Logo.png"],
   [50, "Square50x50Logo.png"],
   [150, "Square150x150Logo.png"],
   [310, "Square310x310Logo.png"],
-  [300, "StoreLogo300x300.png"],
 ];
 for (const [size, name] of storeTiles) {
   await writePng(size, name, storeAssetsDir, source);
 }
+
+/** Partner Center large promotional images (PNG). */
+await writeFitPng(1440, 2160, "StorePromo1440x2160.png", storeAssetsDir, source);
+await writePng(2160, "StorePromo2160x2160.png", storeAssetsDir, source);
 
 /** electron-builder MSIX manifest assets (build/appx — exact names and pixel sizes). */
 const appxTiles = [

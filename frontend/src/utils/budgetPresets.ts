@@ -36,8 +36,12 @@ export function getBudgetPresets(countryCode: string): BudgetPresets {
 export function detectDefaultCountryCode(fallback = "US"): string {
   try {
     const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-    const region = new Intl.Locale(locale).maximize().region;
-    if (region && VALID_CODES.has(region)) return region;
+    if (typeof Intl.Locale === "function") {
+      const region = new Intl.Locale(locale).maximize().region;
+      if (region && VALID_CODES.has(region)) return region;
+    }
+    const match = locale.match(/-([A-Z]{2})\b/i);
+    if (match && VALID_CODES.has(match[1].toUpperCase())) return match[1].toUpperCase();
   } catch {
     /* Intl unsupported */
   }

@@ -7,6 +7,14 @@ export default defineConfig(({ mode }) => {
   const electronBuild = mode === "electron";
   const capacitorBuild = mode === "capacitor";
   const nativeShellBuild = electronBuild || capacitorBuild;
+  if (nativeShellBuild) {
+    const apiUrl = (env.VITE_API_URL ?? process.env.VITE_API_URL ?? "").trim();
+    if (!apiUrl.startsWith("http")) {
+      throw new Error(
+        `${mode} build requires absolute VITE_API_URL (https://…/api). Got: ${apiUrl || "(empty)"}`,
+      );
+    }
+  }
   const plugins = [react()];
   if (!nativeShellBuild) {
     plugins.push(
@@ -18,7 +26,8 @@ export default defineConfig(({ mode }) => {
         manifest: false,
         injectManifest: {
           globPatterns: ["**/*.{js,css,html,ico,woff2}"],
-          maximumFileSizeToCacheInBytes: 200_000,
+          // Main chunk ~450KB; 200KB caused vite-plugin-pwa to fail CI closeBundle
+          maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         },
       })
     );

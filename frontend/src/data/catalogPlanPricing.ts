@@ -526,3 +526,9 @@ function buildCatalogPlanPricing(): Record<string, CatalogPlanPricing> {
 
 /** Curated verified slugs only (plus catalog aliases). */
 export const catalogPlanPricing: Record<string, CatalogPlanPricing> = buildCatalogPlanPricing();
+
+/** Catalog slug → canonical slug (pricing + Simple Icons CDN). */
+export function resolveCatalogSlugAlias(slug: string): string {
+  const key = slug.trim().toLowerCase();
+  return SLUG_ALIASES[key] ?? key;
+}

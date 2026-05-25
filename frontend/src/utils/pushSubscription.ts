@@ -1,4 +1,6 @@
 import api from "../api";
+import { registerNativePush, unregisterNativePush } from "../lib/capacitorPush";
+import { isCapacitorNative } from "../lib/capacitor";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -9,7 +11,7 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return arr.buffer as ArrayBuffer;
 }
 
-export async function subscribeToPush(): Promise<boolean> {
+async function subscribeWebPush(): Promise<boolean> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
 
   const permission = await Notification.requestPermission();
@@ -27,6 +29,7 @@ export async function subscribeToPush(): Promise<boolean> {
 
     const json = subscription.toJSON();
     await api.post("/push/subscribe", {
+      platform: "web",
       endpoint: json.endpoint,
       p256dh: json.keys!.p256dh,
       auth: json.keys!.auth,
@@ -38,7 +41,17 @@ export async function subscribeToPush(): Promise<boolean> {
   }
 }
 
+export async function subscribeToPush(): Promise<boolean> {
+  if (isCapacitorNative()) return registerNativePush();
+  return subscribeWebPush();
+}
+
 export async function unsubscribeFromPush(): Promise<void> {
+  if (isCapacitorNative()) {
+    await unregisterNativePush();
+    return;
+  }
+
   if (!("serviceWorker" in navigator)) return;
 
   try {
@@ -48,6 +61,7 @@ export async function unsubscribeFromPush(): Promise<void> {
       const json = subscription.toJSON();
       await api.delete("/push/unsubscribe", {
         data: {
+          platform: "web",
           endpoint: json.endpoint,
           p256dh: json.keys!.p256dh,
           auth: json.keys!.auth,

@@ -17,6 +17,7 @@ from models.reminder import ReminderMethodEnum
 from models.reminder_log import ReminderLog
 from models.push_subscription import PushSubscription
 from tasks.send_push import send_push_notification
+from tasks.send_fcm import send_fcm_notification
 from auth.renewal_email import send_renewal_reminder_email
 from utils import as_utc
 
@@ -188,20 +189,33 @@ async def _send_push(db: AsyncSession, user_id: UUID, app: AppItem, days_before:
 
     payload = _push_payload(app, days_before)
     expired_endpoints: list[str] = []
+    expired_fcm_tokens: list[str] = []
     sent_any = False
     for sub in subs:
         try:
-            ok = send_push_notification(sub.endpoint, sub.p256dh, sub.auth, payload)
+            if sub.platform == "android" and sub.fcm_token:
+                ok = send_fcm_notification(sub.fcm_token, payload)
+                if ok:
+                    sent_any = True
+                else:
+                    expired_fcm_tokens.append(sub.fcm_token)
+            elif sub.endpoint and sub.p256dh and sub.auth:
+                ok = send_push_notification(sub.endpoint, sub.p256dh, sub.auth, payload)
+                if ok:
+                    sent_any = True
+                else:
+                    expired_endpoints.append(sub.endpoint)
         except Exception:
-            logger.exception("push send raised for %s", sub.endpoint[:60])
+            label = (sub.fcm_token or sub.endpoint or "")[:60]
+            logger.exception("push send raised for %s", label)
             ok = True
-        if ok:
-            sent_any = True
-        else:
-            expired_endpoints.append(sub.endpoint)
+            if ok:
+                sent_any = True
 
     for endpoint in expired_endpoints:
         await db.execute(sa_delete(PushSubscription).where(PushSubscription.endpoint == endpoint))
+    for fcm_token in expired_fcm_tokens:
+        await db.execute(sa_delete(PushSubscription).where(PushSubscription.fcm_token == fcm_token))
 
     return sent_any
 
