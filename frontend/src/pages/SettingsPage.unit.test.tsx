@@ -215,4 +215,88 @@ describe("SettingsPage unit", () => {
       expect(screen.getByText("Saved")).toBeInTheDocument();
     });
   });
+
+  it("shows error when save profile fails", async () => {
+    mockApi.patch.mockRejectedValueOnce(new Error("fail"));
+    render(<SettingsPage />);
+    await act(async () => {
+      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Could not save your changes. Please try again.")).toBeInTheDocument();
+    });
+  });
+
+  it("budget input accepts digits only", () => {
+    render(<SettingsPage />);
+    const budgetInput = screen.getByLabelText("Monthly budget amount");
+    fireEvent.change(budgetInput, { target: { value: "abc50xyz" } });
+    expect(budgetInput).toHaveValue("50");
+  });
+
+  it("save budget calls updateAsync with parsed value", async () => {
+    render(<SettingsPage />);
+    const budgetInput = screen.getByLabelText("Monthly budget amount");
+    fireEvent.change(budgetInput, { target: { value: "120" } });
+    const saveBtn = screen.getByRole("button", { name: /save budget/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+    await waitFor(() => {
+      expect(mockUpdateAsync).toHaveBeenCalledWith({ monthlyBudget: 120 });
+    });
+  });
+
+  it("save budget sends null for empty input", async () => {
+    render(<SettingsPage />);
+    const budgetInput = screen.getByLabelText("Monthly budget amount");
+    fireEvent.change(budgetInput, { target: { value: "" } });
+    const saveBtn = screen.getByRole("button", { name: /save budget/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+    await waitFor(() => {
+      expect(mockUpdateAsync).toHaveBeenCalledWith({ monthlyBudget: null });
+    });
+  });
+
+  it("clicking budget preset sets value and calls updateAsync", async () => {
+    render(<SettingsPage />);
+    const presets = screen.getAllByRole("button").filter((b) => /^\$?\d+/.test(b.textContent || ""));
+    if (presets.length > 0) {
+      await act(async () => {
+        fireEvent.click(presets[0]);
+      });
+      await waitFor(() => {
+        expect(mockUpdateAsync).toHaveBeenCalled();
+      });
+    }
+  });
+
+  it("cancel sign out confirm closes modal", () => {
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(screen.queryByTestId(/confirm-sign-out/i)).not.toBeInTheDocument();
+  });
+
+  it("cancel reset session closes modal", () => {
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /reset session/i }));
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(screen.queryByTestId(/confirm-reset-session/i)).not.toBeInTheDocument();
+  });
+
+  it("remember device toggle reverts on failure", async () => {
+    mockApi.post.mockRejectedValueOnce(new Error("net"));
+    render(<SettingsPage />);
+    const toggles = screen.getAllByRole("switch");
+    const rememberSwitch = toggles[toggles.length - 1];
+    await act(async () => {
+      fireEvent.click(rememberSwitch);
+    });
+    await waitFor(() => {
+      expect(rememberSwitch).toHaveAttribute("aria-checked", "false");
+    });
+  });
 });

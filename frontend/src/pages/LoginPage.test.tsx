@@ -188,4 +188,49 @@ describe("LoginPage", () => {
     render(<LoginPage />);
     expect(screen.getByText("Continue with Google")).toBeInTheDocument();
   });
+
+  it("registers successfully and calls signIn", async () => {
+    mockApi.post.mockResolvedValueOnce({ data: { ok: true } });
+    mockSignIn.mockResolvedValueOnce(undefined);
+    render(<LoginPage />);
+    fireEvent.click(screen.getByRole("button", { name: /^sign up$/i }));
+    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "User" } });
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByPlaceholderText("At least 8 characters"), { target: { value: "ValidPass1!" } });
+    await act(async () => {
+      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    });
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith("/auth/register", { name: "User", email: "a@b.com", password: "ValidPass1!" });
+      expect(mockSignIn).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("shows generic error for unknown server error", async () => {
+    mockApi.post.mockRejectedValueOnce({
+      response: { data: { detail: "something unexpected" } },
+    });
+    render(<LoginPage />);
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Your password"), { target: { value: "pass1234" } });
+    await act(async () => {
+      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/something unexpected/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows fallback error when no detail in response", async () => {
+    mockApi.post.mockRejectedValueOnce({ response: { data: {} } });
+    render(<LoginPage />);
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Your password"), { target: { value: "pass1234" } });
+    await act(async () => {
+      fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Something went wrong. Please try again.")).toBeInTheDocument();
+    });
+  });
 });
