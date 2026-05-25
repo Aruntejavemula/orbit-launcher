@@ -15,6 +15,7 @@ export function responseLooksLikeHtml(
 
 /** Reject SPA index.html mistaken for API JSON (Capacitor /api on https://localhost). */
 export function assertJsonApiResponse(response: AxiosResponse): void {
+  if (response.status === 204 || response.data == null || response.data === "") return;
   if (responseLooksLikeHtml(response.data, String(response.headers["content-type"] ?? ""))) {
     const err = new Error(
       "API returned HTML instead of JSON. Use npm run cap:build (absolute VITE_API_URL), not a relative /api base.",
