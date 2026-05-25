@@ -20,7 +20,8 @@ vi.mock("./AuthContext", () => ({
 }));
 
 vi.mock("../utils/launch", () => ({
-  smartLaunch: vi.fn(),
+  handoffToApp: vi.fn(),
+  setHandoffCallbacks: vi.fn(),
 }));
 
 vi.mock("../components/Toast", () => ({
@@ -359,8 +360,8 @@ describe("AppsContext - useApps", () => {
     });
   });
 
-  it("launch calls smartLaunch with url", async () => {
-    const { smartLaunch } = await import("../utils/launch");
+  it("launch calls handoffToApp with url", async () => {
+    const { handoffToApp } = await import("../utils/launch");
     setupDefaultMocks();
     mockApi.post.mockResolvedValueOnce({ data: fakeAppApiResponse });
 
@@ -372,11 +373,11 @@ describe("AppsContext - useApps", () => {
     });
 
     act(() => {
-      result.current.launch("app-1");
+      result.current.launch({ id: "app-1", slug: "notion", url: "https://notion.so" });
     });
 
     await waitFor(() => {
-      expect(smartLaunch).toHaveBeenCalledWith(
+      expect(handoffToApp).toHaveBeenCalledWith(
         expect.objectContaining({ slug: "notion", url: "https://notion.so" })
       );
     });

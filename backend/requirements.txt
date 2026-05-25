@@ -65,6 +65,8 @@ fastapi==0.136.1
     # via
     #   -r backend/requirements.in
     #   sentry-sdk
+google-auth==2.49.0
+    # via -r backend/requirements.in
 frozenlist==1.8.0
     # via
     #   aiohttp

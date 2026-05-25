@@ -1,11 +1,21 @@
+const FALLBACK_BRAND_HEX = "6B7280";
+
+/** Guard AppItem / API rows where color is missing (crashes `.replace` in cards). */
+export function normalizeBrandHex(color: string | null | undefined): string {
+  const h = String(color ?? "")
+    .replace(/^#/, "")
+    .trim();
+  return /^[0-9A-Fa-f]{6}$/.test(h) ? h : FALLBACK_BRAND_HEX;
+}
+
 export function hexToRgb(hex: string): string {
-  const h = hex.replace(/^#/, "");
+  const h = normalizeBrandHex(hex);
   if (!/^[0-9A-Fa-f]{6}$/.test(h)) return "107, 114, 128";
   return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
 }
 
 export function isDark(hex: string): boolean {
-  const h = hex.replace("#", "");
+  const h = normalizeBrandHex(hex);
   const r = parseInt(h.substring(0, 2), 16);
   const g = parseInt(h.substring(2, 4), 16);
   const b = parseInt(h.substring(4, 6), 16);
@@ -14,7 +24,7 @@ export function isDark(hex: string): boolean {
 
 /** Near-black brand marks that disappear on dark UI without a heavy invert. */
 export function needsMutedIconOnDark(hex: string): boolean {
-  const h = hex.replace(/^#/, "");
+  const h = normalizeBrandHex(hex);
   if (h.length !== 6) return false;
   const r = parseInt(h.substring(0, 2), 16);
   const g = parseInt(h.substring(2, 4), 16);
@@ -26,7 +36,7 @@ export function needsMutedIconOnDark(hex: string): boolean {
 export const DARK_UI_ICON_ON_TILE = "ffffff";
 
 export function iconColorForTheme(brandHex: string, uiDark: boolean): string {
-  const hex = brandHex.replace(/^#/, "");
+  const hex = normalizeBrandHex(brandHex);
   if (uiDark && needsMutedIconOnDark(hex)) return DARK_UI_ICON_ON_TILE;
   return hex;
 }
@@ -37,7 +47,7 @@ export const DARK_UI_CARD_LIFT = "#141414";
 export const DARK_UI_ACCENT_FALLBACK = "#6b7280";
 
 export function cardBrandBackground(color: string, uiDark: boolean): string {
-  const hex = color.replace(/^#/, "");
+  const hex = normalizeBrandHex(color);
   if (uiDark && needsMutedIconOnDark(hex)) return DARK_UI_CARD_LIFT;
   return `rgba(${hexToRgb(color)}, 0.14)`;
 }
@@ -48,7 +58,7 @@ export function iconTileBrandBackground(color: string, uiDark: boolean): string 
 }
 
 export function brandAccentColor(color: string, uiDark: boolean): string {
-  const hex = color.replace(/^#/, "");
+  const hex = normalizeBrandHex(color);
   if (uiDark && needsMutedIconOnDark(hex)) return DARK_UI_ACCENT_FALLBACK;
   return `#${hex}`;
 }

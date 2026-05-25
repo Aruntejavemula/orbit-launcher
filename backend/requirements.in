@@ -16,6 +16,7 @@ sentry-sdk[fastapi]
 arq
 redis
 pywebpush
+google-auth
 pytest
 pytest-asyncio
 pytest-cov

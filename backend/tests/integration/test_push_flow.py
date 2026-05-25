@@ -11,6 +11,7 @@ from models.push_subscription import PushSubscription
 from tests.integration.conftest import seed_user, make_auth_cookie
 
 _SUB_PAYLOAD = {
+    "platform": "web",
     "endpoint": "https://fcm.googleapis.com/fcm/send/test-endpoint",
     "p256dh": "test-p256dh-key-value",
     "auth": "test-auth-value",
@@ -56,6 +57,7 @@ class TestSubscribe:
             select(PushSubscription).where(PushSubscription.user_id == user.id)
         )).scalar_one_or_none()
         assert sub is not None
+        assert sub.platform == "web"
         assert sub.endpoint == _SUB_PAYLOAD["endpoint"]
 
     async def test_resubscribe_upserts_keys(self, int_client, db_session):
@@ -98,6 +100,54 @@ class TestSubscribe:
             cookies=make_auth_cookie(user.id),
         )
         assert resp.status_code == 422
+
+
+class TestAndroidSubscribe:
+    async def test_android_subscribe_creates_record(self, int_client, db_session):
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        resp = await int_client.post(
+            "/api/push/subscribe",
+            json={"platform": "android", "fcm_token": "fcm-test-token-abc123"},
+            cookies=make_auth_cookie(user.id),
+        )
+        assert resp.status_code == 201
+
+        sub = (
+            await db_session.execute(
+                select(PushSubscription).where(PushSubscription.user_id == user.id)
+            )
+        ).scalar_one()
+        assert sub.platform == "android"
+        assert sub.fcm_token == "fcm-test-token-abc123"
+        assert sub.endpoint is None
+
+    async def test_android_unsubscribe_removes_record(self, int_client, db_session):
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        token = "fcm-unsub-token"
+        await int_client.post(
+            "/api/push/subscribe",
+            json={"platform": "android", "fcm_token": token},
+            cookies=make_auth_cookie(user.id),
+        )
+
+        resp = await int_client.request(
+            "DELETE",
+            "/api/push/unsubscribe",
+            json={"platform": "android", "fcm_token": token},
+            cookies=make_auth_cookie(user.id),
+        )
+        assert resp.status_code == 204
+
+        sub = (
+            await db_session.execute(
+                select(PushSubscription).where(PushSubscription.user_id == user.id)
+            )
+        ).scalar_one_or_none()
+        assert sub is None
 
 
 class TestUnsubscribe:
@@ -159,3 +209,40 @@ class TestUnsubscribe:
             select(PushSubscription).where(PushSubscription.user_id == user1.id)
         )).scalar_one_or_none()
         assert sub is not None
+
+
+class TestPushTestEndpoint:
+    async def test_disabled_returns_503(self, int_client, db_session, monkeypatch):
+        monkeypatch.delenv("ALLOW_TEST_PUSH", raising=False)
+        monkeypatch.delenv("allow_test_push", raising=False)
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        resp = await int_client.post(
+            "/api/push/test",
+            cookies=make_auth_cookie(user.id),
+        )
+        assert resp.status_code == 503
+        assert "ALLOW_TEST_PUSH" in resp.json()["detail"]
+
+    async def test_sends_when_enabled(self, int_client, db_session, monkeypatch):
+        from unittest.mock import patch
+
+        monkeypatch.setenv("ALLOW_TEST_PUSH", "1")
+        user = await seed_user(db_session)
+        await db_session.commit()
+
+        await int_client.post(
+            "/api/push/subscribe",
+            json={"platform": "android", "fcm_token": "fcm-test-push"},
+            cookies=make_auth_cookie(user.id),
+        )
+
+        with patch("routers.push.send_fcm_notification", return_value=True):
+            resp = await int_client.post(
+                "/api/push/test",
+                cookies=make_auth_cookie(user.id),
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["sent"] == 1

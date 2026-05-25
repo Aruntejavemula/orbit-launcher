@@ -19,7 +19,7 @@ import {
 import { clearOfflineDataCache } from "../utils/offlineDataCache";
 import { clearOnboardingCache } from "../lib/onboardingLocalCache";
 import { isCapacitorNative } from "../lib/capacitor";
-import { clearCapacitorAccessToken } from "../lib/capacitorSession";
+import { clearCapacitorAccessToken, getCapacitorAccessToken } from "../lib/capacitorSession";
 import { isRemioDesktop, getRemioDesktop } from "../lib/desktop";
 import { clearPendingRememberPrompt } from "../lib/rememberDevicePrompt";
 
@@ -53,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const cached = getCachedUser();
     if (cached) {
-      setUser(cached.user);
+      if (isCapacitorNative() && !getCapacitorAccessToken()) {
+        clearCachedUser();
+      } else {
+        setUser(cached.user);
+      }
     }
 
     api

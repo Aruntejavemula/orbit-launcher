@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePrefs } from "../context/PreferencesContext";
+import { syncNativePushAfterLogin } from "../lib/capacitorPush";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import PasswordInput from "../components/PasswordInput";
 import { markPendingRememberPrompt } from "../lib/rememberDevicePrompt";
@@ -41,6 +43,7 @@ function friendlyError(raw: string | undefined): string {
 
 export default function LoginPage() {
   const { signIn } = useAuth();
+  const { update: updatePrefs } = usePrefs();
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -90,11 +93,19 @@ export default function LoginPage() {
         const reg = await api.post("/auth/register", { name, email, password });
         if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(reg.data);
         await signIn(false);
+        if (isCapacitorNative()) {
+          const ok = await syncNativePushAfterLogin();
+          if (ok) await updatePrefs({ reminderPush: true });
+        }
       } else {
         const login = await api.post("/auth/login", { email, password, remember_me: false });
         if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(login.data);
         markPendingRememberPrompt();
         await signIn(false);
+        if (isCapacitorNative()) {
+          const ok = await syncNativePushAfterLogin();
+          if (ok) await updatePrefs({ reminderPush: true });
+        }
       }
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;

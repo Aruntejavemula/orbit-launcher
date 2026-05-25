@@ -8,11 +8,6 @@ import {
   resolveMonthlyBudget,
   writeBudgetCache,
 } from "../lib/budgetLocalCache";
-import {
-  resolveOnboardingCompleted,
-  writeOnboardingCache,
-} from "../lib/onboardingLocalCache";
-
 const DEFAULTS: Preferences = {
   theme: "light",
   startWeekOnMonday: false,
@@ -54,6 +49,12 @@ function apiHasMonthlyBudgetField(raw: unknown): boolean {
   return typeof raw === "object" && raw !== null && Object.prototype.hasOwnProperty.call(raw, "monthly_budget");
 }
 
+function assertPrefsApiResponse(raw: unknown): asserts raw is PrefsApiResponse {
+  if (!raw || typeof raw !== "object" || typeof (raw as PrefsApiResponse).theme !== "string") {
+    throw new Error("Invalid preferences response from API (expected JSON, not HTML).");
+  }
+}
+
 function toPrefs(
   raw: PrefsApiResponse,
   userId: string | undefined,
@@ -72,7 +73,7 @@ function toPrefs(
     reminderDays: raw.reminder_days ?? 7,
     reminderEmail: raw.reminder_email ?? true,
     reminderPush: raw.reminder_push ?? false,
-    onboardingCompleted: resolveOnboardingCompleted(raw.onboarding_completed, userId),
+    onboardingCompleted: raw.onboarding_completed ?? false,
     monthlyBudget,
     country: raw.country ?? "",
   };
@@ -193,7 +194,12 @@ export function usePrefs() {
   const prefsQueryKey = ["preferences", user?.id] as const;
   const userId = user?.id;
 
-  const { data: prefsQuery, isFetched: prefsFetched } = useQuery({
+  const {
+    data: prefsQuery,
+    isFetched: prefsFetched,
+    isError: prefsError,
+    error: prefsLoadError,
+  } = useQuery({
     queryKey: prefsQueryKey,
     queryFn: async (): Promise<PrefsQueryResult> => {
       const load = async (): Promise<PrefsApiResponse> => {
@@ -202,6 +208,7 @@ export function usePrefs() {
       };
       try {
         const raw = await load();
+        assertPrefsApiResponse(raw);
         const serverSupportsBudget = apiHasMonthlyBudgetField(raw);
         return { prefs: toPrefs(raw, userId), serverSupportsBudget };
       } catch (err: unknown) {
@@ -209,6 +216,7 @@ export function usePrefs() {
         if (status === 404) {
           const r = await api.post("/preferences/init");
           const raw = r.data as PrefsApiResponse;
+          assertPrefsApiResponse(raw);
           const serverSupportsBudget = apiHasMonthlyBudgetField(raw);
           return { prefs: toPrefs(raw, userId), serverSupportsBudget };
         }
@@ -216,12 +224,14 @@ export function usePrefs() {
       }
     },
     enabled: !!user,
+    retry: (failureCount, err) => {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("HTML") || msg.includes("not JSON")) return false;
+      return failureCount < 2;
+    },
   });
 
-  const prefs = prefsQuery?.prefs ?? {
-    ...DEFAULTS,
-    onboardingCompleted: resolveOnboardingCompleted(false, userId),
-  };
+  const prefs = prefsQuery?.prefs ?? DEFAULTS;
 
   const { data: apiKeys = [] } = useQuery({
     queryKey: ["api-keys"],
@@ -241,23 +251,16 @@ export function usePrefs() {
       await qc.cancelQueries({ queryKey: prefsQueryKey });
       const cached = qc.getQueryData<PrefsQueryResult>(prefsQueryKey);
       const prev = cached ?? { prefs: DEFAULTS, serverSupportsBudget: false };
-      const optimisticPatch = { ...patch };
-      if (optimisticPatch.onboardingCompleted) {
-        delete optimisticPatch.onboardingCompleted;
-      }
       if (patch.monthlyBudget !== undefined) {
         writeBudgetCache(userId, patch.monthlyBudget ?? null);
       }
       qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
-        prefs: { ...prev.prefs, ...optimisticPatch },
+        prefs: { ...prev.prefs, ...patch },
         serverSupportsBudget: prev.serverSupportsBudget,
       });
       return { prev: cached };
     },
     onSuccess: ({ prefs, raw }, variables, context) => {
-      if (variables.onboardingCompleted) {
-        writeOnboardingCache(userId);
-      }
       const prevCached = context?.prev;
       const prevPrefs = prevCached?.prefs ?? DEFAULTS;
       let next = prefs;
@@ -277,22 +280,32 @@ export function usePrefs() {
         serverSupportsBudget: supports,
       });
     },
-    onError: async (err, variables) => {
+    onError: async (err, variables, context) => {
       const cached = qc.getQueryData<PrefsQueryResult>(prefsQueryKey);
       const prev = cached?.prefs ?? DEFAULTS;
+      const optimistic = context?.prev?.prefs;
       if (variables.monthlyBudget !== undefined) {
         const budget = readBudgetCache(userId) ?? variables.monthlyBudget ?? null;
+        const keepOnboarding =
+          variables.onboardingCompleted === true
+            ? true
+            : optimistic?.onboardingCompleted ?? prev.onboardingCompleted;
         qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
           prefs: {
             ...prev,
             monthlyBudget: budget,
-            onboardingCompleted: variables.onboardingCompleted ? false : prev.onboardingCompleted,
+            onboardingCompleted: keepOnboarding,
+            ...(variables.theme !== undefined ? { theme: variables.theme } : {}),
           },
           serverSupportsBudget: cached?.serverSupportsBudget ?? false,
         });
       } else if (variables.onboardingCompleted) {
         qc.setQueryData<PrefsQueryResult>(prefsQueryKey, {
-          prefs: { ...prev, onboardingCompleted: false },
+          prefs: {
+            ...prev,
+            onboardingCompleted: optimistic?.onboardingCompleted ?? true,
+            ...(variables.theme !== undefined ? { theme: variables.theme } : {}),
+          },
           serverSupportsBudget: cached?.serverSupportsBudget ?? false,
         });
       } else {
@@ -320,6 +333,8 @@ export function usePrefs() {
   return {
     prefs,
     prefsFetched,
+    prefsError,
+    prefsLoadError,
     update: updateMutation.mutate,
     updateAsync: updateMutation.mutateAsync,
     apiKeys,

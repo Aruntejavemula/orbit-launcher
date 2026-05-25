@@ -50,6 +50,7 @@ import {
 } from "../utils/budgetPresets";
 
 import { computeSubscriptionExpiryMs } from "../utils/billingDates";
+import { displayFirstName } from "../utils/displayName";
 
 import type { Preferences, Theme } from "../types";
 
@@ -278,7 +279,7 @@ export default function OnboardingOverlay() {
 
 
 
-  const firstName = (user?.name ?? "there").split(/\s+/)[0] || "there";
+  const firstName = displayFirstName(user) || "friend";
 
   const catalogGrid = useMemo(() => featuredCatalogApps(), []);
 
@@ -302,14 +303,6 @@ export default function OnboardingOverlay() {
     if (step < 5) return;
     document.documentElement.classList.toggle("dark", draftTheme === "dark");
   }, [step, draftTheme]);
-
-  useEffect(() => {
-    return () => {
-      document.documentElement.classList.toggle("dark", prefs.theme === "dark");
-    };
-  }, [prefs.theme]);
-
-
 
   const toggleSlug = (slug: string) => {
 
@@ -501,10 +494,13 @@ export default function OnboardingOverlay() {
 
 
 
-  const goThemeContinue = () => {
-
-    setStep(6);
-
+  const goThemeContinue = async () => {
+    try {
+      await updateAsync({ theme: draftTheme, compactCards: draftCompact });
+      setStep(6);
+    } catch {
+      toast("Could not save theme. Check your connection and try again.", "error");
+    }
   };
 
 
@@ -598,7 +594,7 @@ export default function OnboardingOverlay() {
 
           ) : step === 5 ? (
 
-            <PrimaryButton onClick={goThemeContinue}>
+            <PrimaryButton onClick={() => void goThemeContinue()}>
 
               Continue
 

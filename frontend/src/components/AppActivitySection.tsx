@@ -17,6 +17,7 @@ interface Props {
 function lastOpenedHint(ts: number | null): string {
   if (!ts) return "Never";
   const r = relativeTime(ts);
+  if (typeof r !== "string" || !r) return "Never";
   return r.startsWith("Opened ") ? r.slice(7) : r;
 }
 
@@ -25,10 +26,11 @@ function opensLabel(n: number): string {
 }
 
 export default function AppActivitySection({ app, history, className = "" }: Props) {
-  const ts = lastOpenedAt(app.id, history, app.lastOpened);
-  const week = opensLast7Days(app.id, history);
-  const month = opensLast30Days(app.id, history);
-  const monthOpens = opensThisMonth(app.id, history);
+  const launches = Array.isArray(history) ? history : [];
+  const ts = lastOpenedAt(app.id, launches, app.lastOpened);
+  const week = opensLast7Days(app.id, launches);
+  const month = opensLast30Days(app.id, launches);
+  const monthOpens = opensThisMonth(app.id, launches);
   const worth = app.plan === "paid" ? appWorthRating(app.monthlyCost, monthOpens) : null;
 
   return (

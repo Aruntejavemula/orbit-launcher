@@ -1,4 +1,6 @@
 import type { AppItem } from "../types";
+import { resolveCatalogAppFields } from "../data/appCatalog";
+import { normalizeBrandHex } from "./color";
 import { assertNoForbiddenStoragePayload } from "./clientStoragePolicy";
 
 /** App launch history only — never cache /api-keys, auth, or secrets here. */
@@ -7,10 +9,31 @@ type LaunchCacheEntry = { appId: string; ts: number };
 const APPS_KEY = "remio_apps_cache";
 const LAUNCHES_KEY = "remio_launches_cache";
 
+function normalizeCachedApp(item: unknown): AppItem | null {
+  if (!item || typeof item !== "object") return null;
+  const o = item as Partial<AppItem>;
+  if (typeof o.id !== "string") return null;
+  const { slug, name } = resolveCatalogAppFields(
+    typeof o.slug === "string" ? o.slug : undefined,
+    typeof o.name === "string" ? o.name : undefined,
+    typeof o.url === "string" ? o.url : undefined,
+  );
+  return {
+    ...(o as AppItem),
+    slug,
+    name,
+    color: normalizeBrandHex(o.color),
+  };
+}
+
 export function readAppsCache(): AppItem[] | null {
   try {
     const raw = localStorage.getItem(APPS_KEY);
-    return raw ? (JSON.parse(raw) as AppItem[]) : null;
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const items = parsed.map(normalizeCachedApp).filter((a): a is AppItem => a != null);
+    return items.length ? items : null;
   } catch {
     return null;
   }

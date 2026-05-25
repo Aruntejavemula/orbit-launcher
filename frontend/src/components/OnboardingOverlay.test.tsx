@@ -265,7 +265,7 @@ describe("OnboardingOverlay", () => {
 
 
 
-  it("updates draft theme locally without API on preferences step", async () => {
+  it("saves theme on preferences continue", async () => {
 
     renderOverlay();
 
@@ -291,26 +291,21 @@ describe("OnboardingOverlay", () => {
 
     await waitFor(() => screen.getByText("Your preferences"));
 
-    mockUpdateAsync.mockClear();
-
     fireEvent.click(screen.getByRole("button", { name: /^dark$/i }));
-
-    expect(mockUpdateAsync).not.toHaveBeenCalled();
 
     expect(screen.getByRole("button", { name: /^dark$/i }).className).toMatch(/e8541a/);
 
-
-
     fireEvent.click(screen.getByRole("button", { name: /compact/i }));
 
-    expect(mockUpdateAsync).not.toHaveBeenCalled();
+    mockUpdateAsync.mockClear();
 
+    fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
 
+    await waitFor(() =>
+      expect(mockUpdateAsync).toHaveBeenCalledWith({ theme: "dark", compactCards: true }),
+    );
 
-    const shell = document.querySelector('[data-theme="dark"]');
-
-    expect(shell).toBeTruthy();
-
+    await waitFor(() => screen.getByRole("button", { name: /enter remio/i }));
   });
 
 
@@ -343,11 +338,11 @@ describe("OnboardingOverlay", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^continue$/i }));
 
-    expect(screen.getByRole("button", { name: /enter remio/i })).toBeInTheDocument();
+    await waitFor(() => screen.getByRole("button", { name: /enter remio/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /enter remio/i }));
 
-    await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalledTimes(3));
 
     expect(mockUpdateAsync).toHaveBeenCalledWith({
 

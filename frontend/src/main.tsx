@@ -7,8 +7,14 @@ import "./index.css";
 import { queryClient } from "./queryClient";
 import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { isCapacitorNative } from "./lib/capacitor";
+import { initNativePushListeners } from "./lib/capacitorPush";
 
 async function bootstrap() {
+  if (isCapacitorNative()) {
+    initNativePushListeners();
+  }
+
   const webOnly = import.meta.env.MODE !== "electron" && import.meta.env.MODE !== "capacitor";
   if (webOnly) {
     void import("virtual:pwa-register").then(({ registerSW }) => {
