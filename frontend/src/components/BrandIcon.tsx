@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { iconByKey } from "../data/iconLibrary";
 import { usePrefs } from "../context/PreferencesContext";
-import { iconColorForTheme, needsMutedIconOnDark } from "../utils/color";
+import { brandIconCdnSlug } from "../data/brandIconSlug";
+import { iconColorForTheme, needsMutedIconOnDark, normalizeBrandHex } from "../utils/color";
 
 interface Props {
   slug: string;
@@ -11,6 +12,8 @@ interface Props {
   iconKey?: string;
   /** Keep catalog brand hex on dark UI (e.g. tinted desktop cards). */
   preserveBrandColor?: boolean;
+  /** When set, skips PreferencesContext subscription (fewer list re-renders). */
+  uiDark?: boolean;
 }
 
 const INLINE: Record<string, (color: string) => JSX.Element> = {
@@ -95,18 +98,17 @@ const INLINE: Record<string, (color: string) => JSX.Element> = {
   ),
 };
 
-export default function BrandIcon({
+function BrandIconInner({
   slug,
   color,
   size = 28,
   className = "",
   iconKey,
   preserveBrandColor = false,
-}: Props) {
+  uiDark,
+}: Props & { uiDark: boolean }) {
   const [failed, setFailed] = useState(false);
-  const { prefs } = usePrefs();
-  const uiDark = prefs.theme === "dark";
-  const hex = color.replace(/^#/, "");
+  const hex = normalizeBrandHex(color);
   const iconColor =
     uiDark && needsMutedIconOnDark(hex)
       ? "ffffff"
@@ -126,7 +128,11 @@ export default function BrandIcon({
     );
   }
 
-  const inline = INLINE[slug];
+  const catalogSlug = (slug ?? "").trim().toLowerCase() || "app";
+  const cdnSlug = brandIconCdnSlug(catalogSlug);
+  const inlineKey = cdnSlug ?? catalogSlug;
+
+  const inline = INLINE[inlineKey] ?? INLINE[catalogSlug];
   if (inline) {
     return (
       <span style={{ width: size, height: size, display: "inline-grid", placeItems: "center" }} className={className}>
@@ -135,10 +141,10 @@ export default function BrandIcon({
     );
   }
 
-  if (!failed) {
+  if (!failed && cdnSlug) {
     return (
       <img
-        src={`https://cdn.simpleicons.org/${slug}/${iconColor}`}
+        src={`https://cdn.simpleicons.org/${cdnSlug}/${iconColor}`}
         alt=""
         width={size}
         height={size}
@@ -148,12 +154,27 @@ export default function BrandIcon({
     );
   }
 
+  const letter =
+    catalogSlug === "app" ? "?" : catalogSlug.replace(/[^a-z0-9]/gi, "").slice(0, 1).toUpperCase() || "?";
+
   return (
     <span
       className={`grid place-items-center rounded-md font-bold text-white ${className}`}
-      style={{ width: size, height: size, background: `#${color}`, fontSize: size * 0.5 }}
+      style={{ width: size, height: size, background: `#${normalizeBrandHex(color)}`, fontSize: size * 0.5 }}
     >
-      {slug.slice(0, 1).toUpperCase()}
+      {letter}
     </span>
   );
+}
+
+function BrandIconWithPrefs(props: Omit<Props, "uiDark">) {
+  const { prefs } = usePrefs();
+  return <BrandIconInner {...props} uiDark={prefs.theme === "dark"} />;
+}
+
+export default function BrandIcon(props: Props) {
+  if (props.uiDark !== undefined) {
+    return <BrandIconInner {...props} uiDark={props.uiDark} />;
+  }
+  return <BrandIconWithPrefs {...props} />;
 }

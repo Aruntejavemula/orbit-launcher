@@ -3,13 +3,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sun, Moon, Menu } from "lucide-react";
 import { ToastContainer } from "./components/Toast";
 import SplashScreen from "./components/SplashScreen";
-import OnboardingOverlay from "./components/OnboardingOverlay";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
 import FloatingAddButton from "./components/FloatingAddButton";
-import AddAppModal from "./components/AddAppModal";
-import AppDetailModal from "./components/AppDetailModal";
-import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -48,14 +44,32 @@ import {
 } from "./lib/rememberDevicePrompt";
 import { shouldShowBudgetNudge } from "./lib/budgetNudge";
 import { isCapacitorNative } from "./lib/capacitor";
+import { initNativePushListeners, syncNativePushAfterLogin } from "./lib/capacitorPush";
+import { shouldShowPushPrimer, markPushPrimerSeen } from "./lib/pushPrimerStorage";
+import PushNotificationPrimerScreen from "./components/PushNotificationPrimerScreen";
 import { registerCapacitorOAuthListener } from "./lib/capacitorAuth";
-import { saveCapacitorTokenFromAuthBody } from "./lib/capacitorSession";
+import { getCapacitorAccessToken, saveCapacitorTokenFromAuthBody } from "./lib/capacitorSession";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
+import LaunchHandoffOverlay from "./components/LaunchHandoffOverlay";
+import RemioLoading from "./components/RemioLoading";
+import { applyDocumentTheme } from "./lib/applyTheme";
 import { appleSpringDrawer, appleSpringGentle, fadeUpVariants } from "./lib/motion";
+
+function HomePageFallback() {
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center page-enter" aria-busy="true">
+      <RemioLoading active variant="screen" label="Loading dashboard" delayMs={0} />
+    </div>
+  );
+}
 
 const DESKTOP_QUERY = "(min-width: 768px)";
 
+const HomePage = lazy(() => import("./pages/HomePage"));
+const OnboardingOverlay = lazy(() => import("./components/OnboardingOverlay"));
+const AddAppModal = lazy(() => import("./components/AddAppModal"));
+const AppDetailModal = lazy(() => import("./components/AppDetailModal"));
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
@@ -90,8 +104,8 @@ export default function App() {
   const [showRememberPrompt, setShowRememberPrompt] = useState(false);
   const [showBudgetNudge, setShowBudgetNudge] = useState(false);
   const { apps } = useApps();
-  const { prefs, prefsFetched, update } = usePrefs();
-  const showOnboarding = prefsFetched && !prefs.onboardingCompleted;
+  const { prefs, prefsFetched, prefsError, update } = usePrefs();
+  const showOnboarding = prefsFetched && !prefsError && !prefs.onboardingCompleted;
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const [page, setPage] = useState<PageId>("home");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -99,8 +113,12 @@ export default function App() {
   const [openAppId, setOpenAppId] = useState<string | null>(null);
   const isAuthCallback = !isPackagedFile() && appPathname() === "/auth/callback";
   const [splashDone, setSplashDone] = useState(shouldSkipSplash);
+  const [pushPrimerDone, setPushPrimerDone] = useState(
+    () => !isCapacitorNative() || !shouldShowPushPrimer(),
+  );
   const [navTick, setNavTick] = useState(0);
   const prevUserId = useRef<string | null>(null);
+  const pushSyncAttemptedForUser = useRef<string | null>(null);
   const isUnknownPath = !isPackagedFile() && !KNOWN_PATHS.has(appPathname());
   const handleSplashComplete = useCallback(() => {
     try {
@@ -131,17 +149,37 @@ export default function App() {
     navigateAppRoot("?google_error=1");
   }, [isAuthCallback, authLoading, user]);
 
+  const completePushPrimer = useCallback(() => {
+    markPushPrimerSeen();
+    setPushPrimerDone(true);
+  }, []);
+
+  useEffect(() => {
+    if (!user || authLoading || !isCapacitorNative() || !getCapacitorAccessToken()) return;
+    if (pushSyncAttemptedForUser.current === user.id) return;
+    pushSyncAttemptedForUser.current = user.id;
+    void syncNativePushAfterLogin().then((ok) => {
+      if (!ok) pushSyncAttemptedForUser.current = null;
+      if (ok && prefsFetched && !prefs.reminderPush) {
+        void update({ reminderPush: true });
+      }
+    });
+  }, [user, authLoading, prefsFetched, prefs.reminderPush, update]);
+
   useEffect(() => {
     if (!isCapacitorNative()) return;
+    initNativePushListeners();
     registerCapacitorOAuthListener({
       onSuccess: async () => {
         await signIn(false);
+        const ok = await syncNativePushAfterLogin();
+        if (ok) void update({ reminderPush: true });
       },
       onError: () => {
         navigateAppRoot("?google_error=1");
       },
     });
-  }, [signIn]);
+  }, [signIn, update]);
 
   useEffect(() => {
     if (!user || authLoading) return;
@@ -170,17 +208,27 @@ export default function App() {
         if (isCapacitorNative()) saveCapacitorTokenFromAuthBody(res.data);
         await refreshUser();
         await signIn(remember);
+        if (isCapacitorNative()) {
+          const ok = await syncNativePushAfterLogin();
+          if (ok) void update({ reminderPush: true });
+        }
       } catch {
         /* session already valid; ignore */
       }
     },
-    [refreshUser, signIn]
+    [refreshUser, signIn, update]
   );
 
+  const themeSynced = useRef(false);
   useEffect(() => {
-    if (showOnboarding) return;
-    document.documentElement.classList.toggle("dark", prefs.theme === "dark");
-  }, [prefs.theme, showOnboarding]);
+    const dark = prefs.theme === "dark";
+    if (!themeSynced.current) {
+      themeSynced.current = true;
+      applyDocumentTheme(dark, false);
+      return;
+    }
+    applyDocumentTheme(dark, true);
+  }, [prefs.theme]);
 
   useEffect(() => {
     const currentId = user?.id ?? null;
@@ -259,6 +307,11 @@ export default function App() {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
+  // Native: explain notifications, then system permission (before login; reinstall = storage cleared → shows again)
+  if (isCapacitorNative() && !pushPrimerDone && !isAuthCallback) {
+    return <PushNotificationPrimerScreen onComplete={completePushPrimer} />;
+  }
+
   // OAuth return — stable screen while session resolves (no blank flash / layout jump)
   if (isAuthCallback) {
     return <AuthLoadingScreen />;
@@ -319,6 +372,23 @@ export default function App() {
 
   if (authLoading) {
     return <AuthLoadingScreen />;
+  }
+
+  if (user && prefsError) {
+    return (
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-3 bg-app px-6 text-center"
+        role="alert"
+      >
+        <p className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+          Could not reach the API
+        </p>
+        <p className="max-w-md text-sm" style={{ color: "var(--text-muted)" }}>
+          Settings loaded a web page instead of JSON — usually a wrong API URL on mobile. Rebuild with{" "}
+          <code className="text-xs">npm run cap:build</code> then <code className="text-xs">npm run cap:sync</code>.
+        </p>
+      </div>
+    );
   }
 
   // Confirmed user → render shell
@@ -417,7 +487,9 @@ export default function App() {
                   exit="exit"
                   transition={appleSpringGentle}
                 >
-                  <Suspense fallback={null}>{renderPage()}</Suspense>
+                  <Suspense fallback={page === "home" ? <HomePageFallback /> : null}>
+                    {renderPage()}
+                  </Suspense>
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -428,10 +500,16 @@ export default function App() {
       {!showOnboarding ? (
         <BottomNav page={page} onNavigate={handleNavigate} onAdd={() => setShowAdd(true)} />
       ) : null}
-      {!showOnboarding ? <AddAppModal open={showAdd} onClose={() => setShowAdd(false)} /> : null}
+      {!showOnboarding ? (
+        <Suspense fallback={null}>
+          <AddAppModal open={showAdd} onClose={() => setShowAdd(false)} />
+        </Suspense>
+      ) : null}
       <AnimatePresence>
         {openApp && (
-          <AppDetailModal app={openApp} onClose={() => setOpenAppId(null)} />
+          <Suspense fallback={null}>
+            <AppDetailModal app={openApp} onClose={() => setOpenAppId(null)} />
+          </Suspense>
         )}
       </AnimatePresence>
       <ToastContainer />
@@ -440,7 +518,12 @@ export default function App() {
         open={showBudgetNudge && !showRememberPrompt}
         onSaved={() => setShowBudgetNudge(false)}
       />
-      {showOnboarding && <OnboardingOverlay />}
+      {showOnboarding && (
+        <Suspense fallback={null}>
+          <OnboardingOverlay />
+        </Suspense>
+      )}
+      <LaunchHandoffOverlay />
     </motion.div>
   );
 }

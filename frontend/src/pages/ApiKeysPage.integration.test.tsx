@@ -5,20 +5,29 @@
  * Covers: load keys, create key (shows secret), revoke key.
  */
 import React from "react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
 import { fakeApiKeys } from "../test/handlers";
 import { createMockQueryClient } from "../test/helpers";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { AuthProvider } from "../context/AuthContext";
 import ApiKeysPage from "./ApiKeysPage";
 
 const BASE = "http://localhost/api";
 
+let activeQc: QueryClient | null = null;
+
+afterEach(() => {
+  activeQc?.cancelQueries();
+  activeQc?.clear();
+  activeQc = null;
+});
+
 function renderApiKeys() {
   const qc = createMockQueryClient();
+  activeQc = qc;
   return render(
     <QueryClientProvider client={qc}>
       <AuthProvider>
@@ -74,10 +83,8 @@ describe("ApiKeysPage integration", () => {
   });
 
   it("regression: revokes a key", async () => {
-    let revoked = false;
     server.use(
       http.delete(`${BASE}/api-keys/${fakeApiKeys[0].id}`, () => {
-        revoked = true;
         return new HttpResponse(null, { status: 204 });
       })
     );
@@ -85,23 +92,23 @@ describe("ApiKeysPage integration", () => {
     renderApiKeys();
     await waitFor(() => screen.getByText(fakeApiKeys[0].name));
 
-    // Find and click the revoke button by aria-label
     const revokeBtn = screen.getByRole("button", { name: /revoke key/i });
     fireEvent.click(revokeBtn);
 
-    // Confirm the revoke modal
     const confirmBtn = await screen.findByRole("button", { name: /^Revoke$/i });
     fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(fakeApiKeys[0].name)).not.toBeInTheDocument();
+    });
   });
 
   it("shows empty state when no keys", async () => {
     server.use(http.get(`${BASE}/api-keys`, () => HttpResponse.json([])));
     renderApiKeys();
     await waitFor(() => {
-      // No keys should be listed — just the create form
-      expect(screen.queryByText(/abcd1234/)).not.toBeInTheDocument();
+      expect(screen.getByText(/no keys yet/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/no keys yet/i)).toBeInTheDocument();
   });
 
   it("clears the error state when user types again", async () => {

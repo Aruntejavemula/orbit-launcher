@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useApps } from "../context/AppsContext";
 import { usePrefs } from "../context/PreferencesContext";
 import type { AppItem } from "../types";
+import { displayFirstName } from "../utils/displayName";
 import { greeting } from "../utils/time";
 import { formatBudgetAmount, timezoneForCountry } from "../utils/countryData";
 import { budgetUsagePercent, monthlySpend } from "../utils/subscriptionSpend";
@@ -28,7 +29,7 @@ export default function HeroCard({ query, onQuery }: Props) {
   const { user } = useAuth();
   const { apps } = useApps();
   const { prefs } = usePrefs();
-  const firstName = (user?.name ?? "there").split(" ")[0];
+  const firstName = displayFirstName(user);
   const tz = prefs.country ? timezoneForCountry(prefs.country) : undefined;
   const greetingText = greeting(tz);
 
@@ -64,10 +65,16 @@ export default function HeroCard({ query, onQuery }: Props) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <h1
           className="min-w-0 truncate font-display text-base font-normal sm:text-lg"
-          title={`${greetingText}, ${firstName}`}
+          title={firstName ? `${greetingText}, ${firstName}` : greetingText}
         >
-          <span className="dashboard-hero-muted">{greetingText}, </span>
-          <span className="dashboard-hero-text font-semibold">{firstName}</span>
+          {firstName ? (
+            <>
+              <span className="dashboard-hero-muted">{greetingText}, </span>
+              <span className="dashboard-hero-text font-semibold">{firstName}</span>
+            </>
+          ) : (
+            <span className="dashboard-hero-text font-semibold">{greetingText}</span>
+          )}
         </h1>
         {expiryAlert && (
           <p className="dashboard-hero-muted shrink-0 text-xs sm:text-right sm:text-sm" role="status">

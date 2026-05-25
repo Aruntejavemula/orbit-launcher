@@ -37,6 +37,9 @@ export default function SettingsPage() {
   const [budgetDraft, setBudgetDraft] = useState("");
   const [budgetSaving, setBudgetSaving] = useState(false);
   const [budgetSaved, setBudgetSaved] = useState(false);
+  const [testPushBusy, setTestPushBusy] = useState(false);
+  const [testPushMsg, setTestPushMsg] = useState<string | null>(null);
+  const showTestPush = isCapacitorNative();
 
   useEffect(() => {
     const b = prefs.monthlyBudget;
@@ -268,6 +271,51 @@ export default function SettingsPage() {
           <Toggle label="Notify before subscriptions expire" description="Banner reminder 7 days before any renewal." value={prefs.notifyExpirations} disabled={!prefsFetched} onChange={(v) => update({ notifyExpirations: v })} />
         </div>
       </Card>
+
+      {showTestPush && (
+        <Card title="Notifications">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Send a test push now (Hello / Hi). API needs ALLOW_TEST_PUSH=1 and Firebase on the server.
+          </p>
+          <button
+            type="button"
+            disabled={testPushBusy}
+            className="btn-primary mt-4 disabled:opacity-60"
+            onClick={async () => {
+              setTestPushBusy(true);
+              setTestPushMsg(null);
+              try {
+                const res = await api.post("/push/test");
+                const n = (res.data as { sent?: number }).sent ?? 1;
+                setTestPushMsg(`Sent to ${n} device(s). Check your notification shade.`);
+              } catch (err: unknown) {
+                const detail =
+                  err &&
+                  typeof err === "object" &&
+                  "response" in err &&
+                  err.response &&
+                  typeof err.response === "object" &&
+                  "data" in err.response &&
+                  err.response.data &&
+                  typeof err.response.data === "object" &&
+                  "detail" in err.response.data
+                    ? String((err.response.data as { detail: unknown }).detail)
+                    : "Test push failed.";
+                setTestPushMsg(detail);
+              } finally {
+                setTestPushBusy(false);
+              }
+            }}
+          >
+            {testPushBusy ? "Sending…" : "Send Hello notification"}
+          </button>
+          {testPushMsg && (
+            <p className="mt-3 text-sm" style={{ color: "var(--text-muted)" }} role="status">
+              {testPushMsg}
+            </p>
+          )}
+        </Card>
+      )}
 
       <Card title="Security">
         <div className="space-y-1 border-b pb-3 mb-3" style={{ borderColor: "var(--line)" }}>

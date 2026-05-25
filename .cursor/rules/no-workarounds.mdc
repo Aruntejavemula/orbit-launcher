@@ -1,0 +1,40 @@
+---
+description: Fix root causes; do not ship client-side workarounds that hide API/auth/sync failures
+alwaysApply: true
+---
+
+# No workarounds — fix root causes
+
+## Policy
+
+Do **not** add workarounds that hide broken behavior. Fix why it fails (API, auth, CORS, schema, env, native shell). Workarounds fail the next session, platform, or deploy.
+
+**Workaround (reject):**
+- Local flags/cache that contradict server state **only** because PATCH/POST failed
+- Renaming or “repairing” bad API rows in the UI instead of fixing create/update + validation
+- Skipping errors (empty catch, swallow 401, reload to “reset” state)
+- Wrong third-party URLs or aliases instead of the correct contract
+- “Works on device if you delete data / avoid path X”
+
+**Real fix (do this):**
+- Correct auth for the platform (e.g. Capacitor Bearer when cookies cannot cross-origin)
+- Server persists what the client depends on (`onboarding_completed`, app `name`/`slug`, etc.)
+- CORS / env / OAuth config documented and set in deployment
+- API returns complete, validated payloads; client validates and surfaces failures clearly
+- Defensive parsing at boundaries (null-safe) **without** pretending sync succeeded
+
+## When proposing a change
+
+1. State **root cause** in one sentence.
+2. State **fix** (what file/service/config changes).
+3. If something still fails, **toast/error + failed request** — not silent local override.
+
+## Allowed patterns (not workarounds)
+
+- Platform-correct transport (Bearer in WebView, cookies on same-site web)
+- Offline cache **only** as an explicit product feature with defined merge rules and server reconciliation
+- Legitimate fallbacks (brand not on icon CDN → letter tile) **after** correct slug lookup fails
+
+## If a true fix needs infra you cannot do in-repo
+
+Say so plainly. Do not ship a client mask instead. List what the user must set (Railway env, rebuild native, etc.).

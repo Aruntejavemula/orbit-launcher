@@ -91,33 +91,24 @@ export default function AppGrid({ apps, totalApps, onOpenApp, query, onClearSear
   return (
     <div className="flex flex-col gap-4">
       {!isDesktop ? (
-        <motion.div
-          className="flex flex-col gap-2"
-          data-testid="app-grid-mobile"
-          variants={cardContainer}
-          initial="initial"
-          animate="animate"
-        >
-          <AnimatePresence mode="sync">
-            {page.map((a) => (
-              <motion.div
-                key={a.id}
-                variants={cardVariants}
-                initial={false}
-                animate="animate"
-                transition={cardTransition}
-              >
-                <AppListRow
-                  app={a}
-                  countryCode={country}
-                  showLastOpened={prefs.showLastOpened}
-                  onOpen={onOpenApp}
-                  onLaunch={launch}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <div className="app-grid-mobile-enter flex flex-col gap-2" data-testid="app-grid-mobile">
+          {page.map((a, i) => (
+            <div
+              key={a.id}
+              className="app-list-row-enter"
+              style={{ ["--row-enter-delay" as string]: `${Math.min(i, 14) * 36}ms` }}
+            >
+              <AppListRow
+                app={a}
+                countryCode={country}
+                uiDark={prefs.theme === "dark"}
+                showLastOpened={prefs.showLastOpened}
+                onOpen={onOpenApp}
+                onLaunch={() => launch({ id: a.id, slug: a.slug, url: a.url })}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
         <motion.div
           data-testid="app-grid-desktop"

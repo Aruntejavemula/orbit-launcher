@@ -8,6 +8,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../context/AuthContext";
 import CalendarPage from "./CalendarPage";
 
+vi.mock("../utils/pushSubscription", () => ({
+  subscribeToPush: vi.fn(() => Promise.resolve(true)),
+  unsubscribeFromPush: vi.fn(() => Promise.resolve()),
+}));
+
 const BASE = "http://localhost/api";
 
 function renderCalendar() {

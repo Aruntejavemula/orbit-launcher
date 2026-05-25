@@ -208,3 +208,50 @@ export const appCatalog: CatalogApp[] = [
   { name: "FanCode", slug: "fancode", color: "000000", category: "sports", url: "https://fancode.com" },
   { name: "Willow", slug: "willow", color: "1B4332", category: "sports", url: "https://www.willow.tv" },
 ];
+
+const catalogBySlug = new Map(appCatalog.map((a) => [a.slug, a]));
+
+export function getCatalogApp(slug: string): CatalogApp | undefined {
+  return catalogBySlug.get(slug.trim().toLowerCase());
+}
+
+function catalogFromUrl(url: string | null | undefined): CatalogApp | undefined {
+  const raw = url?.trim();
+  if (!raw) return undefined;
+  try {
+    const host = new URL(raw.includes("://") ? raw : `https://${raw}`).hostname.replace(/^www\./i, "");
+    return appCatalog.find((a) => {
+      try {
+        return new URL(a.url).hostname.replace(/^www\./i, "") === host;
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/** Resolve display fields from API row; optional url recovers catalog when slug/name are generic. */
+export function resolveCatalogAppFields(
+  slug: string | null | undefined,
+  name: string | null | undefined,
+  url?: string | null,
+): { slug: string; name: string } {
+  const rawSlug = slug?.trim().toLowerCase() ?? "";
+  const rawName = name?.trim() ?? "";
+  const genericSlug = !rawSlug || rawSlug === "app";
+  const genericName = !rawName || rawName === "App";
+  let catalog = !genericSlug ? getCatalogApp(rawSlug) : undefined;
+  if (!catalog && rawName && !genericName) {
+    catalog = appCatalog.find((a) => a.name.toLowerCase() === rawName.toLowerCase());
+  }
+  if (!catalog && (genericSlug || genericName)) {
+    catalog = catalogFromUrl(url);
+  }
+  const finalSlug = catalog?.slug ?? (rawSlug && rawSlug !== "app" ? rawSlug : "app");
+  const finalName =
+    rawName && rawName !== "App" ? rawName : (catalog?.name ?? (rawName || "App"));
+  return { slug: finalSlug, name: finalName };
+}
+

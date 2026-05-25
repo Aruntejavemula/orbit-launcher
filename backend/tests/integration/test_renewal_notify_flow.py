@@ -91,8 +91,9 @@ class TestCollectPending:
 
 class TestRunRenewalNotifications:
     @patch("tasks.renewal_notify.send_renewal_reminder_email")
+    @patch("tasks.renewal_notify.send_fcm_notification", return_value=True)
     @patch("tasks.renewal_notify.send_push_notification", return_value=True)
-    async def test_sends_and_dedups(self, mock_push, mock_email, db_session):
+    async def test_sends_and_dedups(self, mock_web_push, mock_fcm, mock_email, db_session):
         user = await seed_user(db_session, email="renew3@example.com")
         prefs = await seed_preferences(db_session, user.id)
         prefs.reminder_email = True
@@ -104,9 +105,8 @@ class TestRunRenewalNotifications:
         db_session.add(
             PushSubscription(
                 user_id=user.id,
-                endpoint="https://fcm.example/send/abc",
-                p256dh="p256",
-                auth="auth",
+                platform="android",
+                fcm_token="fcm-integration-test-token",
             )
         )
         await db_session.commit()
