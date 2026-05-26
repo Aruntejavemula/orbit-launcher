@@ -5,6 +5,9 @@
   "license": "UNLICENSED",
   "author": "Arun Teja <hello@remiolauncher.com> (Remio Org)",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
