@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Capacitor — keep bridge and plugin classes intact
+-keep class com.getcapacitor.** { *; }
+-dontwarn com.getcapacitor.**
+
+# Firebase / FCM — keep messaging classes
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Preserve stack traces for crash reporting
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
