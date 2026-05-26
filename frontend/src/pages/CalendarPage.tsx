@@ -234,26 +234,38 @@ export default function CalendarPage() {
               active={prefs.reminderEmail}
               onToggle={() => update({ reminderEmail: !prefs.reminderEmail })}
             />
-            {!isCapacitorNative() && (
-              <ReminderToggle
-                icon={Smartphone}
-                label="Push notifications"
-                description="Browser push when a reminder is due"
-                active={prefs.reminderPush}
-                onToggle={async () => {
-                  if (!prefs.reminderPush) {
+            <ReminderToggle
+              icon={Smartphone}
+              label="Push notifications"
+              description={isCapacitorNative() ? "Get notified when a reminder is due" : "Browser push when a reminder is due"}
+              active={prefs.reminderPush}
+              onToggle={async () => {
+                if (!prefs.reminderPush) {
+                  if (isCapacitorNative()) {
+                    const { registerNativePush } = await import("../lib/capacitorPush");
+                    const ok = await registerNativePush();
+                    if (!ok) {
+                      alert("Allow notifications in your device settings to enable push reminders.");
+                      return;
+                    }
+                  } else {
                     const ok = await subscribeToPush();
                     if (!ok) {
                       alert("Allow notifications in your browser to enable push reminders.");
                       return;
                     }
+                  }
+                } else {
+                  if (isCapacitorNative()) {
+                    const { unregisterNativePush } = await import("../lib/capacitorPush");
+                    await unregisterNativePush();
                   } else {
                     await unsubscribeFromPush();
                   }
-                  update({ reminderPush: !prefs.reminderPush });
-                }}
-              />
-            )}
+                }
+                update({ reminderPush: !prefs.reminderPush });
+              }}
+            />
             <ReminderToggle
               icon={Bell}
               label="Show banner before expiration"
