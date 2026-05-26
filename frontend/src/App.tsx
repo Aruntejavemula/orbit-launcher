@@ -94,6 +94,7 @@ function shouldSkipSplash(): boolean {
   } catch {
     /* private mode */
   }
+  if (isCapacitorNative()) return true;
   if (appPathname() === "/auth/callback") return true;
   return new URLSearchParams(appSearch()).get("google_error") === "1";
 }
@@ -105,7 +106,7 @@ export default function App() {
   const [showBudgetNudge, setShowBudgetNudge] = useState(false);
   const { apps } = useApps();
   const { prefs, prefsFetched, prefsError, update } = usePrefs();
-  const showOnboarding = prefsFetched && !prefsError && !prefs.onboardingCompleted;
+  const showOnboarding = prefsFetched && !prefsError && !prefs.onboardingCompleted && !!user && !authLoading;
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const [page, setPage] = useState<PageId>("home");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
