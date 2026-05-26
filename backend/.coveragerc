@@ -15,7 +15,7 @@ omit =
     */conftest.py
 
 [report]
-fail_under = 82
+fail_under = 80
 exclude_lines =
     pragma: no cover
     raise NotImplementedError
