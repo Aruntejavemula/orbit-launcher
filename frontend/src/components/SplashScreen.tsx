@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeroLogo from "./HeroLogo";
 import { appleSpring, appleSpringGentle, fadeUpVariants } from "../lib/motion";
+import { isCapacitorNative } from "../lib/capacitor";
 
 interface Props {
   onComplete: () => void;
@@ -12,7 +13,7 @@ export default function SplashScreen({ onComplete }: Props) {
   const called = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setPhase("out"), 1400);
+    const timer = setTimeout(() => setPhase("out"), isCapacitorNative() ? 800 : 1400);
     return () => clearTimeout(timer);
   }, []);
 
