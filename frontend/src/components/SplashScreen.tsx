@@ -29,7 +29,7 @@ export default function SplashScreen({ onComplete }: Props) {
         <motion.div
           key="splash"
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center backdrop-blur-2xl"
-          style={{ background: "rgba(10, 26, 10, 0.92)" }}
+          style={{ background: "rgba(10, 10, 10, 0.97)" }}
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
