@@ -4,8 +4,9 @@ export const PRIVACY_POLICY_PATH = "/privacy";
 export const TERMS_PATH = "/terms";
 export const EULA_PATH = "/eula";
 export const LICENSES_PATH = "/licenses";
+export const DELETE_ACCOUNT_PATH = "/delete-account";
 
-export type LegalPageId = "privacy" | "terms" | "eula" | "licenses";
+export type LegalPageId = "privacy" | "terms" | "eula" | "licenses" | "delete-account";
 
 export const LEGAL_OPERATOR = "Arun Teja";
 export const LEGAL_COMPANY = "Remio Org";
@@ -32,7 +33,11 @@ export function isLicensesRoute(): boolean {
 }
 
 export function isLegalRoute(): boolean {
-  return isPrivacyPolicyRoute() || isTermsRoute() || isEulaRoute() || isLicensesRoute();
+  return isPrivacyPolicyRoute() || isTermsRoute() || isEulaRoute() || isLicensesRoute() || isDeleteAccountRoute();
+}
+
+export function isDeleteAccountRoute(): boolean {
+  return appPathname() === DELETE_ACCOUNT_PATH;
 }
 
 export function legalPageFromPath(): LegalPageId | null {
@@ -41,5 +46,6 @@ export function legalPageFromPath(): LegalPageId | null {
   if (path === TERMS_PATH) return "terms";
   if (path === EULA_PATH) return "eula";
   if (path === LICENSES_PATH) return "licenses";
+  if (path === DELETE_ACCOUNT_PATH) return "delete-account";
   return null;
 }

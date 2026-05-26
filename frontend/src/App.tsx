@@ -29,12 +29,14 @@ import { RESET_PASSWORD_PATH, isResetPasswordRoute } from "./lib/passwordResetSe
 import {
   isLegalRoute,
   legalPageFromPath,
+  isDeleteAccountRoute,
   EULA_PATH,
   LICENSES_PATH,
   PRIVACY_POLICY_PATH,
   TERMS_PATH,
 } from "./lib/legal";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import DeleteAccountPage from "./pages/DeleteAccountPage";
 import TermsPage from "./pages/TermsPage";
 import EulaPage from "./pages/EulaPage";
 import LicensesPage from "./pages/LicensesPage";
@@ -319,6 +321,10 @@ export default function App() {
 
   if (isResetPasswordRoute()) {
     return <ResetPasswordPage />;
+  }
+
+  if (isDeleteAccountRoute()) {
+    return <DeleteAccountPage />;
   }
 
   if (isLegalRoute()) {
