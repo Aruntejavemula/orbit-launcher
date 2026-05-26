@@ -209,6 +209,7 @@ export function usePrefs() {
       try {
         const raw = await load();
         assertPrefsApiResponse(raw);
+        try { localStorage.setItem("remio_theme", raw.theme); } catch { /* private mode */ }
         const serverSupportsBudget = apiHasMonthlyBudgetField(raw);
         return { prefs: toPrefs(raw, userId), serverSupportsBudget };
       } catch (err: unknown) {
@@ -217,6 +218,7 @@ export function usePrefs() {
           const r = await api.post("/preferences/init");
           const raw = r.data as PrefsApiResponse;
           assertPrefsApiResponse(raw);
+          try { localStorage.setItem("remio_theme", raw.theme); } catch { /* private mode */ }
           const serverSupportsBudget = apiHasMonthlyBudgetField(raw);
           return { prefs: toPrefs(raw, userId), serverSupportsBudget };
         }
