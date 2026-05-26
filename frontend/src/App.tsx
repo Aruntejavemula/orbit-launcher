@@ -94,7 +94,6 @@ function shouldSkipSplash(): boolean {
   } catch {
     /* private mode */
   }
-  if (isCapacitorNative()) return true;
   if (appPathname() === "/auth/callback") return true;
   return new URLSearchParams(appSearch()).get("google_error") === "1";
 }
