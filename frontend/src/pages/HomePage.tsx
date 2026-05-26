@@ -3,6 +3,8 @@ import HeroCard from "../components/HeroCard";
 import CategoryFilters from "../components/CategoryFilters";
 import AppGrid from "../components/AppGrid";
 import RemioLoading from "../components/RemioLoading";
+import ExpirationBanner from "../components/ExpirationBanner";
+import BudgetOverageBanner from "../components/BudgetOverageBanner";
 import { useApps } from "../context/AppsContext";
 import type { CategoryId } from "../types";
 
@@ -32,6 +34,8 @@ export default function HomePage({ onOpenApp }: Props) {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-6 page-enter">
+      <ExpirationBanner />
+      <BudgetOverageBanner />
       <HeroCard query={query} onQuery={setQuery} />
       <CategoryFilters active={category} onChange={setCategory} />
       {appsLoading ? (
