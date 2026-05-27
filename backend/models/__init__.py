@@ -8,3 +8,4 @@ from .api_key import ApiKey
 from .otp import PasswordResetOtp
 from .push_subscription import PushSubscription
 from .reminder_log import ReminderLog
+from .engagement_log import EngagementLog
