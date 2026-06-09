@@ -130,6 +130,48 @@ for (const [size, name] of storeTiles) {
 await writeFitPng(1440, 2160, "StorePromo1440x2160.png", storeAssetsDir, source);
 await writePng(2160, "StorePromo2160x2160.png", storeAssetsDir, source);
 
+/** Google Play feature graphic: 1024×500, icon left + "Remio" title + tagline. */
+async function featureGraphicBuffer(source) {
+  const W = 1024, H = 500;
+  const img = await loadImage(source);
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#0a0a0a";
+  ctx.fillRect(0, 0, W, H);
+
+  const iconSize = 180;
+  const iconX = (W - iconSize) / 2;
+  const iconY = 80;
+  const radius = 36;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(iconX + radius, iconY);
+  ctx.arcTo(iconX + iconSize, iconY, iconX + iconSize, iconY + iconSize, radius);
+  ctx.arcTo(iconX + iconSize, iconY + iconSize, iconX, iconY + iconSize, radius);
+  ctx.arcTo(iconX, iconY + iconSize, iconX, iconY, radius);
+  ctx.arcTo(iconX, iconY, iconX + iconSize, iconY, radius);
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(img, iconX, iconY, iconSize, iconSize);
+  ctx.restore();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 56px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Remio", W / 2, 320);
+
+  ctx.fillStyle = "#888888";
+  ctx.font = "24px Arial, sans-serif";
+  ctx.fillText("Track subscriptions. Stay in control.", W / 2, 365);
+
+  return canvas.toBuffer("image/png");
+}
+const fgBuf = await featureGraphicBuffer(source);
+const fgPath = path.join(storeAssetsDir, "PlayFeatureGraphic1024x500.png");
+fs.writeFileSync(fgPath, fgBuf);
+console.log("wrote", fgPath);
+
 /** electron-builder MSIX manifest assets (build/appx — exact names and pixel sizes). */
 const appxTiles = [
   [44, "Square44x44Logo.png"],
