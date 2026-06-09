@@ -16,9 +16,10 @@ from models import User, AppItem, Reminder, Preferences
 from models.reminder import ReminderMethodEnum
 from models.reminder_log import ReminderLog
 from models.push_subscription import PushSubscription
+from models.engagement_log import EngagementLog
 from tasks.send_push import send_push_notification
 from tasks.send_fcm import send_fcm_notification
-from auth.renewal_email import send_renewal_reminder_email
+from auth.renewal_email import send_renewal_digest_email
 from utils import as_utc
 
 logger = logging.getLogger("orbit.renewal_notify")
@@ -27,6 +28,9 @@ Channel = Literal["email", "push"]
 
 # Default automated reminders when the user has no per-app reminder for that offset.
 DEFAULT_AUTOMATED_REMINDER_DAYS = (3, 1)
+
+_DIGEST_EMAIL_TYPE = "renewal_digest_email"
+_DIGEST_WINDOW_DAYS = 14
 
 
 @dataclass(frozen=True)
@@ -208,9 +212,7 @@ async def _send_push(db: AsyncSession, user_id: UUID, app: AppItem, days_before:
         except Exception:
             label = (sub.fcm_token or sub.endpoint or "")[:60]
             logger.exception("push send raised for %s", label)
-            ok = True
-            if ok:
-                sent_any = True
+            sent_any = True
 
     for endpoint in expired_endpoints:
         await db.execute(sa_delete(PushSubscription).where(PushSubscription.endpoint == endpoint))
@@ -220,27 +222,77 @@ async def _send_push(db: AsyncSession, user_id: UUID, app: AppItem, days_before:
     return sent_any
 
 
+async def _fetch_expiring_apps_for_user(
+    db: AsyncSession, user_id: UUID, today: date, window: int = _DIGEST_WINDOW_DAYS
+) -> list[AppItem]:
+    rows = (
+        await db.execute(
+            select(AppItem).where(
+                AppItem.user_id == user_id,
+                AppItem.expires_at.isnot(None),
+                AppItem.is_deleted == False,  # noqa: E712
+            )
+        )
+    ).scalars().all()
+    return [a for a in rows if 0 <= days_until_expiry(a.expires_at, today) <= window]
+
+
+async def _digest_already_sent(db: AsyncSession, user_id: UUID, today: date) -> bool:
+    row = (
+        await db.execute(
+            select(EngagementLog.id).where(
+                EngagementLog.user_id == user_id,
+                EngagementLog.type == _DIGEST_EMAIL_TYPE,
+                EngagementLog.sent_date == today,
+            )
+        )
+    ).scalar_one_or_none()
+    return row is not None
+
+
+async def deliver_email_digest(db: AsyncSession, user: User, today: date) -> bool:
+    """Send one digest email per user listing all apps expiring within 14 days."""
+    if await _digest_already_sent(db, user.id, today):
+        return False
+
+    expiring = await _fetch_expiring_apps_for_user(db, user.id, today)
+    if not expiring:
+        return False
+
+    app_data = [
+        {
+            "name": a.name,
+            "expires_at": as_utc(a.expires_at),
+            "days_left": days_until_expiry(a.expires_at, today),
+            "plan": _plan_str(a),
+        }
+        for a in expiring
+    ]
+
+    try:
+        send_renewal_digest_email(user.email, app_data)
+    except Exception:
+        logger.exception("renewal digest email failed user=%s", str(user.id)[:8])
+        return False
+
+    db.add(EngagementLog(user_id=user.id, type=_DIGEST_EMAIL_TYPE, sent_date=today))
+    await db.commit()
+    return True
+
+
 async def deliver_one(db: AsyncSession, item: PendingDelivery, today: date) -> bool:
-    """Send one notification; log on success. Returns True if delivered."""
+    """Send one push notification; log on success. Returns True if delivered."""
+    if item.channel != "push":
+        return False
     if await _already_sent(db, item.user.id, item.app.id, item.days_before, item.channel, today):
         return False
 
     try:
-        if item.channel == "email":
-            send_renewal_reminder_email(
-                item.user.email,
-                item.app.name,
-                plan=_plan_str(item.app),
-                expires_at=as_utc(item.app.expires_at),
-                days_before=item.days_before,
-            )
-        else:
-            if not await _send_push(db, item.user.id, item.app, item.days_before):
-                return False
+        if not await _send_push(db, item.user.id, item.app, item.days_before):
+            return False
     except Exception:
         logger.exception(
-            "renewal %s failed user=%s app=%s days=%d",
-            item.channel,
+            "renewal push failed user=%s app=%s days=%d",
             str(item.user.id)[:8],
             item.app.name,
             item.days_before,
@@ -264,13 +316,32 @@ async def run_renewal_notifications(db: AsyncSession, today: date | None = None)
     """Process all due reminders for today. Returns count of notifications sent."""
     today = today or date.today()
     pending = await collect_pending_deliveries(db, today)
-    sent = 0
+
+    # Send one digest email per unique user who has email-channel items.
+    email_users: dict[UUID, User] = {}
     for item in pending:
+        if item.channel == "email":
+            email_users[item.user.id] = item.user
+
+    sent = 0
+    for user in email_users.values():
+        try:
+            if await deliver_email_digest(db, user, today):
+                sent += 1
+        except Exception:
+            await db.rollback()
+            logger.exception("deliver_email_digest failed user=%s", str(user.id)[:8])
+
+    # Push notifications remain per-app.
+    for item in pending:
+        if item.channel != "push":
+            continue
         try:
             if await deliver_one(db, item, today):
                 sent += 1
         except Exception:
             await db.rollback()
-            logger.exception("deliver_one failed")
+            logger.exception("deliver_one push failed")
+
     logger.info("Renewal notifications: %d sent of %d pending for %s", sent, len(pending), today)
     return sent
